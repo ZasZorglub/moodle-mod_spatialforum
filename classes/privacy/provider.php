@@ -120,7 +120,7 @@ class provider implements
             $posts = $DB->get_records('spatialforum_posts', [
                 'spatialforumid' => $cm->instance,
                 'userid' => $userid,
-            ], 'timecreated ASC', 'id,trackid,subject,message,messageformat,timecreated,timemodified');
+            ], 'timecreated ASC', 'id,trackid,replytoid,showparent,subject,message,messageformat,timecreated,timemodified');
             $reads = $DB->get_records_sql(
                 'SELECT r.*
                    FROM {spatialforum_read} r

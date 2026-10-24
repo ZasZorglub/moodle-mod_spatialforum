@@ -8,7 +8,7 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 - Moodle Workplace 5.x, using public Moodle activity, capability, backup and privacy APIs only
 - PHP and database requirements follow the installed Moodle 5.x release
 
-This is an MVP release. It has been statically checked, but must be tested on a staging copy of the exact Moodle or Workplace build before production use.
+This is a staging release with automated Moodle 5.0 regression tests. It must also be tested on a staging copy of the exact Moodle or Workplace build before production use.
 
 ## Install
 
