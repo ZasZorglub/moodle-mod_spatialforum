@@ -7,7 +7,7 @@
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT=""/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true"/>
         <FIELD NAME="intro" TYPE="text" NOTNULL="false"/>
         <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="roottrackid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
@@ -28,7 +28,7 @@
         <FIELD NAME="spatialforumid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="parenttrackid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="originpostid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT=""/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true"/>
         <FIELD NAME="colour" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="#ffffff"/>
         <FIELD NAME="locked" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
@@ -50,7 +50,7 @@
         <FIELD NAME="trackid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="replytoid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-        <FIELD NAME="subject" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT=""/>
+        <FIELD NAME="subject" TYPE="char" LENGTH="255" NOTNULL="true"/>
         <FIELD NAME="message" TYPE="text" NOTNULL="true"/>
         <FIELD NAME="messageformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="deleted" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>

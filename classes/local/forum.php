@@ -283,7 +283,7 @@ class forum {
         $tree = self::get_tree($activity->id, $activity->roottrackid);
         $posts = $DB->get_records('spatialforum_posts', [
             'trackid' => $currenttrack->id,
-        ], 'timecreated ASC');
+        ], 'timecreated ASC, id ASC');
         $childtracks = $DB->get_records('spatialforum_tracks', [
             'parenttrackid' => $currenttrack->id,
         ], 'timecreated ASC');
