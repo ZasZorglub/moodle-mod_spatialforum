@@ -37,12 +37,44 @@ final class upgrade_test extends \advanced_testcase {
             $this->assertSame('Existing text', $DB->get_field('spatialforum_posts', 'message', ['id' => $postid]));
             $this->assertTrue($manager->table_exists(new \xmldb_table('spatialforum_likes')));
             // A repeat at the new version must not run the migration again.
-            $this->assertTrue(xmldb_spatialforum_upgrade(2026102400));
+            $this->assertTrue(xmldb_spatialforum_upgrade(2026102401));
         } finally {
             // Restore the current schema before PHPUnit resets the database.
             if (!$manager->table_exists(new \xmldb_table('spatialforum_likes')) || !$manager->field_exists($table, $field)) {
                 set_config('version', 2026100500, 'mod_spatialforum');
                 xmldb_spatialforum_upgrade(2026100500);
+            }
+        }
+    }
+
+    public function test_upgrade_from_020_preserves_likes_and_published_quotes(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $parent = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
+            get_admin()->id, 'Parent', 'Text', FORMAT_HTML);
+        $reply = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
+            get_admin()->id, 'Reply', 'Answer', FORMAT_HTML, $parent);
+        $DB->insert_record('spatialforum_likes', (object) [
+            'userid' => get_admin()->id, 'postid' => $parent, 'timecreated' => time(),
+        ]);
+        $manager = $DB->get_manager();
+        $manager->drop_field(new \xmldb_table('spatialforum_likes'), new \xmldb_field('reaction'));
+        $manager->drop_field(new \xmldb_table('spatialforum_posts'), new \xmldb_field('showparent'));
+        set_config('version', 2026102400, 'mod_spatialforum');
+        try {
+            $this->assertTrue(xmldb_spatialforum_upgrade(2026102400));
+            $this->assertEquals(1, $DB->get_field('spatialforum_likes', 'reaction', ['postid' => $parent]));
+            $this->assertEquals(1, $DB->get_field('spatialforum_posts', 'showparent', ['id' => $reply]));
+            $this->assertEquals(0, $DB->get_field('spatialforum_posts', 'showparent', ['id' => $parent]));
+        } finally {
+            if (!$manager->field_exists(new \xmldb_table('spatialforum_likes'), new \xmldb_field('reaction'))
+                    || !$manager->field_exists(new \xmldb_table('spatialforum_posts'), new \xmldb_field('showparent'))) {
+                set_config('version', 2026102400, 'mod_spatialforum');
+                xmldb_spatialforum_upgrade(2026102400);
             }
         }
     }

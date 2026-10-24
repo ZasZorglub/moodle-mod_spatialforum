@@ -31,12 +31,14 @@ class provider implements
         $collection->add_database_table('spatialforum_likes', [
             'userid' => 'privacy:metadata:spatialforum_likes:userid',
             'postid' => 'privacy:metadata:spatialforum_likes:postid',
+            'reaction' => 'privacy:metadata:spatialforum_likes:reaction',
             'timecreated' => 'privacy:metadata:spatialforum_likes:timecreated',
         ], 'privacy:metadata:spatialforum_likes');
         $collection->add_database_table('spatialforum_posts', [
             'userid' => 'privacy:metadata:spatialforum_posts:userid',
             'subject' => 'privacy:metadata:spatialforum_posts:subject',
             'message' => 'privacy:metadata:spatialforum_posts:message',
+            'showparent' => 'privacy:metadata:spatialforum_posts:showparent',
             'timecreated' => 'privacy:metadata:spatialforum_posts:timecreated',
         ], 'privacy:metadata:spatialforum_posts');
         $collection->add_database_table('spatialforum_read', [

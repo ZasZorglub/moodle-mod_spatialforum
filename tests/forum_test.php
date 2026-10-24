@@ -44,7 +44,7 @@ final class forum_test extends \advanced_testcase {
         global $DB;
 
         [$activity, $track, $post, $user, $context, $cm] = $this->fixture();
-        forum::create_post($activity, $track->id, $user->id, 'Custom reply title', 'My reply', FORMAT_HTML, $post->id);
+        forum::create_post($activity, $track->id, $user->id, 'Custom reply title', 'My reply', FORMAT_HTML, $post->id, true);
         $data = forum::export_view_data($activity, $cm, $track, $context);
         $this->assertSame('Custom reply title', $data['posts'][1]['subject']);
         $this->assertStringContainsString('Original body', $data['posts'][1]['replycontext'][0]['message']);
@@ -71,6 +71,49 @@ final class forum_test extends \advanced_testcase {
         $this->assertTrue($DB->record_exists('spatialforum_likes', ['postid' => $post->id, 'userid' => $other->id]));
     }
 
+    public function test_quotes_are_opt_in_without_losing_reply_relationships(): void {
+        global $DB;
+
+        [$activity, $track, $post, $user, $context, $cm] = $this->fixture();
+        $reply = forum::create_post($activity, $track->id, $user->id, 'Without quote', 'Answer', FORMAT_HTML, $post->id);
+        $data = forum::export_view_data($activity, $cm, $track, $context);
+        $this->assertSame([], $data['posts'][1]['replycontext']);
+        $this->assertEquals($post->id, $DB->get_field('spatialforum_posts', 'replytoid', ['id' => $reply]));
+        // Opt-in quotes also work across a track boundary, without copying the original text.
+        $childid = forum::create_track($activity, $track, $post->id, 'Branch');
+        forum::create_post($activity, $childid, $user->id, 'With quote', 'Answer', FORMAT_HTML, $post->id, true);
+        $child = $DB->get_record('spatialforum_tracks', ['id' => $childid], '*', MUST_EXIST);
+        $data = forum::export_view_data($activity, $cm, $child, $context);
+        $this->assertStringContainsString('Original body', $data['posts'][0]['replycontext'][0]['message']);
+    }
+
+    public function test_like_dislike_switching_removal_and_invalid_reactions(): void {
+        global $DB;
+
+        [$activity, $track, $post, $user, $context, $cm] = $this->fixture();
+        $other = $this->getDataGenerator()->create_user();
+        forum::set_reaction($activity, $post, $other->id, 1);
+        forum::set_reaction($activity, $post, $user->id, 1);
+        forum::set_reaction($activity, $post, $user->id, -1);
+        forum::set_reaction($activity, $post, $user->id, -1);
+        $data = forum::export_view_data($activity, $cm, $track, $context);
+        $this->assertEquals(1, $data['posts'][0]['likecount']);
+        $this->assertEquals(1, $data['posts'][0]['dislikecount']);
+        $this->assertFalse($data['posts'][0]['liked']);
+        $this->assertTrue($data['posts'][0]['disliked']);
+        $this->assertSame(0, $data['posts'][0]['nextdislike']);
+        $this->assertSame(2, $DB->count_records('spatialforum_likes', ['postid' => $post->id]));
+        forum::set_reaction($activity, $post, $user->id, 1);
+        $data = forum::export_view_data($activity, $cm, $track, $context);
+        $this->assertEquals(2, $data['posts'][0]['likecount']);
+        $this->assertEquals(0, $data['posts'][0]['dislikecount']);
+        forum::set_reaction($activity, $post, $user->id, 0);
+        forum::set_reaction($activity, $post, $user->id, 0);
+        $this->assertSame(1, $DB->count_records('spatialforum_likes', ['postid' => $post->id]));
+        $this->expectException(\moodle_exception::class);
+        forum::set_reaction($activity, $post, $user->id, 2);
+    }
+
     public function test_likes_can_be_disabled_at_both_levels_without_losing_data(): void {
         global $DB;
 
@@ -82,7 +125,7 @@ final class forum_test extends \advanced_testcase {
             $data = forum::export_view_data($activity, $cm, $track, $context);
             $this->assertFalse($data['posts'][0]['showlikes']);
             try {
-                forum::set_like($activity, $post, $user->id, false);
+                forum::set_reaction($activity, $post, $user->id, -1);
                 $this->fail('Disabled likes accepted a direct request');
             } catch (\moodle_exception $e) {
                 $this->assertSame('likesdisabled', $e->errorcode);
@@ -120,7 +163,7 @@ final class forum_test extends \advanced_testcase {
 
         [$activity, $track, $post, $user, $context] = $this->fixture();
         $other = $this->getDataGenerator()->create_user();
-        forum::set_like($activity, $post, $other->id, true);
+        forum::set_reaction($activity, $post, $other->id, -1);
         $contexts = provider::get_contexts_for_userid($other->id)->get_contextids();
         $this->assertContains((int) $context->id, array_map('intval', $contexts));
         $userlist = new \core_privacy\local\request\userlist($context, 'mod_spatialforum');

@@ -57,8 +57,16 @@ class forum {
 
     /** Set one user's like state, serialising duplicate submissions. Caller must check capabilities. */
     public static function set_like(stdClass $activity, stdClass $post, int $userid, bool $liked): void {
+        self::set_reaction($activity, $post, $userid, $liked ? 1 : 0);
+    }
+
+    /** One reaction per user: 1 = like, -1 = dislike, 0 = remove. */
+    public static function set_reaction(stdClass $activity, stdClass $post, int $userid, int $reaction): void {
         global $DB;
 
+        if (!in_array($reaction, [-1, 0, 1], true)) {
+            throw new \moodle_exception('invalidaction', 'mod_spatialforum');
+        }
         if (!self::likes_enabled($activity)) {
             throw new \moodle_exception('likesdisabled', 'mod_spatialforum');
         }
@@ -72,10 +80,19 @@ class forum {
         }
         try {
             $conditions = ['userid' => $userid, 'postid' => $post->id];
-            if ($liked && !$DB->record_exists('spatialforum_likes', $conditions)) {
-                $DB->insert_record('spatialforum_likes', (object) ($conditions + ['timecreated' => time()]));
-            } else if (!$liked) {
+            $existing = $DB->get_record('spatialforum_likes', $conditions);
+            if (!$reaction) {
                 $DB->delete_records('spatialforum_likes', $conditions);
+            } else if ($existing) {
+                if ((int) $existing->reaction !== $reaction) {
+                    $existing->reaction = $reaction;
+                    $existing->timecreated = time();
+                    $DB->update_record('spatialforum_likes', $existing);
+                }
+            } else {
+                $DB->insert_record('spatialforum_likes', (object) ($conditions + [
+                    'reaction' => $reaction, 'timecreated' => time(),
+                ]));
             }
         } finally {
             $lock->release();
@@ -131,6 +148,7 @@ class forum {
      * @param string $message
      * @param int $messageformat
      * @param int $replytoid
+     * @param bool $showparent Whether the author opted in to displaying the parent quote.
      * @return int
      */
     public static function create_post(
@@ -140,7 +158,8 @@ class forum {
         string $subject,
         string $message,
         int $messageformat,
-        int $replytoid = 0
+        int $replytoid = 0,
+        bool $showparent = false
     ): int {
         global $DB;
 
@@ -149,6 +168,7 @@ class forum {
             'spatialforumid' => $activity->id,
             'trackid' => $trackid,
             'replytoid' => $replytoid,
+            'showparent' => $replytoid && $showparent ? 1 : 0,
             'userid' => $userid,
             'subject' => trim($subject),
             'message' => $message,
@@ -301,13 +321,15 @@ class forum {
         $userlikes = [];
         if ($showlikes) {
             $likecounts = $DB->get_records_sql(
-                'SELECT l.postid, COUNT(l.id) AS total
+                'SELECT l.postid,
+                        SUM(CASE WHEN l.reaction = 1 THEN 1 ELSE 0 END) AS total,
+                        SUM(CASE WHEN l.reaction = -1 THEN 1 ELSE 0 END) AS dislikes
                    FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
                   WHERE p.trackid = :trackid AND p.deleted = 0
                GROUP BY l.postid', ['trackid' => $currenttrack->id]);
             $userlikes = $DB->get_records_sql(
-                'SELECT l.postid, l.id FROM {spatialforum_likes} l
+                'SELECT l.postid, l.id, l.reaction FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
                   WHERE p.trackid = :trackid AND l.userid = :userid',
                 ['trackid' => $currenttrack->id, 'userid' => $USER->id]);
@@ -323,8 +345,10 @@ class forum {
         $postdata = [];
         foreach ($posts as $post) {
             $replycontext = [];
-            if (!$post->deleted && $post->replytoid) {
-                $parent = $posts[$post->replytoid] ?? null;
+            if (!$post->deleted && $post->replytoid && $post->showparent) {
+                $parent = $posts[$post->replytoid] ?? $DB->get_record('spatialforum_posts', [
+                    'id' => $post->replytoid, 'spatialforumid' => $activity->id,
+                ]);
                 $replycontext[] = $parent ? self::export_reply_context($parent, $context, $cm->id)
                     : ['available' => false];
             }
@@ -333,6 +357,7 @@ class forum {
             $message = $post->deleted
                 ? get_string('deletedpost', 'mod_spatialforum')
                 : format_text($post->message, $post->messageformat, ['context' => $context]);
+            $reaction = (int) ($userlikes[$post->id]->reaction ?? 0);
             $postdata[] = [
                 'id' => $post->id,
                 'subject' => format_string($post->subject),
@@ -345,9 +370,13 @@ class forum {
                 'showlikes' => $showlikes && !$post->deleted,
                 'canlike' => $canlike && !$post->deleted,
                 'likecount' => $likecounts[$post->id]->total ?? 0,
-                'liked' => isset($userlikes[$post->id]),
-                'nextliked' => isset($userlikes[$post->id]) ? 0 : 1,
-                'likelabel' => get_string(isset($userlikes[$post->id]) ? 'unlike' : 'like', 'mod_spatialforum'),
+                'dislikecount' => $likecounts[$post->id]->dislikes ?? 0,
+                'liked' => $reaction === 1,
+                'disliked' => $reaction === -1,
+                'nextreaction' => $reaction === 1 ? 0 : 1,
+                'nextdislike' => $reaction === -1 ? 0 : -1,
+                'likelabel' => get_string($reaction === 1 ? 'unlike' : 'like', 'mod_spatialforum'),
+                'dislikelabel' => get_string($reaction === -1 ? 'undislike' : 'dislike', 'mod_spatialforum'),
                 'canreply' => $canreply && !$post->deleted,
                 'canbranch' => $canbranch && !$post->deleted,
                 'replyurl' => (new moodle_url('/mod/spatialforum/post.php', [

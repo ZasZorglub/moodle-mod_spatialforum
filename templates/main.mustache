@@ -85,11 +85,18 @@
                                                 <input type="hidden" name="id" value="{{cmid}}">
                                                 <input type="hidden" name="postid" value="{{id}}">
                                                 <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                                <input type="hidden" name="liked" value="{{nextliked}}">
+                                                <input type="hidden" name="reaction" value="{{nextreaction}}">
                                                 <button type="submit" class="spatialforum-like-button" aria-pressed="{{#liked}}true{{/liked}}{{^liked}}false{{/liked}}">{{likelabel}} ({{likecount}})</button>
                                             </form>
+                                            <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
+                                                <input type="hidden" name="id" value="{{cmid}}">
+                                                <input type="hidden" name="postid" value="{{id}}">
+                                                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                                <input type="hidden" name="reaction" value="{{nextdislike}}">
+                                                <button type="submit" class="spatialforum-like-button" aria-pressed="{{#disliked}}true{{/disliked}}{{^disliked}}false{{/disliked}}">{{dislikelabel}} ({{dislikecount}})</button>
+                                            </form>
                                         {{/canlike}}
-                                        {{^canlike}}<span>{{#str}}likes, mod_spatialforum{{/str}}: {{likecount}}</span>{{/canlike}}
+                                        {{^canlike}}<span>{{#str}}likes, mod_spatialforum{{/str}}: {{likecount}} · {{#str}}dislikes, mod_spatialforum{{/str}}: {{dislikecount}}</span>{{/canlike}}
                                     {{/showlikes}}
                                     {{#canreply}}<a href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
                                     {{#canbranch}}<a href="{{branchurl}}">{{#str}}branchfromhere, mod_spatialforum{{/str}}</a>{{/canbranch}}

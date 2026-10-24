@@ -11,7 +11,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 $id = required_param('id', PARAM_INT);
 $postid = required_param('postid', PARAM_INT);
-$liked = required_param('liked', PARAM_BOOL);
+$reaction = required_param('reaction', PARAM_INT);
 $cm = get_coursemodule_from_id('spatialforum', $id, 0, false, MUST_EXIST);
 $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
 require_course_login($course, true, $cm);
@@ -26,7 +26,7 @@ $activity = $DB->get_record('spatialforum', ['id' => $cm->instance], '*', MUST_E
 $post = $DB->get_record('spatialforum_posts', [
     'id' => $postid, 'spatialforumid' => $activity->id, 'deleted' => 0,
 ], '*', MUST_EXIST);
-forum::set_like($activity, $post, $USER->id, (bool) $liked);
+forum::set_reaction($activity, $post, $USER->id, $reaction);
 $url = new moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id, 'trackid' => $post->trackid]);
 $url->set_anchor('post-' . $post->id);
 redirect($url);

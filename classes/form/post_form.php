@@ -42,6 +42,12 @@ class post_form extends \moodleform {
         $mform->addRule('subject', null, 'required', null, 'client');
         $mform->addRule('subject', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
 
+        if (!empty($customdata['originpostid'])) {
+            $mform->addElement('advcheckbox', 'showparent', get_string('includeparent', 'mod_spatialforum'));
+            $mform->addHelpButton('showparent', 'includeparent', 'mod_spatialforum');
+            $mform->setDefault('showparent', 0);
+        }
+
         $mform->addElement('editor', 'message_editor', get_string('message', 'mod_spatialforum'), null, [
             'maxfiles' => 0,
             'trusttext' => false,

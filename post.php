@@ -81,7 +81,8 @@ if ($form->is_cancelled()) {
         $data->subject,
         $message,
         $format,
-        $action === 'reply' ? $originpostid : 0
+        $originpostid,
+        !empty($data->showparent)
     );
     $transaction->allow_commit();
     redirect(new moodle_url('/mod/spatialforum/view.php', [

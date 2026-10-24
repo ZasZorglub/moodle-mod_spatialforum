@@ -1,12 +1,20 @@
-# Staging validation for 0.2.0
+# Staging validation for 0.2.1
 
 Do not merge to main until the target Moodle/Workplace checks below pass.
+
+## Additional 0.2.1 checks
+
+- Like, dislike, switch in both directions and remove a reaction. Confirm separate counts, one reaction per user/post and unchanged votes from other users. Submit the same state twice; it must remain unchanged. Both teacher and administrator disable switches apply to both reactions.
+- Reply with the parent-quote checkbox off (default), then on. The parent must only appear in the saved reply when selected, including in a manually created child track. In both cases preserve the reply relationship. Trigger validation failure and confirm the checkbox choice survives.
+- Upgrade 0.2.0 with existing likes and replies: likes stay positive and published parent quotes remain visible. New replies default to no quote. Check the new `reaction` and `showparent` fields and no pending upgrade on a second visit.
+- Backup/restore preserves dislike values, quote preferences and reply parents across tracks. Privacy export includes the reaction and quote preference; privacy deletion also removes dislike-only users.
+- The requested automatic-branch threshold is awaiting the author's clarification (A → B → C → D, branch at C or D). Existing Reply routing is unchanged in this revision.
 
 ## Reported issues and implemented changes
 
 1. Reply opens with an empty subject. `post.php` now supplies an editable `Re:` default from the selected parent, avoiding another prefix when it already starts with `Re:` and respecting the 255-character field limit.
-2. No likes. Added a POST-only like/unlike form, counts and a capability. One user can give one like per post. Teacher activity settings and the administrator site switch both enforce disabling on the server. Existing likes are retained while hidden.
-3. Replies lack parent context. The form and saved reply show a labelled blockquote with the parent subject, author, date, body and link. It is rendered live from the parent so moderator removal and privacy erasure also remove the displayed quote. Quotes do not recursively quote ancestor posts.
+2. No reactions. Added POST-only like/dislike forms, separate counts and a capability. One user can give one reaction per post. Teacher activity settings and the administrator site switch both enforce disabling on the server. Existing reactions are retained while hidden.
+3. Replies lack parent context. The form shows a labelled reference and offers an unchecked opt-in quote checkbox. Only opted-in saved replies show the parent blockquote. It is rendered live from the parent so moderator removal and privacy erasure also remove the displayed quote. Quotes do not recursively quote ancestor posts.
 4. Reporter cannot activate Reply on post 5 in a long thread. The supplied screenshot does not establish the exact browser hit-test failure. The old code applied perspective/rotate/translateZ to the whole growing plane and posts inside an overflow-hidden container. The candidate fix removes transforms from interactive content, keeps the 3D decoration non-interactive, and enlarges action targets to at least 44px. Exact reproduction and confirmation remain required on the target site.
 
 ## Required target-site checks

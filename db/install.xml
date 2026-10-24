@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/spatialforum/db" VERSION="2026102400" COMMENT="XMLDB file for mod_spatialforum"
+<XMLDB PATH="mod/spatialforum/db" VERSION="2026102401" COMMENT="XMLDB file for mod_spatialforum"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
@@ -49,6 +49,7 @@
         <FIELD NAME="spatialforumid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="trackid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="replytoid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="showparent" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="subject" TYPE="char" LENGTH="255" NOTNULL="true"/>
         <FIELD NAME="message" TYPE="text" NOTNULL="true"/>
@@ -84,11 +85,12 @@
         <INDEX NAME="userpost" UNIQUE="true" FIELDS="userid, postid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="spatialforum_likes" COMMENT="One like per user and post">
+    <TABLE NAME="spatialforum_likes" COMMENT="One like or dislike per user and post">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="postid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="reaction" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
       </FIELDS>
       <KEYS>
