@@ -2,6 +2,23 @@
 // This file is part of Moodle - http://moodle.org/
 
 $string['pluginname'] = 'Samtalespor';
+$string['enablelikes'] = 'Tillad likes på indlæg';
+$string['enablelikes_help'] = 'Deltagere kan like indlæg og fjerne deres like igen. Administratoren kan slå likes fra for alle Samtalespor. Når likes slås fra, skjules knapper og antal, mens eksisterende likes bevares.';
+$string['allowlikes'] = 'Tillad likes på hele sitet';
+$string['allowlikes_desc'] = 'Når indstillingen er slået fra, skjules likes, og der kan ikke gives likes i nogen Samtalespor-aktivitet. Eksisterende likes bevares.';
+$string['likesdisabledsite'] = 'Administratoren har slået likes fra på sitet.';
+$string['likesdisabled'] = 'Likes er slået fra i denne aktivitet.';
+$string['likelocktimeout'] = 'Dit like kunne ikke gemmes lige nu. Prøv igen.';
+$string['like'] = 'Like';
+$string['unlike'] = 'Fjern like';
+$string['likes'] = 'Likes';
+$string['inreplyto'] = 'Svar på indlæg';
+$string['originalunavailable'] = 'Det oprindelige indlæg er ikke længere tilgængeligt.';
+$string['spatialforum:like'] = 'Like indlæg og fjerne egne likes';
+$string['privacy:metadata:spatialforum_likes'] = 'Gemmer likes på indlæg.';
+$string['privacy:metadata:spatialforum_likes:userid'] = 'Brugeren, der likede indlægget.';
+$string['privacy:metadata:spatialforum_likes:postid'] = 'Indlægget, der blev liket.';
+$string['privacy:metadata:spatialforum_likes:timecreated'] = 'Tidspunktet for liket.';
 $string['modulename'] = 'Samtalespor';
 $string['modulenameplural'] = 'Samtalespor';
 $string['modulename_help'] = 'Et forum, hvor forgrenede diskussioner bliver til navngivne og farvekodede samtalespor.';

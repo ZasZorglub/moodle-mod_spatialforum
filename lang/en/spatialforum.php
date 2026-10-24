@@ -2,6 +2,23 @@
 // This file is part of Moodle - http://moodle.org/
 
 $string['pluginname'] = 'Spatial forum';
+$string['enablelikes'] = 'Allow likes on posts';
+$string['enablelikes_help'] = 'Let participants like or unlike posts in this activity. The site administrator can disable likes for all spatial forums. Disabling likes hides counts and buttons but keeps existing likes.';
+$string['allowlikes'] = 'Allow likes site-wide';
+$string['allowlikes_desc'] = 'If disabled, likes are hidden and cannot be submitted in any spatial forum, regardless of activity settings. Existing likes are retained.';
+$string['likesdisabledsite'] = 'Likes are currently disabled by the site administrator.';
+$string['likesdisabled'] = 'Likes are disabled in this activity.';
+$string['likelocktimeout'] = 'Your like could not be saved right now. Please try again.';
+$string['like'] = 'Like';
+$string['unlike'] = 'Unlike';
+$string['likes'] = 'Likes';
+$string['inreplyto'] = 'In reply to';
+$string['originalunavailable'] = 'The original post is no longer available.';
+$string['spatialforum:like'] = 'Like and unlike posts';
+$string['privacy:metadata:spatialforum_likes'] = 'Stores likes on posts.';
+$string['privacy:metadata:spatialforum_likes:userid'] = 'The user who liked the post.';
+$string['privacy:metadata:spatialforum_likes:postid'] = 'The post that was liked.';
+$string['privacy:metadata:spatialforum_likes:timecreated'] = 'When the like was created.';
 $string['modulename'] = 'Spatial forum';
 $string['modulenameplural'] = 'Spatial forums';
 $string['modulename_help'] = 'A forum where branching discussions become named, colour-coded spatial tracks.';

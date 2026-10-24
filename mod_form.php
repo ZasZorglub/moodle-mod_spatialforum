@@ -33,6 +33,13 @@ class mod_spatialforum_mod_form extends moodleform_mod {
         $mform->addElement('advcheckbox', 'enablecolors', get_string('enablecolors', 'mod_spatialforum'));
         $mform->setDefault('enablecolors', 1);
 
+        $mform->addElement('advcheckbox', 'enablelikes', get_string('enablelikes', 'mod_spatialforum'));
+        $mform->setDefault('enablelikes', 1);
+        $mform->addHelpButton('enablelikes', 'enablelikes', 'mod_spatialforum');
+        if (get_config('mod_spatialforum', 'allowlikes') === '0') {
+            $mform->addElement('static', 'likesdisabled', '', get_string('likesdisabledsite', 'mod_spatialforum'));
+        }
+
         $mform->addElement('advcheckbox', 'locked', get_string('lockforum', 'mod_spatialforum'));
         $mform->setDefault('locked', 0);
 

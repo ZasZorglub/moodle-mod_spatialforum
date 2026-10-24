@@ -27,6 +27,7 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         if ($this->get_setting_value('userinfo')) {
             $paths[] = new restore_path_element('spatialforum_post', '/activity/spatialforum/posts/post');
             $paths[] = new restore_path_element('spatialforum_read', '/activity/spatialforum/reads/read');
+            $paths[] = new restore_path_element('spatialforum_like', '/activity/spatialforum/likes/like');
         }
         return $this->prepare_activity_structure($paths);
     }
@@ -40,6 +41,7 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $this->oldroottrackid = (int) $record->roottrackid;
         $record->course = $this->get_courseid();
         $record->roottrackid = 0;
+        $record->enablelikes = $record->enablelikes ?? 1;
         $record->timemodified = $this->apply_date_offset($record->timemodified);
 
         $newid = $DB->insert_record('spatialforum', $record);
@@ -79,7 +81,7 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $record->timecreated = $this->apply_date_offset($record->timecreated);
         $record->timemodified = $this->apply_date_offset($record->timemodified);
 
-        if (!$record->trackid || !$record->userid) {
+        if (!$record->trackid || (!$record->userid && !$record->deleted)) {
             return;
         }
         $newid = $DB->insert_record('spatialforum_posts', $record);
@@ -101,6 +103,22 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
             'postid' => $record->postid,
         ])) {
             $DB->insert_record('spatialforum_read', $record);
+        }
+    }
+
+    /** Restore likes only when both user and post mappings exist. */
+    protected function process_spatialforum_like(array $data): void {
+        global $DB;
+
+        $record = (object) $data;
+        unset($record->id);
+        $record->userid = $this->get_mappingid('user', $record->userid, 0);
+        $record->postid = $this->get_mappingid('spatialforum_post', $record->postid, 0);
+        $record->timecreated = $this->apply_date_offset($record->timecreated);
+        if ($record->userid && $record->postid && !$DB->record_exists('spatialforum_likes', [
+            'userid' => $record->userid, 'postid' => $record->postid,
+        ])) {
+            $DB->insert_record('spatialforum_likes', $record);
         }
     }
 

@@ -21,6 +21,67 @@ class forum {
         '#59d6c2', '#ff8366', '#78d59b', '#c18bea',
     ];
 
+    /** Editable reply subject, without accumulating repeated Re: prefixes. */
+    public static function reply_subject(string $subject): string {
+        $subject = trim($subject);
+        if (!preg_match('/^re\s*:/i', $subject)) {
+            $subject = 'Re: ' . $subject;
+        }
+        return \core_text::substr($subject, 0, 255);
+    }
+
+    /** Parent content is read live so moderation and privacy erasure take effect in every quote. */
+    public static function export_reply_context(stdClass $post, context_module $context, int $cmid): array {
+        global $DB;
+
+        if (!empty($post->deleted)) {
+            return ['available' => false];
+        }
+        $user = $DB->get_record('user', ['id' => $post->userid]);
+        $url = new moodle_url('/mod/spatialforum/view.php', ['id' => $cmid, 'trackid' => $post->trackid]);
+        $url->set_anchor('post-' . $post->id);
+        return [
+            'available' => true,
+            'subject' => format_string($post->subject),
+            'author' => $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum'),
+            'time' => userdate($post->timecreated),
+            'message' => format_text($post->message, $post->messageformat, ['context' => $context]),
+            'url' => $url->out(false),
+        ];
+    }
+
+    /** Whether the site and this activity both allow likes. Disabling preserves existing data. */
+    public static function likes_enabled(stdClass $activity): bool {
+        return !empty($activity->enablelikes) && get_config('mod_spatialforum', 'allowlikes') !== '0';
+    }
+
+    /** Set one user's like state, serialising duplicate submissions. Caller must check capabilities. */
+    public static function set_like(stdClass $activity, stdClass $post, int $userid, bool $liked): void {
+        global $DB;
+
+        if (!self::likes_enabled($activity)) {
+            throw new \moodle_exception('likesdisabled', 'mod_spatialforum');
+        }
+        if (!$userid || $post->spatialforumid != $activity->id || $post->deleted) {
+            throw new \moodle_exception('invalidaction', 'mod_spatialforum');
+        }
+        $factory = \core\lock\lock_config::get_lock_factory('mod_spatialforum');
+        $lock = $factory->get_lock('like:' . $post->id . ':' . $userid, 10);
+        if (!$lock) {
+            throw new \moodle_exception('likelocktimeout', 'mod_spatialforum');
+        }
+        try {
+            $conditions = ['userid' => $userid, 'postid' => $post->id];
+            if ($liked && !$DB->record_exists('spatialforum_likes', $conditions)) {
+                $DB->insert_record('spatialforum_likes', (object) ($conditions + ['timecreated' => time()]));
+            } else if (!$liked) {
+                $DB->delete_records('spatialforum_likes', $conditions);
+            }
+        } finally {
+            $lock->release();
+        }
+    }
+
     /**
      * Creates a named child track.
      *
@@ -234,6 +295,23 @@ class forum {
             && empty($activity->locked) && empty($currenttrack->locked)
             && count($path) < $activity->maxdepth;
         $canmoderate = has_capability('mod/spatialforum:moderate', $context);
+        $showlikes = self::likes_enabled($activity);
+        $canlike = $showlikes && !isguestuser() && has_capability('mod/spatialforum:like', $context);
+        $likecounts = [];
+        $userlikes = [];
+        if ($showlikes) {
+            $likecounts = $DB->get_records_sql(
+                'SELECT l.postid, COUNT(l.id) AS total
+                   FROM {spatialforum_likes} l
+                   JOIN {spatialforum_posts} p ON p.id = l.postid
+                  WHERE p.trackid = :trackid AND p.deleted = 0
+               GROUP BY l.postid', ['trackid' => $currenttrack->id]);
+            $userlikes = $DB->get_records_sql(
+                'SELECT l.postid, l.id FROM {spatialforum_likes} l
+                   JOIN {spatialforum_posts} p ON p.id = l.postid
+                  WHERE p.trackid = :trackid AND l.userid = :userid',
+                ['trackid' => $currenttrack->id, 'userid' => $USER->id]);
+        }
 
         $users = [];
         $userids = array_unique(array_column($posts, 'userid'));
@@ -243,6 +321,12 @@ class forum {
 
         $postdata = [];
         foreach ($posts as $post) {
+            $replycontext = [];
+            if (!$post->deleted && $post->replytoid) {
+                $parent = $posts[$post->replytoid] ?? null;
+                $replycontext[] = $parent ? self::export_reply_context($parent, $context, $cm->id)
+                    : ['available' => false];
+            }
             $user = $users[$post->userid] ?? null;
             $fullname = $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum');
             $message = $post->deleted
@@ -256,6 +340,13 @@ class forum {
                 'initials' => self::initials($fullname),
                 'time' => userdate($post->timecreated),
                 'unread' => isset($unreadids[$post->id]),
+                'replycontext' => $replycontext,
+                'showlikes' => $showlikes && !$post->deleted,
+                'canlike' => $canlike && !$post->deleted,
+                'likecount' => $likecounts[$post->id]->total ?? 0,
+                'liked' => isset($userlikes[$post->id]),
+                'nextliked' => isset($userlikes[$post->id]) ? 0 : 1,
+                'likelabel' => get_string(isset($userlikes[$post->id]) ? 'unlike' : 'like', 'mod_spatialforum'),
                 'canreply' => $canreply && !$post->deleted,
                 'canbranch' => $canbranch && !$post->deleted,
                 'replyurl' => (new moodle_url('/mod/spatialforum/post.php', [
@@ -332,6 +423,9 @@ class forum {
         ]);
         return [
             'forumname' => format_string($activity->name),
+            'cmid' => $cm->id,
+            'sesskey' => sesskey(),
+            'likeurl' => (new moodle_url('/mod/spatialforum/like.php'))->out(false),
             'trackname' => format_string($currenttrack->name),
             'trackcolour' => self::normalise_colour($currenttrack->colour),
             'depth' => count($path),

@@ -76,8 +76,21 @@
                                     </div>
                                     {{#unread}}<span class="badge rounded-pill text-bg-primary">{{#str}}unread, mod_spatialforum{{/str}}</span>{{/unread}}
                                 </header>
+                                {{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
                                 <div class="spatialforum-message">{{{message}}}</div>
                                 <footer>
+                                    {{#showlikes}}
+                                        {{#canlike}}
+                                            <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
+                                                <input type="hidden" name="id" value="{{cmid}}">
+                                                <input type="hidden" name="postid" value="{{id}}">
+                                                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                                <input type="hidden" name="liked" value="{{nextliked}}">
+                                                <button type="submit" class="spatialforum-like-button" aria-pressed="{{#liked}}true{{/liked}}{{^liked}}false{{/liked}}">{{likelabel}} ({{likecount}})</button>
+                                            </form>
+                                        {{/canlike}}
+                                        {{^canlike}}<span>{{#str}}likes, mod_spatialforum{{/str}}: {{likecount}}</span>{{/canlike}}
+                                    {{/showlikes}}
                                     {{#canreply}}<a href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
                                     {{#canbranch}}<a href="{{branchurl}}">{{#str}}branchfromhere, mod_spatialforum{{/str}}</a>{{/canbranch}}
                                     {{#candelete}}<a href="{{deleteurl}}" class="text-danger" data-confirm-delete data-confirm-message="{{#str}}confirmdeletepost, mod_spatialforum{{/str}}">{{#str}}delete{{/str}}</a>{{/candelete}}

@@ -99,6 +99,7 @@ function spatialforum_delete_instance(int $id): bool {
     $transaction = $DB->start_delegated_transaction();
     $postids = $DB->get_fieldset_select('spatialforum_posts', 'id', 'spatialforumid = :id', ['id' => $id]);
     if ($postids) {
+        $DB->delete_records_list('spatialforum_likes', 'postid', $postids);
         $DB->delete_records_list('spatialforum_read', 'postid', $postids);
     }
     $DB->delete_records('spatialforum_posts', ['spatialforumid' => $id]);

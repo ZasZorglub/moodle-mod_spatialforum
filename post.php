@@ -25,6 +25,7 @@ $track = $DB->get_record('spatialforum_tracks', [
 
 require_course_login($course, true, $cm);
 $context = context_module::instance($cm->id);
+require_capability('mod/spatialforum:view', $context);
 require_capability($action === 'branch' ? 'mod/spatialforum:startbranch' : 'mod/spatialforum:reply', $context);
 
 if ($activity->locked || $track->locked) {
@@ -34,6 +35,7 @@ if ($originpostid) {
     $origin = $DB->get_record('spatialforum_posts', [
         'id' => $originpostid,
         'trackid' => $track->id,
+        'deleted' => 0,
     ], '*', MUST_EXIST);
 }
 
@@ -53,6 +55,10 @@ $form = new post_form(null, [
     'trackid' => $track->id,
     'originpostid' => $originpostid,
 ]);
+
+if ($action === 'reply' && !empty($origin)) {
+    $form->set_data(['subject' => forum::reply_subject($origin->subject)]);
+}
 
 if ($form->is_cancelled()) {
     redirect($returnurl);
@@ -86,6 +92,10 @@ if ($form->is_cancelled()) {
 
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string($action === 'branch' ? 'createbranch' : 'postreply', 'mod_spatialforum'));
+if ($action === 'reply' && !empty($origin)) {
+    echo $OUTPUT->render_from_template('mod_spatialforum/reply_context',
+        forum::export_reply_context($origin, $context, $cm->id));
+}
 $form->display();
 echo $OUTPUT->footer();
 

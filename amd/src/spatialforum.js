@@ -19,13 +19,11 @@ export const init = () => {
         stage.addEventListener('pointermove', (event) => {
             const box = stage.getBoundingClientRect();
             const x = ((event.clientX - box.left) / box.width) - 0.5;
-            const y = ((event.clientY - box.top) / box.height) - 0.5;
-            plane.style.setProperty('--tilt-y', `${x * 3.2}deg`);
-            plane.style.setProperty('--tilt-x', `${2 - y * 2.2}deg`);
+            // Only decorative layers move; links remain in normal layout even in long threads.
+            stage.style.setProperty('--tilt-y', `${x * 3.2}deg`);
         });
         stage.addEventListener('pointerleave', () => {
-            plane.style.removeProperty('--tilt-y');
-            plane.style.removeProperty('--tilt-x');
+            stage.style.removeProperty('--tilt-y');
         });
     }
 
