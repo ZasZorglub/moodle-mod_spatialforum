@@ -138,6 +138,37 @@ class forum {
         ]);
     }
 
+    /** Publish each reply in a separate child track. Caller checks reply and branch capabilities. */
+    public static function reply_in_new_track(
+        stdClass $activity,
+        stdClass $parenttrack,
+        int $originpostid,
+        int $userid,
+        string $branchname,
+        string $subject,
+        string $message,
+        int $messageformat,
+        bool $showparent = false
+    ): int {
+        global $DB;
+
+        if ($parenttrack->spatialforumid != $activity->id || trim($branchname) === '') {
+            throw new \moodle_exception('invalidaction', 'mod_spatialforum');
+        }
+        if ($activity->locked || $parenttrack->locked) {
+            throw new \moodle_exception('forumlocked', 'mod_spatialforum');
+        }
+        $DB->get_record('spatialforum_posts', [
+            'id' => $originpostid, 'trackid' => $parenttrack->id,
+            'spatialforumid' => $activity->id, 'deleted' => 0,
+        ], '*', MUST_EXIST);
+        $transaction = $DB->start_delegated_transaction();
+        $trackid = self::create_track($activity, $parenttrack, $originpostid, $branchname);
+        self::create_post($activity, $trackid, $userid, $subject, $message, $messageformat, $originpostid, $showparent);
+        $transaction->allow_commit();
+        return $trackid;
+    }
+
     /**
      * Inserts a post.
      *
@@ -377,7 +408,7 @@ class forum {
                 'nextdislike' => $reaction === -1 ? 0 : -1,
                 'likelabel' => get_string($reaction === 1 ? 'unlike' : 'like', 'mod_spatialforum'),
                 'dislikelabel' => get_string($reaction === -1 ? 'undislike' : 'dislike', 'mod_spatialforum'),
-                'canreply' => $canreply && !$post->deleted,
+                'canreply' => $canreply && $canbranch && !$post->deleted,
                 'canbranch' => $canbranch && !$post->deleted,
                 'replyurl' => (new moodle_url('/mod/spatialforum/post.php', [
                     'id' => $cm->id,

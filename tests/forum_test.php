@@ -114,6 +114,70 @@ final class forum_test extends \advanced_testcase {
         forum::set_reaction($activity, $post, $user->id, 2);
     }
 
+    public function test_every_reply_creates_a_separate_track_with_a_return_path(): void {
+        global $DB;
+
+        [$activity, $root, $post, $user, $context, $cm] = $this->fixture();
+        $firstid = forum::reply_in_new_track($activity, $root, $post->id, $user->id,
+            'First reply track', 'Re: Original', 'First answer', FORMAT_HTML);
+        $secondid = forum::reply_in_new_track($activity, $root, $post->id, $user->id,
+            'Second reply track', 'Different subject', 'Second answer', FORMAT_HTML, true);
+        $this->assertNotEquals($firstid, $secondid);
+        foreach ([$firstid, $secondid] as $id) {
+            $track = $DB->get_record('spatialforum_tracks', ['id' => $id], '*', MUST_EXIST);
+            $reply = $DB->get_record('spatialforum_posts', ['trackid' => $id], '*', MUST_EXIST);
+            $this->assertEquals($root->id, $track->parenttrackid);
+            $this->assertEquals($post->id, $track->originpostid);
+            $this->assertEquals($post->id, $reply->replytoid);
+            $this->assertNotEquals('#ffffff', $track->colour);
+        }
+        $second = $DB->get_record('spatialforum_tracks', ['id' => $secondid], '*', MUST_EXIST);
+        $secondpost = $DB->get_record('spatialforum_posts', ['trackid' => $secondid], '*', MUST_EXIST);
+        $data = forum::export_view_data($activity, $cm, $second, $context);
+        $this->assertStringContainsString('Original body', $data['posts'][0]['replycontext'][0]['message']);
+        $thirdid = forum::reply_in_new_track($activity, $second, $secondpost->id, $user->id,
+            'Reply to reply', 'Re: Different subject', 'Third answer', FORMAT_HTML);
+        $this->assertEquals([$root->id, $secondid, $thirdid],
+            array_column(forum::get_path($thirdid, $activity->id), 'id'));
+        $this->assertSame(1, $DB->count_records('spatialforum_posts', ['trackid' => $root->id]));
+    }
+
+    public function test_new_reply_tracks_respect_locks_depth_and_origin_scope(): void {
+        global $DB;
+
+        [$activity, $track, $post, $user, $context, $cm] = $this->fixture();
+        foreach (['locked', 'depth', 'deleted', 'wrongtrack'] as $case) {
+            $testtrack = clone $track;
+            $testactivity = clone $activity;
+            if ($case === 'locked') {
+                $testtrack->locked = 1;
+            } else if ($case === 'depth') {
+                $testactivity->maxdepth = 1;
+                $data = forum::export_view_data($testactivity, $cm, $track, $context);
+                $this->assertFalse($data['posts'][0]['canreply']);
+            } else if ($case === 'deleted') {
+                $DB->set_field('spatialforum_posts', 'deleted', 1, ['id' => $post->id]);
+            } else {
+                $testtrack->id = -1;
+            }
+            try {
+                forum::reply_in_new_track($testactivity, $testtrack, $post->id, $user->id,
+                    'Rejected', 'Subject', 'Answer', FORMAT_HTML);
+                $this->fail('Invalid reply accepted: ' . $case);
+            } catch (\moodle_exception $e) {
+                $this->assertSame(1, $DB->count_records('spatialforum_tracks', ['spatialforumid' => $activity->id]));
+                $this->assertSame(1, $DB->count_records('spatialforum_posts', ['spatialforumid' => $activity->id]));
+            }
+            $DB->set_field('spatialforum_posts', 'deleted', 0, ['id' => $post->id]);
+        }
+        $role = $DB->get_record('role', ['shortname' => 'student'], '*', MUST_EXIST);
+        assign_capability('mod/spatialforum:startbranch', CAP_PROHIBIT, $role->id, $context->id);
+        reload_all_capabilities();
+        $data = forum::export_view_data($activity, $cm, $track, $context);
+        $this->assertFalse($data['posts'][0]['canreply']);
+        $this->assertTrue($data['canreply']); // A new top-level post does not create a track.
+    }
+
     public function test_likes_can_be_disabled_at_both_levels_without_losing_data(): void {
         global $DB;
 

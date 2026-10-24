@@ -16,6 +16,7 @@ $string['dislike'] = 'Dislike';
 $string['undislike'] = 'Fjern dislike';
 $string['dislikes'] = 'Dislikes';
 $string['includeparent'] = 'Medtag det foregående indlæg som citat';
+$string['replystartsnewtrack'] = 'Dit svar starter et nyt samtalespor med forbindelse tilbage til dette indlæg. Du kan ændre sporets navn og svarets emne nedenfor.';
 $string['includeparent_help'] = 'Vælg dette for at vise det indlæg, du svarer på, som et tydeligt markeret citat i dit svar. Forbindelsen til indlægget bevares også uden citat. Citatet følger ændringer og sletning af originalen.';
 $string['inreplyto'] = 'Svar på indlæg';
 $string['originalunavailable'] = 'Det oprindelige indlæg er ikke længere tilgængeligt.';

@@ -16,6 +16,7 @@ $string['dislike'] = 'Dislike';
 $string['undislike'] = 'Remove dislike';
 $string['dislikes'] = 'Dislikes';
 $string['includeparent'] = 'Include the previous post as a quote';
+$string['replystartsnewtrack'] = 'Your reply starts a new conversation track linked back to this post. You can change the track name and reply subject below.';
 $string['includeparent_help'] = 'Select this to display the post you are replying to as a clearly marked quote in your reply. The reply relationship is kept even without a quote. The quote follows changes to or deletion of the original.';
 $string['inreplyto'] = 'In reply to';
 $string['originalunavailable'] = 'The original post is no longer available.';

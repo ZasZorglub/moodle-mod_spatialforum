@@ -8,7 +8,7 @@ Do not merge to main until the target Moodle/Workplace checks below pass.
 - Reply with the parent-quote checkbox off (default), then on. The parent must only appear in the saved reply when selected, including in a manually created child track. In both cases preserve the reply relationship. Trigger validation failure and confirm the checkbox choice survives.
 - Upgrade 0.2.0 with existing likes and replies: likes stay positive and published parent quotes remain visible. New replies default to no quote. Check the new `reaction` and `showparent` fields and no pending upgrade on a second visit.
 - Backup/restore preserves dislike values, quote preferences and reply parents across tracks. Privacy export includes the reaction and quote preference; privacy deletion also removes dislike-only users.
-- The requested automatic-branch threshold is awaiting the author's clarification (A → B → C → D, branch at C or D). Existing Reply routing is unchanged in this revision.
+- Every Reply to an existing post opens a new-track form with editable name/subject. Save two replies to A: each gets its own child track whose origin is A. Reply to B: create a child of B's track. Test with and without quote. Cancelling creates nothing. At maximum depth, without branch permission or while locked, both the UI and direct requests must prevent replies that would create a track.
 
 ## Reported issues and implemented changes
 
