@@ -3,15 +3,16 @@
 
 namespace mod_spatialforum;
 
+use PHPUnit\Framework\Attributes\CoversFunction;
+
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->libdir . '/upgradelib.php');
 require_once($CFG->dirroot . '/mod/spatialforum/db/upgrade.php');
 
-/** Existing activities and posts survive the schema upgrade.
- * @covers ::xmldb_spatialforum_upgrade
- */
+/** Existing activities and posts survive the schema upgrade. */
+#[CoversFunction('xmldb_spatialforum_upgrade')]
 final class upgrade_test extends \advanced_testcase {
     public function test_upgrade_from_mvp_preserves_activity_and_posts(): void {
         global $DB;

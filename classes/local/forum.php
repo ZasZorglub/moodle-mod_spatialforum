@@ -316,7 +316,8 @@ class forum {
         $users = [];
         $userids = array_unique(array_column($posts, 'userid'));
         if ($userids) {
-            $users = $DB->get_records_list('user', 'id', $userids, '', 'id,firstname,lastname,picture,imagealt,email');
+            $userfields = 'id,' . implode(',', \core_user\fields::get_name_fields());
+            $users = $DB->get_records_list('user', 'id', $userids, '', $userfields);
         }
 
         $postdata = [];

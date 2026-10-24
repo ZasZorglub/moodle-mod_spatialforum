@@ -5,13 +5,13 @@ namespace mod_spatialforum;
 
 use mod_spatialforum\local\forum;
 use mod_spatialforum\privacy\provider;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 defined('MOODLE_INTERNAL') || die();
 
-/** Regression tests using a real Moodle database and capability system.
- * @covers \mod_spatialforum\local\forum
- * @covers \mod_spatialforum\privacy\provider
- */
+/** Regression tests using a real Moodle database and capability system. */
+#[CoversClass(forum::class)]
+#[CoversClass(provider::class)]
 final class forum_test extends \advanced_testcase {
     /** Create an enrolled participant, activity, root track and first post. */
     private function fixture(): array {
@@ -122,10 +122,10 @@ final class forum_test extends \advanced_testcase {
         $other = $this->getDataGenerator()->create_user();
         forum::set_like($activity, $post, $other->id, true);
         $contexts = provider::get_contexts_for_userid($other->id)->get_contextids();
-        $this->assertContains($context->id, $contexts);
+        $this->assertContains((int) $context->id, array_map('intval', $contexts));
         $userlist = new \core_privacy\local\request\userlist($context, 'mod_spatialforum');
         provider::get_users_in_context($userlist);
-        $this->assertContains($other->id, $userlist->get_userids());
+        $this->assertContains((int) $other->id, array_map('intval', $userlist->get_userids()));
         $approved = new \core_privacy\local\request\approved_contextlist($other, 'mod_spatialforum', [$context->id]);
         provider::delete_data_for_user($approved);
         $this->assertFalse($DB->record_exists('spatialforum_likes', ['userid' => $other->id]));

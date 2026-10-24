@@ -5,16 +5,16 @@ namespace mod_spatialforum;
 
 use mod_spatialforum\local\forum;
 use mod_spatialforum\privacy\provider;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->libdir . '/phpunit/classes/restore_date_testcase.php');
 
-/** Backup/restore preserves reply, track and like relationships.
- * @covers \backup_spatialforum_activity_structure_step
- * @covers \restore_spatialforum_activity_structure_step
- */
+/** Backup/restore preserves reply, track and like relationships. */
+#[CoversClass(\backup_spatialforum_activity_structure_step::class)]
+#[CoversClass(\restore_spatialforum_activity_structure_step::class)]
 final class backup_test extends \restore_date_testcase {
     public function test_restore_remaps_quotes_likes_and_privacy_tombstones(): void {
         global $DB;

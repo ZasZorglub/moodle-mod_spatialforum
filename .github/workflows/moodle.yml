@@ -41,4 +41,6 @@ jobs:
       - name: Upgrade savepoints
         run: moodle-plugin-ci savepoints
       - name: Moodle regression tests
-        run: moodle-plugin-ci phpunit --fail-on-warning
+        run: |
+          cd moodle
+          vendor/bin/phpunit --configuration mod/spatialforum/phpunit.xml --fail-on-warning --fail-on-notice --display-notices --display-deprecations --display-phpunit-deprecations
