@@ -162,10 +162,17 @@ class forum {
             'id' => $originpostid, 'trackid' => $parenttrack->id,
             'spatialforumid' => $activity->id, 'deleted' => 0,
         ], '*', MUST_EXIST);
+        if (count(self::get_path($parenttrack->id, $activity->id)) >= $activity->maxdepth) {
+            throw new \moodle_exception('maxdepthreached', 'mod_spatialforum');
+        }
         $transaction = $DB->start_delegated_transaction();
-        $trackid = self::create_track($activity, $parenttrack, $originpostid, $branchname);
-        self::create_post($activity, $trackid, $userid, $subject, $message, $messageformat, $originpostid, $showparent);
-        $transaction->allow_commit();
+        try {
+            $trackid = self::create_track($activity, $parenttrack, $originpostid, $branchname);
+            self::create_post($activity, $trackid, $userid, $subject, $message, $messageformat, $originpostid, $showparent);
+            $transaction->allow_commit();
+        } catch (\Throwable $e) {
+            $transaction->rollback($e);
+        }
         return $trackid;
     }
 
