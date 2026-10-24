@@ -1,0 +1,119 @@
+{{!
+    @template mod_spatialforum/main
+
+    Spatial navigation and posts for one conversation track.
+}}
+<div class="mod-spatialforum" data-region="spatialforum" style="--track-colour: {{trackcolour}};">
+    <header class="spatialforum-hero">
+        <div>
+            <div class="spatialforum-eyebrow">{{#str}}currenttrack, mod_spatialforum{{/str}}</div>
+            <h2>{{trackname}}</h2>
+            <div class="spatialforum-depth" aria-label="{{#str}}depthlabel, mod_spatialforum{{/str}}">
+                {{#str}}depth, mod_spatialforum{{/str}} {{depth}} {{#str}}of, mod_spatialforum{{/str}} {{maxdepth}}
+            </div>
+        </div>
+        <div class="spatialforum-actions">
+            {{#canreply}}
+                <a class="btn btn-primary" href="{{newposturl}}">{{#str}}postreply, mod_spatialforum{{/str}}</a>
+            {{/canreply}}
+            {{#canmoderate}}
+                <a class="btn btn-outline-secondary" href="{{moderateurl}}">{{moderatelabel}}</a>
+            {{/canmoderate}}
+        </div>
+    </header>
+
+    {{#locked}}
+        <div class="alert alert-warning" role="status">{{#str}}forumlocked, mod_spatialforum{{/str}}</div>
+    {{/locked}}
+
+    <div class="spatialforum-layout">
+        <aside class="spatialforum-route" aria-label="{{#str}}yourroute, mod_spatialforum{{/str}}">
+            <h3>{{#str}}yourroute, mod_spatialforum{{/str}}</h3>
+            <ol>
+                {{#path}}
+                    <li class="{{#active}}is-active{{/active}}" style="--node-colour: {{colour}};">
+                        <a href="{{url}}" data-track-link>
+                            <span class="spatialforum-route-dot" aria-hidden="true"></span>
+                            <span>
+                                <small>{{#str}}depth, mod_spatialforum{{/str}} {{depth}}</small>
+                                <strong>{{name}}</strong>
+                            </span>
+                        </a>
+                    </li>
+                {{/path}}
+            </ol>
+        </aside>
+
+        <main class="spatialforum-stage" data-region="stage">
+            <div class="spatialforum-depth-lines" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+            </div>
+            <section class="spatialforum-plane" data-region="plane" aria-label="{{trackname}}">
+                <div class="spatialforum-plane-head">
+                    <span class="spatialforum-colour-mark" aria-hidden="true"></span>
+                    <div>
+                        <span>{{#str}}conversationtrack, mod_spatialforum{{/str}}</span>
+                        <h3>{{trackname}}</h3>
+                    </div>
+                </div>
+
+                {{^hasposts}}
+                    <div class="spatialforum-empty">
+                        <p>{{#str}}noposts, mod_spatialforum{{/str}}</p>
+                        {{#canreply}}<a href="{{newposturl}}" class="btn btn-primary">{{#str}}startconversation, mod_spatialforum{{/str}}</a>{{/canreply}}
+                    </div>
+                {{/hasposts}}
+
+                <div class="spatialforum-posts">
+                    {{#posts}}
+                        <article class="spatialforum-post {{#unread}}is-unread{{/unread}}" id="post-{{id}}">
+                            <div class="spatialforum-avatar" aria-hidden="true">{{initials}}</div>
+                            <div class="spatialforum-post-body">
+                                <header>
+                                    <div>
+                                        <h4>{{subject}}</h4>
+                                        <span>{{author}} · {{time}}</span>
+                                    </div>
+                                    {{#unread}}<span class="badge rounded-pill text-bg-primary">{{#str}}unread, mod_spatialforum{{/str}}</span>{{/unread}}
+                                </header>
+                                <div class="spatialforum-message">{{{message}}}</div>
+                                <footer>
+                                    {{#canreply}}<a href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
+                                    {{#canbranch}}<a href="{{branchurl}}">{{#str}}branchfromhere, mod_spatialforum{{/str}}</a>{{/canbranch}}
+                                    {{#candelete}}<a href="{{deleteurl}}" class="text-danger" data-confirm-delete data-confirm-message="{{#str}}confirmdeletepost, mod_spatialforum{{/str}}">{{#str}}delete{{/str}}</a>{{/candelete}}
+                                </footer>
+                            </div>
+                        </article>
+                    {{/posts}}
+                </div>
+
+                {{#haschildren}}
+                    <section class="spatialforum-branches" aria-labelledby="spatialforum-branches-heading">
+                        <h3 id="spatialforum-branches-heading">{{#str}}continuingtracks, mod_spatialforum{{/str}}</h3>
+                        <div class="spatialforum-branch-grid">
+                            {{#children}}
+                                <a class="spatialforum-branch" href="{{url}}" data-track-link style="--branch-colour: {{colour}};">
+                                    <span class="spatialforum-branch-layer" aria-hidden="true"></span>
+                                    <strong>{{name}}</strong>
+                                    <span>{{postcount}} {{#str}}posts, mod_spatialforum{{/str}}</span>
+                                    <b aria-hidden="true">→</b>
+                                </a>
+                            {{/children}}
+                        </div>
+                    </section>
+                {{/haschildren}}
+            </section>
+        </main>
+
+        <aside class="spatialforum-map" aria-label="{{#str}}alltracks, mod_spatialforum{{/str}}">
+            <h3>{{#str}}alltracks, mod_spatialforum{{/str}}</h3>
+            <nav>
+                {{#tree}}
+                    <a href="{{url}}" data-track-link class="{{#active}}is-active{{/active}} {{#onpath}}is-on-path{{/onpath}}" style="--map-colour: {{colour}}; --map-indent: {{indent}}px;">
+                        <span aria-hidden="true"></span>{{name}}
+                    </a>
+                {{/tree}}
+            </nav>
+        </aside>
+    </div>
+</div>
