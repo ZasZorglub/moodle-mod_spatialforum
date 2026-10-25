@@ -10,7 +10,13 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 This is a staging release with automated Moodle 5.0 regression tests. It must also be tested on a staging copy of the exact Moodle or Workplace build before production use.
 
-## 0.3.3 conversation map
+## 0.4.0 selective replies
+
+Select text in an opened post and choose **Reply to selection**. The reply form opens with that passage and a comment field. Select further passages in the original above the form and choose **Add selected text** to build an interleaved quote/comment reply. Remove any unwanted blocks before submitting. Up to ten blocks, each with a 4,000-character quotation/comment limit, form one reply and one automatically linked track. The regular message editor provides an optional closing comment. Plain Reply and optional whole-parent quoting remain available.
+
+Selections are checked against the source on the server. Stored blocks contain the reply author's comments, source offsets and a fingerprint; no copy of another author's text is stored. The visible quotation links to the source and its current author. A changed source displays a notice instead of a potentially incorrect passage; deleting or privacy-erasing a source hides its quotations. Previews contain only the reply author's own text. Backup/restore and Privacy API export/deletion include the new nullable `replyparts` field. Selection/composer interactions require JavaScript; ordinary replies remain available without it.
+
+## Conversation map
 
 The map uses a white background. Main-track columns occupy 50% and reply-depth columns 25% of the visible plugin width, including their connector gutters. Columns have minimum widths of 320/240 pixels for small screens; extra depth scrolls horizontally instead of compressing cards. A continuous reply chain retains its colour; children at a fork receive palette colours. Wires match the destination segment and attach to card-summary edges. Main posts stay white with a neutral outline. Colours are derived for the map; stored track colours and backup data are unchanged. Very large maps (over 150 posts) retain the list fallback.
 

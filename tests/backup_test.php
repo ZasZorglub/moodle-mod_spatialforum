@@ -26,11 +26,14 @@ final class backup_test extends \restore_date_testcase {
         $this->getDataGenerator()->enrol_user($other->id, $course->id, 'student');
         $root = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid]);
         $first = forum::create_post($activity, $root->id, $user->id, 'Original', 'Parent', FORMAT_HTML);
-        $reply = forum::create_post($activity, $root->id, $other->id, 'Reply', 'Answer', FORMAT_HTML, $first, true);
+        $reply = forum::create_post($activity, $root->id, $other->id, 'Reply', 'Answer', FORMAT_HTML, $first, true,
+            json_encode([['quote' => 'Parent', 'comment' => 'Note']]));
+        $replyparts = $DB->get_field('spatialforum_posts', 'replyparts', ['id' => $reply]);
         $replycreated = $DB->get_field('spatialforum_posts', 'timecreated', ['id' => $reply]);
         $DB->set_field('spatialforum_posts', 'timemodified', $replycreated + 3600, ['id' => $reply]);
         $branchid = forum::create_track($activity, $root, $reply, 'Child track');
-        forum::create_post($activity, $branchid, $other->id, 'Child', 'Branch body', FORMAT_HTML, $reply);
+        forum::create_post($activity, $branchid, $other->id, 'Child', 'Branch body', FORMAT_HTML, $reply, false,
+            json_encode([['quote' => 'Answer', 'comment' => 'Child note']]));
         // Likes remain in backups even while the activity hides them.
         $DB->insert_record('spatialforum_likes', (object) [
             'userid' => $other->id, 'postid' => $reply, 'reaction' => -1, 'timecreated' => time(),
@@ -47,6 +50,7 @@ final class backup_test extends \restore_date_testcase {
         $newreply = $DB->get_record('spatialforum_posts', ['spatialforumid' => $new->id, 'subject' => 'Reply'], '*', MUST_EXIST);
         $parent = $DB->get_record('spatialforum_posts', ['id' => $newreply->replytoid], '*', MUST_EXIST);
         $this->assertEquals(1, $newreply->showparent);
+        $this->assertSame($replyparts, $newreply->replyparts);
         $this->assertEquals(3600, $newreply->timemodified - $newreply->timecreated);
         $this->assertEquals($new->id, $parent->spatialforumid);
         $this->assertEquals(1, $parent->deleted);
@@ -60,5 +64,12 @@ final class backup_test extends \restore_date_testcase {
         $newchildpost = $DB->get_record('spatialforum_posts', ['trackid' => $newchild->id], '*', MUST_EXIST);
         $this->assertEquals(0, $newchildpost->showparent);
         $this->assertEquals($newreply->id, $newchildpost->replytoid);
+        $newcm = get_coursemodule_from_instance('spatialforum', $new->id);
+        $newcontext = \context_module::instance($newcm->id);
+        $this->assertStringContainsString('Answer', \mod_spatialforum\local\excerpts::render(
+            $newchildpost, $newcontext, $newcm->id));
+        $this->assertStringContainsString('Child note', $newchildpost->replyparts);
+        $this->assertStringNotContainsString('Parent', \mod_spatialforum\local\excerpts::render(
+            $newreply, $newcontext, $newcm->id));
     }
 }

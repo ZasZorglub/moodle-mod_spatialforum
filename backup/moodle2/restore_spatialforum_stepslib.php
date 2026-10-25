@@ -78,6 +78,7 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $record->trackid = $this->get_mappingid('spatialforum_track', $record->trackid, 0);
         $record->replytoid = $this->get_mappingid('spatialforum_post', $record->replytoid, 0);
         $record->showparent = $record->showparent ?? 1;
+        $record->replyparts = $record->replyparts ?? null;
         $record->userid = $this->get_mappingid('user', $record->userid, 0);
         $record->timecreated = $this->apply_date_offset($record->timecreated);
         $record->timemodified = $this->apply_date_offset($record->timemodified);

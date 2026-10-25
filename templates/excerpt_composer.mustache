@@ -1,0 +1,17 @@
+{{!
+    @template mod_spatialforum/excerpt_composer
+    Selected source passages and the reply author's interleaved comments.
+}}
+<section class="spatialforum-excerpt-composer" data-excerpt-composer
+         data-comment-label="{{#str}}excerptcomment, mod_spatialforum{{/str}}"
+         data-remove-label="{{#str}}removeexcerpt, mod_spatialforum{{/str}}"
+         data-limit-label="{{#str}}excerptlimit, mod_spatialforum{{/str}}">
+    <h3>{{#str}}excerptreply, mod_spatialforum{{/str}}</h3>
+    <p>{{#str}}excerptinstructions, mod_spatialforum{{/str}}</p>
+    <button type="button" class="btn btn-outline-secondary" data-add-excerpt disabled>
+        {{#str}}addexcerpt, mod_spatialforum{{/str}}
+    </button>
+    <div data-excerpt-parts></div>
+    <p data-excerpt-status role="status"></p>
+    <noscript><p>{{#str}}excerptrequiresjs, mod_spatialforum{{/str}}</p></noscript>
+</section>

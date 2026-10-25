@@ -14,6 +14,32 @@ require_once($CFG->dirroot . '/mod/spatialforum/db/upgrade.php');
 /** Existing activities and posts survive the schema upgrade. */
 #[CoversFunction('xmldb_spatialforum_upgrade')]
 final class upgrade_test extends \advanced_testcase {
+    public function test_upgrade_from_033_adds_excerpt_storage_without_changing_posts(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $postid = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
+            get_admin()->id, 'Before', 'Unchanged body', FORMAT_HTML);
+        $table = new \xmldb_table('spatialforum_posts');
+        $field = new \xmldb_field('replyparts');
+        $manager = $DB->get_manager();
+        $manager->drop_field($table, $field);
+        set_config('version', 2026102503, 'mod_spatialforum');
+        try {
+            $this->assertTrue(xmldb_spatialforum_upgrade(2026102503));
+            $this->assertTrue($manager->field_exists($table, $field));
+            $this->assertSame('Unchanged body', $DB->get_field('spatialforum_posts', 'message', ['id' => $postid]));
+            $this->assertNull($DB->get_field('spatialforum_posts', 'replyparts', ['id' => $postid]));
+        } finally {
+            if (!$manager->field_exists($table, $field)) {
+                set_config('version', 2026102503, 'mod_spatialforum');
+                xmldb_spatialforum_upgrade(2026102503);
+            }
+        }
+    }
+
     public function test_upgrade_from_mvp_preserves_activity_and_posts(): void {
         global $DB;
 

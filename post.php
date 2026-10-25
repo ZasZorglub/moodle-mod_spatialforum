@@ -65,13 +65,22 @@ $form = new post_form(null, [
     'trackid' => $track->id,
     'originpostid' => $originpostid,
     'newtrack' => $createstrack,
+    'origin' => $origin ?? null,
+    'context' => $context,
 ]);
 
 if ($action === 'reply' && !empty($origin)) {
-    $form->set_data([
-        'subject' => forum::reply_subject($origin->subject),
-    ]);
+    $defaults = ['subject' => forum::reply_subject($origin->subject)];
+    if (optional_param('startquote', 0, PARAM_BOOL)) {
+        require_sesskey();
+        $selection = optional_param('initialexcerpt', '', PARAM_RAW);
+        $draft = json_encode([['quote' => $selection, 'comment' => '']], JSON_UNESCAPED_UNICODE);
+        \mod_spatialforum\local\excerpts::prepare($draft, $origin, $context);
+        $defaults['excerptdraft'] = $draft;
+    }
+    $form->set_data($defaults);
 }
+$PAGE->requires->js_call_amd('mod_spatialforum/excerpts', 'init');
 
 if ($form->is_cancelled()) {
     redirect($returnurl);
@@ -83,7 +92,7 @@ if ($form->is_cancelled()) {
     if ($createstrack) {
         $targettrackid = forum::reply_in_new_track($activity, $track, $originpostid, $USER->id,
             $action === 'branch' ? $data->branchname : $data->subject,
-            $data->subject, $message, $format, !empty($data->showparent));
+            $data->subject, $message, $format, !empty($data->showparent), (string) ($data->excerptdraft ?? '[]'));
         $newpostid = $DB->get_field('spatialforum_posts', 'id', ['trackid' => $targettrackid], MUST_EXIST);
     } else {
         $newpostid = forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);

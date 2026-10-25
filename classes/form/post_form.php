@@ -43,6 +43,10 @@ class post_form extends \moodleform {
         $mform->addRule('subject', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
 
         if (!empty($customdata['originpostid'])) {
+            global $OUTPUT;
+            $mform->addElement('hidden', 'excerptdraft', '[]');
+            $mform->setType('excerptdraft', PARAM_RAW);
+            $mform->addElement('html', $OUTPUT->render_from_template('mod_spatialforum/excerpt_composer', []));
             $mform->addElement('advcheckbox', 'showparent', get_string('includeparent', 'mod_spatialforum'));
             $mform->addHelpButton('showparent', 'includeparent', 'mod_spatialforum');
             $mform->setDefault('showparent', 0);
@@ -53,7 +57,9 @@ class post_form extends \moodleform {
             'trusttext' => false,
         ]);
         $mform->setType('message_editor', PARAM_RAW);
-        $mform->addRule('message_editor', null, 'required', null, 'client');
+        if (empty($customdata['originpostid'])) {
+            $mform->addRule('message_editor', null, 'required', null, 'client');
+        }
 
         $this->add_action_buttons(true, get_string($isbranch ? 'createbranch' : 'postreply', 'mod_spatialforum'));
     }
@@ -75,7 +81,19 @@ class post_form extends \moodleform {
             $errors['branchname'] = get_string('required');
         }
         $message = trim((string) ($data['message_editor']['text'] ?? ''));
-        if ($message === '') {
+        $hascomments = false;
+        if (!empty($this->_customdata['origin'])) {
+            try {
+                $parts = \mod_spatialforum\local\excerpts::prepare((string) ($data['excerptdraft'] ?? '[]'),
+                    $this->_customdata['origin'], $this->_customdata['context']);
+                foreach (json_decode($parts, true) as $part) {
+                    $hascomments = $hascomments || trim($part['comment']) !== '';
+                }
+            } catch (\moodle_exception $e) {
+                $errors['message_editor'] = get_string('invalidexcerpt', 'mod_spatialforum');
+            }
+        }
+        if (trim(strip_tags($message)) === '' && !$hascomments) {
             $errors['message_editor'] = get_string('required');
         }
         return $errors;

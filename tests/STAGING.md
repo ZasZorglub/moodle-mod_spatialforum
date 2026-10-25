@@ -1,6 +1,13 @@
-# Staging validation for 0.3.1
+# Staging validation for 0.4.0
 
 Do not merge to main until the target Moodle/Workplace checks below pass.
+
+## 0.4.0 selective replies
+
+- Select text inside an opened post, choose Reply to selection, add a comment, then select another passage in the original above the form. Add it and write a second comment. Publish one reply; verify quote/comment order, source links and automatic child-track creation.
+- Remove a block before submitting; cancel a draft; submit only comments with no final-editor text; verify empty replies fail. Check selection by mouse, keyboard and touch in target browsers. Embedded quotations and selections crossing outside the source must not be attributed to its author.
+- Check markup, Danish characters and whitespace. Forge an absent passage or exceed ten blocks / 4,000 characters; the server must reject it. Source revision changes must display a notice; deletion/privacy erasure must hide quotations without erasing the reply author's comments. Previews must exclude quoted source text.
+- Restore a backup into another course and verify source links, quote text and comments after ID remapping. Upgrade from 0.3.3 without changing existing posts/read/reaction records. Privacy exports include own comments and references; privacy deletion clears them.
 
 ## 0.3.1 timestamps
 

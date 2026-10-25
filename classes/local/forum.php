@@ -46,7 +46,7 @@ class forum {
             'subject' => format_string($post->subject),
             'author' => $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum'),
             'time' => userdate($post->timecreated),
-            'message' => format_text($post->message, $post->messageformat, ['context' => $context]),
+            'message' => excerpts::render($post, $context, $cmid),
             'url' => $url->out(false),
         ];
     }
@@ -149,7 +149,8 @@ class forum {
         string $subject,
         string $message,
         int $messageformat,
-        bool $showparent = false
+        bool $showparent = false,
+        string $excerptdraft = '[]'
     ): int {
         global $DB;
 
@@ -169,7 +170,8 @@ class forum {
         $transaction = $DB->start_delegated_transaction();
         try {
             $trackid = self::create_track($activity, $parenttrack, $originpostid, $branchname);
-            self::create_post($activity, $trackid, $userid, $subject, $message, $messageformat, $originpostid, $showparent);
+            self::create_post($activity, $trackid, $userid, $subject, $message, $messageformat,
+                $originpostid, $showparent, $excerptdraft);
             $transaction->allow_commit();
         } catch (\Throwable $e) {
             $transaction->rollback($e);
@@ -188,6 +190,7 @@ class forum {
      * @param int $messageformat
      * @param int $replytoid
      * @param bool $showparent Whether the author opted in to displaying the parent quote.
+     * @param string $excerptdraft Selected quotations and the reply author's comments.
      * @return int
      */
     public static function create_post(
@@ -198,16 +201,25 @@ class forum {
         string $message,
         int $messageformat,
         int $replytoid = 0,
-        bool $showparent = false
+        bool $showparent = false,
+        string $excerptdraft = '[]'
     ): int {
         global $DB;
 
+        $replyparts = null;
+        if ($excerptdraft !== '[]' && $excerptdraft !== '') {
+            $origin = $DB->get_record('spatialforum_posts', ['id' => $replytoid,
+                'spatialforumid' => $activity->id, 'deleted' => 0], '*', MUST_EXIST);
+            $cm = get_coursemodule_from_instance('spatialforum', $activity->id, 0, false, MUST_EXIST);
+            $replyparts = excerpts::prepare($excerptdraft, $origin, context_module::instance($cm->id));
+        }
         $now = time();
         return $DB->insert_record('spatialforum_posts', (object) [
             'spatialforumid' => $activity->id,
             'trackid' => $trackid,
             'replytoid' => $replytoid,
             'showparent' => $replytoid && $showparent ? 1 : 0,
+            'replyparts' => $replyparts,
             'userid' => $userid,
             'subject' => trim($subject),
             'message' => $message,
@@ -424,14 +436,15 @@ class forum {
             $fullname = $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum');
             $message = $post->deleted
                 ? get_string('deletedpost', 'mod_spatialforum')
-                : format_text($post->message, $post->messageformat, ['context' => $context]);
+                : excerpts::render($post, $context, $cm->id);
             $reaction = (int) ($userlikes[$post->id]->reaction ?? 0);
             $postdata[] = [
                 ...self::post_times($post),
                 'id' => $post->id,
                 'parentid' => $parentid,
                 'colour' => self::normalise_colour($posttrack->colour ?? '#ffffff'),
-                'preview' => self::preview($message),
+                'preview' => $post->deleted ? self::preview($message) :
+                    self::preview(s(excerpts::source($post, $context))),
                 'cantrackread' => $cantrackread && !$post->deleted,
                 'readlabel' => get_string($post->deleted ? 'removedpost' :
                     ($cantrackread ? 'readpost' : 'readnottracked'), 'mod_spatialforum'),

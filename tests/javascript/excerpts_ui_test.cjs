@@ -1,0 +1,54 @@
+// Selection and composer regressions against the actual template and shipped AMD modules.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const {parseHTML} = require('linkedom');
+const Mustache = require('mustache');
+const plugin = path.join(__dirname, '../..');
+const template = fs.readFileSync(path.join(plugin, 'templates/excerpt_composer.mustache'), 'utf8');
+for (const built of [false, true]) {
+    const filename = built ? 'amd/build/excerpts.min.js' : 'amd/src/excerpts.js';
+    const code = fs.readFileSync(path.join(plugin, filename), 'utf8');
+    const composer = Mustache.render(template, {str: () => text => text.split(',')[0]});
+    const {document, window} = parseHTML('<div class="spatialforum-reply-context"><div class="spatialforum-message">' +
+        '<p id="source">Målmænd: Pentz</p><blockquote>Someone else</blockquote></div></div>' +
+        '<form><input name="excerptdraft" value="[]">' + composer + '</form>');
+    window.HTMLElement.prototype.focus = function() {};
+    let inside = true, embedded = false, quote = 'Målmænd: Pentz';
+    const range = {get startContainer() {return inside ? document.getElementById('source') : document;},
+        get endContainer() {return inside ? document.getElementById('source') : document;},
+        intersectsNode: () => embedded};
+    const selection = {rangeCount: 1, isCollapsed: false, getRangeAt: () => range, toString: () => quote};
+    const context = vm.createContext({document, window: {getSelection: () => selection}});
+    if (built) {
+        context.define = (name, deps, factory) => {assert.equal(name, 'mod_spatialforum/excerpts'); factory().init();};
+        vm.runInContext(code, context);
+    } else {
+        vm.runInContext(code.replace('export const init', 'const init') + ';init();', context);
+    }
+    const select = () => document.dispatchEvent(new window.Event('selectionchange'));
+    const add = document.querySelector('[data-add-excerpt]');
+    const input = document.querySelector('[name="excerptdraft"]');
+    assert.equal(add.disabled, true);
+    select(); assert.equal(add.disabled, false);
+    add.click();
+    assert.equal(JSON.parse(input.value)[0].quote, quote);
+    const comment = document.querySelector('textarea');
+    comment.value = 'My first point'; comment.dispatchEvent(new window.Event('input'));
+    assert.equal(JSON.parse(input.value)[0].comment, 'My first point');
+    quote = '<img src=x onerror=alert(1)>'; select(); add.click();
+    assert.equal(document.querySelectorAll('[data-excerpt-parts] img').length, 0, 'Quote is text, never injected HTML');
+    assert.equal(document.querySelectorAll('textarea').length, 2);
+    document.querySelector('[data-excerpt-parts] button').click();
+    assert.equal(JSON.parse(input.value).length, 1);
+    assert.equal(JSON.parse(input.value)[0].quote, quote);
+    inside = false; select(); assert.equal(add.disabled, true);
+    inside = true; embedded = true; select(); assert.equal(add.disabled, true);
+    embedded = false; quote = 'x'.repeat(4001); select(); assert.equal(add.disabled, true);
+    quote = 'Valid'; select();
+    for (let n = 0; n < 12; n++) add.click();
+    assert.equal(JSON.parse(input.value).length, 10);
+    assert.ok(document.querySelector('[data-excerpt-status]').textContent);
+}
+console.log('PASS: excerpt source/build, selected text boundaries, multiple comments, escaping, removal and limits');

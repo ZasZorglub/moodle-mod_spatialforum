@@ -39,6 +39,7 @@ class provider implements
             'subject' => 'privacy:metadata:spatialforum_posts:subject',
             'message' => 'privacy:metadata:spatialforum_posts:message',
             'showparent' => 'privacy:metadata:spatialforum_posts:showparent',
+            'replyparts' => 'privacy:metadata:spatialforum_posts:replyparts',
             'timecreated' => 'privacy:metadata:spatialforum_posts:timecreated',
         ], 'privacy:metadata:spatialforum_posts');
         $collection->add_database_table('spatialforum_read', [
@@ -120,7 +121,7 @@ class provider implements
             $posts = $DB->get_records('spatialforum_posts', [
                 'spatialforumid' => $cm->instance,
                 'userid' => $userid,
-            ], 'timecreated ASC', 'id,trackid,replytoid,showparent,subject,message,messageformat,timecreated,timemodified');
+            ], 'timecreated ASC', 'id,trackid,replytoid,showparent,replyparts,subject,message,messageformat,timecreated,timemodified');
             $reads = $DB->get_records_sql(
                 'SELECT r.*
                    FROM {spatialforum_read} r
@@ -207,7 +208,7 @@ class provider implements
         if ($postids) {
             [$insql, $params] = $DB->get_in_or_equal($postids, SQL_PARAMS_NAMED);
             $DB->execute("UPDATE {spatialforum_posts}
-                            SET userid = 0, subject = '', message = '', deleted = 1
+                            SET userid = 0, subject = '', message = '', replyparts = NULL, deleted = 1
                           WHERE id {$insql}", $params);
         }
         $readids = $DB->get_fieldset_sql(

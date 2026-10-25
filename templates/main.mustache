@@ -92,6 +92,16 @@
                             {{/showlikes}}
                         </div>
                         {{#canreply}}<a class="btn btn-primary spatialforum-reply" href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
+                        {{#canreply}}
+                            <form method="post" action="{{replyurl}}" class="spatialforum-excerpt-start" data-excerpt-start>
+                                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                <input type="hidden" name="startquote" value="1">
+                                <input type="hidden" name="initialexcerpt" value="">
+                                <button type="submit" class="btn btn-outline-secondary" disabled>
+                                    {{#str}}replyselection, mod_spatialforum{{/str}}
+                                </button>
+                            </form>
+                        {{/canreply}}
                         {{#haschildren}}
                             <div class="spatialforum-children">
                                 <h3>{{#str}}replieshere, mod_spatialforum{{/str}}</h3>
