@@ -305,6 +305,10 @@ final class forum_test extends \advanced_testcase {
         $this->assertFalse($posts[$child->id]['canreply']);
         $this->assertTrue($posts[$post->id]['canreply']);
         $this->assertEquals(1, $posts[$child->id]['dislikecount']);
+        $lockedtrack = $DB->get_record('spatialforum_tracks', ['id' => $childid], '*', MUST_EXIST);
+        $lockedview = forum::export_view_data($activity, $cm, $lockedtrack, $context, true);
+        $this->assertFalse($lockedview['locked']); // One locked branch must not label the entire map locked.
+        $this->assertTrue($lockedview['canreply']); // A new root post remains available.
         $DB->set_field('spatialforum_tracks', 'locked', 0, ['id' => $childid]);
         $posts = array_column(forum::export_view_data($activity, $cm, $root, $context, true)['posts'], null, 'id');
         $this->assertTrue($posts[$child->id]['canreply']);

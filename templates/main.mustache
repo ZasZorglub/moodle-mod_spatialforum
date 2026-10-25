@@ -48,6 +48,7 @@
                             <time>{{time}}</time>
                             <button type="button" class="spatialforum-close" data-close>{{#str}}closepost, mod_spatialforum{{/str}}</button>
                         </div>
+                        {{#tracklocked}}<p class="alert alert-warning">{{#str}}forumlocked, mod_spatialforum{{/str}}</p>{{/tracklocked}}
                         {{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
                         <div class="spatialforum-message">{{{message}}}</div>
                         {{#unread}}

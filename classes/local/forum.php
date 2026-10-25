@@ -574,7 +574,7 @@ class forum {
             'tracklocked' => !empty($currenttrack->locked),
             'moderateurl' => $moderateurl->out(false),
             'moderatelabel' => get_string($currenttrack->locked ? 'unlocktrack' : 'locktrack', 'mod_spatialforum'),
-            'locked' => !empty($activity->locked) || !empty($currenttrack->locked),
+            'locked' => !empty($activity->locked) || (!$wholemap && !empty($currenttrack->locked)),
         ];
     }
 
