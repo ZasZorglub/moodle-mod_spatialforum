@@ -429,7 +429,7 @@ class forum {
                 'id' => $post->id,
                 'parentid' => $parentid,
                 'colour' => self::normalise_colour($posttrack->colour ?? '#ffffff'),
-                'preview' => trim(preg_replace('/\s+/u', ' ', html_to_text($message, 0, false))),
+                'preview' => self::preview($message),
                 'cantrackread' => $cantrackread && !$post->deleted,
                 'readlabel' => get_string($post->deleted ? 'removedpost' :
                     ($cantrackread ? 'readpost' : 'readnottracked'), 'mod_spatialforum'),
@@ -576,6 +576,15 @@ class forum {
             'moderatelabel' => get_string($currenttrack->locked ? 'unlocktrack' : 'locktrack', 'mod_spatialforum'),
             'locked' => !empty($activity->locked) || !empty($currenttrack->locked),
         ];
+    }
+
+    /** Plain preview of already formatted content, preserving the author's letter case. */
+    private static function preview(string $formatted): string {
+        $formatted = preg_replace('~<(script|style)\b[^>]*>.*?</\1>~is', '', $formatted);
+        $formatted = preg_replace('~<(?:br\b[^>]*|/(?:p|div|li|h[1-6]|tr|blockquote))\s*>~i', ' ', $formatted);
+        $text = html_entity_decode(strip_tags($formatted), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = trim(preg_replace('/\s+/u', ' ', $text));
+        return \core_text::substr($text, 0, 512);
     }
 
     /**
