@@ -55,5 +55,9 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         // Timestamps already exist; only their presentation changes.
         upgrade_mod_savepoint(true, 2026102501, 'spatialforum');
     }
+    if ($oldversion < 2026102503) {
+        // White scrolling map; no schema or stored user-data changes.
+        upgrade_mod_savepoint(true, 2026102503, 'spatialforum');
+    }
     return true;
 }

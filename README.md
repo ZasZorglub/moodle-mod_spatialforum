@@ -10,14 +10,16 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 This is a staging release with automated Moodle 5.0 regression tests. It must also be tested on a staging copy of the exact Moodle or Workplace build before production use.
 
-## 0.3.0 conversation map
+## 0.3.3 conversation map
+
+The map uses a white background. Main-track columns occupy 50% and reply-depth columns 25% of the visible plugin width, including their connector gutters. Columns have minimum widths of 320/240 pixels for small screens; extra depth scrolls horizontally instead of compressing cards. A continuous reply chain retains its colour; children at a fork receive palette colours. Wires match the destination segment and attach to card-summary edges. Main posts stay white with a neutral outline. Colours are derived for the map; stored track colours and backup data are unchanged. Very large maps (over 150 posts) retain the list fallback.
 
 Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and an Edited timestamp when an undeleted post's modification time is later than its creation time. Times follow the viewer's Moodle timezone/locale; quoted originals show the same metadata. Reading and reacting do not change a post's edit time. This is timestamp presentation, not a new post-editing workflow or revision history.
 
 - The complete activity is a connected map of posts. Opening a card unfolds its content in place and makes room in the hierarchy; only one post stays open. Close or Escape restores the overview. A highlighted route links back through ancestors.
 - Closed cards show two lines of the post's own text, with explicit Read/Unread labels. Previewing the map changes no read state. Opening a post sends an authenticated, session-key protected POST for that post only; the UI shows Read only after server confirmation. Each user's timestamps are independent. Existing timestamps are preserved during upgrade.
 - Participants simply choose Reply. The server automatically creates the linked child track and uses the editable reply subject as its internal name. There is no branch-name decision or duplicate Start track here action.
-- Native details and a Mark as read form work without JavaScript. Narrow, deep or dense maps reflow into the same hierarchy as a list; text and controls remain untransformed. Reduced-motion preferences are respected.
+- Native details and a Mark as read form work without JavaScript. Dense maps reflow into the same hierarchy as a list; text and controls remain untransformed. Reduced-motion preferences are respected.
 - The map currently loads the whole activity. Validate performance with representative course data; more than 150 posts use the list layout. This release does not introduce pagination or virtualisation.
 
 ## Install

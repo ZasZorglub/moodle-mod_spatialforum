@@ -41,7 +41,7 @@ async function exercise(script, cyclic = false) {
     let observedFocus = null;
     window.HTMLElement.prototype.focus = function() { observedFocus = this; };
     window.HTMLElement.prototype.getBoundingClientRect = function() {
-        return {width: this.classList.contains('spatialforum-stage') ? width : parseFloat(this.style.width) || 150,
+        return {width: this.classList.contains('spatialforum-viewport') ? width : parseFloat(this.style.width) || 150,
             height: this.classList.contains('spatialforum-post') ? (this.hasAttribute('open') ? 460 : 160) : 0};
     };
     const root = document.querySelector('[data-region="spatialforum"]');
@@ -75,7 +75,8 @@ async function exercise(script, cyclic = false) {
             x: parseFloat(el.style.left), y: parseFloat(el.style.top), w: parseFloat(el.style.width),
             h: el.getBoundingClientRect().height}));
         for (const a of boxes) {
-            assert.ok(a.x >= 0 && a.x + a.w <= width + 1, a.id + ' outside map');
+            const canvasWidth = parseFloat(root.querySelector('[data-region="stage"]').style.width);
+            assert.ok(a.x >= 0 && a.x + a.w <= canvasWidth + 1, a.id + ' outside scroll canvas');
             for (const b of boxes) {
                 if (a.id >= b.id) continue;
                 assert.ok(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y,
@@ -91,6 +92,12 @@ async function exercise(script, cyclic = false) {
     assert.equal(card(12).querySelector('.spatialforum-dates time').getAttribute('datetime'), '2026-10-25T12:00:00+00:00');
     assert.equal(requests.length, 0, 'Loading previews must not mark posts read');
     assert.ok(root.classList.contains('is-map'));
+    assert.equal(parseFloat(card(10).style.width), width * 0.5 - 48);
+    assert.equal(parseFloat(card(11).style.width), Math.max(240, width * 0.25) - 48);
+    const wire = root.querySelector('[data-wire-post="12"]');
+    assert.equal(wire.getAttribute('stroke'), card(12).style.getPropertyValue('--post-colour'));
+    assert.equal(card(12).style.getPropertyValue('--post-colour'), card(11).style.getPropertyValue('--post-colour'));
+    assert.notEqual(card(13).style.getPropertyValue('--post-colour'), card(11).style.getPropertyValue('--post-colour'));
     noOverlap();
     if (cyclic) return;
     open(11);
@@ -124,8 +131,9 @@ async function exercise(script, cyclic = false) {
     assert.equal(observedFocus, card(12).querySelector('summary'));
     for (const post of posts) {open(post.id); await settle(); noOverlap();}
     width = 360;
-    observers.forEach(cb => cb([{target: root.querySelector('[data-region="stage"]')}]));
-    assert.ok(root.classList.contains('is-list'));
+    observers.forEach(cb => cb([{target: root.querySelector('[data-region="viewport"]')}]));
+    assert.ok(root.classList.contains('is-map'));
+    assert.ok(parseFloat(root.querySelector('[data-region="stage"]').style.width) > width);
     assert.equal(card(12).dataset.unread, '0');
     open(11); await settle();
     assert.equal(root.querySelectorAll('details[open]').length, 1);
