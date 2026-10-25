@@ -2,6 +2,8 @@
 // This file is part of Moodle - http://moodle.org/
 
 $string['pluginname'] = 'Samtalespor';
+$string['createdat'] = 'Oprettet {$a}';
+$string['editedat'] = 'Redigeret {$a}';
 $string['conversationmap'] = 'Samtalekort';
 $string['wholeconversation'] = 'Hele samtalen';
 $string['maintrack'] = 'Hovedspor';

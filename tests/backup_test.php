@@ -27,6 +27,8 @@ final class backup_test extends \restore_date_testcase {
         $root = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid]);
         $first = forum::create_post($activity, $root->id, $user->id, 'Original', 'Parent', FORMAT_HTML);
         $reply = forum::create_post($activity, $root->id, $other->id, 'Reply', 'Answer', FORMAT_HTML, $first, true);
+        $replycreated = $DB->get_field('spatialforum_posts', 'timecreated', ['id' => $reply]);
+        $DB->set_field('spatialforum_posts', 'timemodified', $replycreated + 3600, ['id' => $reply]);
         $branchid = forum::create_track($activity, $root, $reply, 'Child track');
         forum::create_post($activity, $branchid, $other->id, 'Child', 'Branch body', FORMAT_HTML, $reply);
         // Likes remain in backups even while the activity hides them.
@@ -45,6 +47,7 @@ final class backup_test extends \restore_date_testcase {
         $newreply = $DB->get_record('spatialforum_posts', ['spatialforumid' => $new->id, 'subject' => 'Reply'], '*', MUST_EXIST);
         $parent = $DB->get_record('spatialforum_posts', ['id' => $newreply->replytoid], '*', MUST_EXIST);
         $this->assertEquals(1, $newreply->showparent);
+        $this->assertEquals(3600, $newreply->timemodified - $newreply->timecreated);
         $this->assertEquals($new->id, $parent->spatialforumid);
         $this->assertEquals(1, $parent->deleted);
         $this->assertSame('', $parent->message);

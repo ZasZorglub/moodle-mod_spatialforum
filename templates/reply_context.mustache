@@ -6,7 +6,9 @@
     <div class="spatialforum-reply-label">{{#str}}inreplyto, mod_spatialforum{{/str}}</div>
     {{#available}}
         <a href="{{url}}">{{subject}}</a>
-        <div class="spatialforum-reply-author">{{author}} · {{time}}</div>
+        <div class="spatialforum-reply-author">{{author}} · <time datetime="{{creatediso}}">{{createdlabel}}</time>
+            {{#edited}} · <time datetime="{{editediso}}">{{editedlabel}}</time>{{/edited}}
+        </div>
         <div class="spatialforum-message">{{{message}}}</div>
     {{/available}}
     {{^available}}<p>{{#str}}originalunavailable, mod_spatialforum{{/str}}</p>{{/available}}

@@ -42,10 +42,17 @@
                                 {{^unread}}{{#cantrackread}}✓ {{/cantrackread}}{{readlabel}}{{/unread}}
                             </span>
                         </span>
+                        <span class="spatialforum-card-times">
+                            <time datetime="{{creatediso}}">{{createdshort}}</time>
+                            {{#edited}}<time datetime="{{editediso}}">{{editedshort}}</time>{{/edited}}
+                        </span>
                     </summary>
                     <div class="spatialforum-post-detail">
                         <div class="spatialforum-detail-head">
-                            <time>{{time}}</time>
+                            <div class="spatialforum-dates">
+                                <time datetime="{{creatediso}}">{{createdlabel}}</time>
+                                {{#edited}}<time datetime="{{editediso}}">{{editedlabel}}</time>{{/edited}}
+                            </div>
                             <button type="button" class="spatialforum-close" data-close>{{#str}}closepost, mod_spatialforum{{/str}}</button>
                         </div>
                         {{#tracklocked}}<p class="alert alert-warning">{{#str}}forumlocked, mod_spatialforum{{/str}}</p>{{/tracklocked}}

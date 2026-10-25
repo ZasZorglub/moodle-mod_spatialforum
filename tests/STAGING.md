@@ -1,6 +1,12 @@
-# Staging validation for 0.3.0
+# Staging validation for 0.3.1
 
 Do not merge to main until the target Moodle/Workplace checks below pass.
+
+## 0.3.1 timestamps
+
+- Closed and opened cards show labelled creation time. Only posts with a later modification timestamp show Edited; moderation tombstones must not be labelled as author edits. Existing posts have no new editing UI in this release.
+- Check date/time formatting in Danish/English and the viewer's Moodle timezone, including daylight-saving boundaries. Creation time stays unchanged after editing. Read marks and reactions do not update edit time.
+- Quoted originals show creation/edit metadata too. Backup/restore preserves the interval between creation and modification. No schema change or reset of existing data is required.
 
 ## 0.3.0 acceptance
 

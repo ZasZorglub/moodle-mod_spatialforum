@@ -51,5 +51,9 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         // Display/read behaviour changes only; existing schema and read timestamps are preserved.
         upgrade_mod_savepoint(true, 2026102500, 'spatialforum');
     }
+    if ($oldversion < 2026102501) {
+        // Timestamps already exist; only their presentation changes.
+        upgrade_mod_savepoint(true, 2026102501, 'spatialforum');
+    }
     return true;
 }

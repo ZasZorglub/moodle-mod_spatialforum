@@ -355,4 +355,48 @@ final class forum_test extends \advanced_testcase {
         $this->assertStringNotContainsString('Start track here', $html);
         $this->assertStringNotContainsString('data-track-link', $html);
     }
+
+    public function test_creation_and_edit_times_render_in_cards_and_quotes(): void {
+        global $DB, $OUTPUT;
+
+        [$activity, $root, $post, $user, $context, $cm] = $this->fixture();
+        $user->timezone = 'Europe/Copenhagen';
+        $this->setUser($user);
+        $created = 1700000000;
+        $DB->set_field('spatialforum_posts', 'timecreated', $created, ['id' => $post->id]);
+        $DB->set_field('spatialforum_posts', 'timemodified', $created, ['id' => $post->id]);
+        $data = forum::export_view_data($activity, $cm, $root, $context, true);
+        $this->assertFalse($data['posts'][0]['edited']);
+        $this->assertSame(gmdate('c', $created), $data['posts'][0]['creatediso']);
+        $expected = get_string('createdat', 'mod_spatialforum',
+            userdate($created, get_string('strftimedatetimeshort', 'langconfig')));
+        $this->assertSame($expected, $data['posts'][0]['createdshort']);
+        $html = $OUTPUT->render_from_template('mod_spatialforum/main', $data);
+        $this->assertStringContainsString(s($expected), $html);
+        $this->assertSame(2, substr_count($html, 'datetime="' . gmdate('c', $created) . '"'));
+        $this->assertSame('', $data['posts'][0]['editedlabel']);
+
+        $DB->set_field('spatialforum_posts', 'subject', 'An edited subject', ['id' => $post->id]);
+        $DB->set_field('spatialforum_posts', 'timemodified', $created + 3600, ['id' => $post->id]);
+        $data = forum::export_view_data($activity, $cm, $root, $context, true);
+        $this->assertTrue($data['posts'][0]['edited']);
+        $this->assertSame(gmdate('c', $created), $data['posts'][0]['creatediso']);
+        $this->assertSame(gmdate('c', $created + 3600), $data['posts'][0]['editediso']);
+        $html = $OUTPUT->render_from_template('mod_spatialforum/main', $data);
+        $this->assertSame(2, substr_count($html, 'datetime="' . gmdate('c', $created + 3600) . '"'));
+        $updated = $DB->get_record('spatialforum_posts', ['id' => $post->id], '*', MUST_EXIST);
+        $quote = forum::export_reply_context($updated, $context, $cm->id);
+        $this->assertTrue($quote['edited']);
+        $this->assertSame($data['posts'][0]['editedlabel'], $quote['editedlabel']);
+        forum::mark_read([$post->id], $user->id);
+        forum::set_reaction($activity, $updated, $user->id, 1);
+        $this->assertEquals($created + 3600, $DB->get_field('spatialforum_posts', 'timemodified', ['id' => $post->id]));
+
+        // Moderation removes content; its timestamp must not masquerade as an author edit.
+        $DB->set_field('spatialforum_posts', 'deleted', 1, ['id' => $post->id]);
+        $DB->set_field('spatialforum_posts', 'timemodified', $created + 7200, ['id' => $post->id]);
+        $data = forum::export_view_data($activity, $cm, $root, $context, true);
+        $this->assertFalse($data['posts'][0]['edited']);
+        $this->assertSame('', $data['posts'][0]['editedlabel']);
+    }
 }

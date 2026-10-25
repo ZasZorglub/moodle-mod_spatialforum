@@ -41,6 +41,7 @@ class forum {
         $url = new moodle_url('/mod/spatialforum/view.php', ['id' => $cmid, 'trackid' => $post->trackid]);
         $url->set_anchor('post-' . $post->id);
         return [
+            ...self::post_times($post),
             'available' => true,
             'subject' => format_string($post->subject),
             'author' => $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum'),
@@ -426,6 +427,7 @@ class forum {
                 : format_text($post->message, $post->messageformat, ['context' => $context]);
             $reaction = (int) ($userlikes[$post->id]->reaction ?? 0);
             $postdata[] = [
+                ...self::post_times($post),
                 'id' => $post->id,
                 'parentid' => $parentid,
                 'colour' => self::normalise_colour($posttrack->colour ?? '#ffffff'),
@@ -575,6 +577,22 @@ class forum {
             'moderateurl' => $moderateurl->out(false),
             'moderatelabel' => get_string($currenttrack->locked ? 'unlocktrack' : 'locktrack', 'mod_spatialforum'),
             'locked' => !empty($activity->locked) || (!$wholemap && !empty($currenttrack->locked)),
+        ];
+    }
+
+    /** Localised creation/edit labels plus unambiguous machine-readable timestamps. */
+    private static function post_times(stdClass $post): array {
+        $shortformat = get_string('strftimedatetimeshort', 'langconfig');
+        $edited = empty($post->deleted) && $post->timemodified > $post->timecreated;
+        return [
+            'creatediso' => gmdate('c', $post->timecreated),
+            'createdlabel' => get_string('createdat', 'mod_spatialforum', userdate($post->timecreated)),
+            'createdshort' => get_string('createdat', 'mod_spatialforum', userdate($post->timecreated, $shortformat)),
+            'edited' => $edited,
+            'editediso' => $edited ? gmdate('c', $post->timemodified) : '',
+            'editedlabel' => $edited ? get_string('editedat', 'mod_spatialforum', userdate($post->timemodified)) : '',
+            'editedshort' => $edited ? get_string('editedat', 'mod_spatialforum',
+                userdate($post->timemodified, $shortformat)) : '',
         ];
     }
 

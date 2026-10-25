@@ -12,6 +12,8 @@ This is a staging release with automated Moodle 5.0 regression tests. It must al
 
 ## 0.3.0 conversation map
 
+Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and an Edited timestamp when an undeleted post's modification time is later than its creation time. Times follow the viewer's Moodle timezone/locale; quoted originals show the same metadata. Reading and reacting do not change a post's edit time. This is timestamp presentation, not a new post-editing workflow or revision history.
+
 - The complete activity is a connected map of posts. Opening a card unfolds its content in place and makes room in the hierarchy; only one post stays open. Close or Escape restores the overview. A highlighted route links back through ancestors.
 - Closed cards show two lines of the post's own text, with explicit Read/Unread labels. Previewing the map changes no read state. Opening a post sends an authenticated, session-key protected POST for that post only; the UI shows Read only after server confirmation. Each user's timestamps are independent. Existing timestamps are preserved during upgrade.
 - Participants simply choose Reply. The server automatically creates the linked child track and uses the editable reply subject as its internal name. There is no branch-name decision or duplicate Start track here action.
@@ -55,7 +57,7 @@ This is a staging release with automated Moodle 5.0 regression tests. It must al
 
 ## Security and operations
 
-- Version `0.3.0 (staging)` upgrades MVP, 0.2.0 or 0.2.1 to `2026102500`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved.
+- Version `0.3.1 (staging)` upgrades MVP or earlier staging versions to `2026102501`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved.
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.

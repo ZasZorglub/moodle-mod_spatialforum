@@ -2,6 +2,8 @@
 // This file is part of Moodle - http://moodle.org/
 
 $string['pluginname'] = 'Spatial forum';
+$string['createdat'] = 'Created {$a}';
+$string['editedat'] = 'Edited {$a}';
 $string['conversationmap'] = 'Conversation map';
 $string['wholeconversation'] = 'Whole conversation';
 $string['maintrack'] = 'Main track';

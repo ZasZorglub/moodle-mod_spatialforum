@@ -20,6 +20,10 @@ async function exercise(script, cyclic = false) {
     ].map(p => ({...p, subject: 'Post ' + p.id, preview: 'Two lines of the actual answer, not a parent quote.',
         message: '<p>Full content for post ' + p.id + '</p>', author: 'Participant', colour: '#54b9ec',
         cantrackread: true, readlabel: 'Read', canreply: true, replyurl: '/reply?id=' + p.id,
+        creatediso: '2026-10-25T12:00:00+00:00', createdshort: 'Created 25/10, 13:00',
+        createdlabel: 'Created 25/10/2026, 13:00', edited: p.id === 12,
+        editediso: '2026-10-25T13:00:00+00:00', editedshort: 'Edited 25/10, 14:00',
+        editedlabel: 'Edited 25/10/2026, 14:00',
         showlikes: true, canlike: true, nextreaction: 1, nextdislike: -1, likecount: 0,
         dislikecount: 0, likelabel: 'Like', dislikelabel: 'Dislike'}));
     if (cyclic) {
@@ -38,7 +42,7 @@ async function exercise(script, cyclic = false) {
     window.HTMLElement.prototype.focus = function() { observedFocus = this; };
     window.HTMLElement.prototype.getBoundingClientRect = function() {
         return {width: this.classList.contains('spatialforum-stage') ? width : parseFloat(this.style.width) || 150,
-            height: this.classList.contains('spatialforum-post') ? (this.hasAttribute('open') ? 440 : 125) : 0};
+            height: this.classList.contains('spatialforum-post') ? (this.hasAttribute('open') ? 460 : 160) : 0};
     };
     const root = document.querySelector('[data-region="spatialforum"]');
     const scope = {document, window: {location: {hash: ''}, matchMedia: () => ({matches: true}), confirm: () => false,
@@ -81,6 +85,10 @@ async function exercise(script, cyclic = false) {
     }
     assert.equal(root.querySelectorAll('details').length, 6);
     assert.equal(root.querySelectorAll('.spatialforum-preview').length, 6);
+    assert.equal(card(10).querySelectorAll('summary time').length, 1);
+    assert.equal(card(12).querySelectorAll('summary time').length, 2);
+    assert.equal(card(12).querySelectorAll('.spatialforum-dates time').length, 2);
+    assert.equal(card(12).querySelector('.spatialforum-dates time').getAttribute('datetime'), '2026-10-25T12:00:00+00:00');
     assert.equal(requests.length, 0, 'Loading previews must not mark posts read');
     assert.ok(root.classList.contains('is-map'));
     noOverlap();
