@@ -142,11 +142,18 @@ export const init = () => {
         }
         lastWidth = width;
         const maxDepth = Math.max(...depths.values());
-        const openWidth = Math.min(360, Math.max(290, width * 0.36));
+        // Use the available Moodle content width instead of keeping the map in a
+        // narrow, centred strip.  The selected card gets a modest visual emphasis,
+        // while every depth column still receives a share of the full stage.
+        const gap = 24;
+        const available = Math.max(0, width - 32 - maxDepth * gap);
+        const emphasis = active ? 1.15 : 1;
+        const unit = available / (maxDepth + emphasis);
+        const openWidth = active ? unit * emphasis : unit;
         // Dense/deep maps reflow into the same unfolding hierarchy instead of horizontal clipping.
         const list = width < 690 || cards.length > 150 ||
-            (active ? maxDepth * 105 + openWidth + maxDepth * 24 + 32 > width :
-                (maxDepth + 1) * 130 + maxDepth * 24 + 32 > width);
+            (active ? maxDepth * 170 + openWidth + maxDepth * gap + 32 > width :
+                (maxDepth + 1) * 170 + maxDepth * gap + 32 > width);
         root.classList.toggle('is-list', list);
         root.classList.toggle('is-map', !list);
         if (list) {
@@ -155,8 +162,7 @@ export const init = () => {
             positions = new Map();
             return;
         }
-        const gap = active ? 24 : Math.max(24, (width - 32 - (maxDepth + 1) * 150) / Math.max(1, maxDepth));
-        const small = active ? Math.min(150, (width - 32 - maxDepth * gap - openWidth) / Math.max(1, maxDepth)) : 150;
+        const small = active ? unit : openWidth;
         const selectedDepth = depths.get(active);
         const widths = Array.from({length: maxDepth + 1}, (_, d) => d === selectedDepth ? openWidth : small);
         const total = widths.reduce((a, b) => a + b, 0) + maxDepth * gap;
