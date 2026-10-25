@@ -85,7 +85,7 @@ export const init = () => {
         });
         if (!path.length) {
             const label = document.createElement('span');
-            label.textContent = root.dataset.rootLabel;
+            label.textContent = root.dataset.wholeLabel;
             route.appendChild(label);
         }
         cards.forEach(card => {

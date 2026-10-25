@@ -38,6 +38,13 @@ jobs:
           MOODLE_BRANCH: MOODLE_500_STABLE
       - name: PHP syntax
         run: moodle-plugin-ci phplint
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Conversation map DOM regressions
+        run: |
+          npm ci --prefix plugin/tests/javascript --ignore-scripts --no-audit
+          npm test --prefix plugin/tests/javascript
       - name: Upgrade savepoints
         run: moodle-plugin-ci savepoints
       - name: Moodle regression tests

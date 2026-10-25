@@ -543,14 +543,15 @@ class forum {
             'action' => 'toggletrack',
             'trackid' => $currenttrack->id,
             'sesskey' => sesskey(),
-            'readurl' => (new moodle_url('/mod/spatialforum/read.php'))->out(false),
-            'readcount' => count(array_filter($postdata, static fn($item) => $item['unread'])),
-            'postcount' => count($postdata),
         ]);
+        $newposttrack = $wholemap ? $maptracks[$activity->roottrackid] : $currenttrack;
         return [
             'forumname' => format_string($activity->name),
             'cmid' => $cm->id,
             'sesskey' => sesskey(),
+            'readurl' => (new moodle_url('/mod/spatialforum/read.php'))->out(false),
+            'readcount' => count(array_filter($postdata, static fn($item) => $item['unread'])),
+            'postcount' => count($postdata),
             'likeurl' => (new moodle_url('/mod/spatialforum/like.php'))->out(false),
             'trackname' => format_string($currenttrack->name),
             'trackcolour' => self::normalise_colour($currenttrack->colour),
@@ -562,11 +563,12 @@ class forum {
             'children' => $childdata,
             'haschildren' => !empty($childdata),
             'tree' => $treedata,
-            'canreply' => $canreply,
+            'canreply' => has_capability('mod/spatialforum:reply', $context)
+                && !$activity->locked && !$newposttrack->locked,
             'newposturl' => (new moodle_url('/mod/spatialforum/post.php', [
                 'id' => $cm->id,
                 'action' => 'reply',
-                'trackid' => $currenttrack->id,
+                'trackid' => $newposttrack->id,
             ]))->out(false),
             'canmoderate' => $canmoderate,
             'tracklocked' => !empty($currenttrack->locked),

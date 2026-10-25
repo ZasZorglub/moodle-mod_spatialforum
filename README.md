@@ -55,13 +55,14 @@ This is a staging release with automated Moodle 5.0 regression tests. It must al
 
 ## Security and operations
 
-- Version `0.2.1 (staging)` upgrades MVP or 0.2.0 to `2026102401`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes remain positive reactions, and already published quotes are preserved.
+- Version `0.3.0 (staging)` upgrades MVP, 0.2.0 or 0.2.1 to `2026102500`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved.
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.
-- Each Reply to an existing post starts a new child track on submission. Two replies to the same post create separate sibling tracks; replying further creates another child track. The track name defaults to the parent subject and is editable. Cancelling creates nothing. New top-level posts remain in the current track. Replying requires both reply and branch capabilities, an unlocked conversation and room below the configured maximum track depth.
+- Each Reply to an existing post starts a new child track on submission. Two replies to the same post create separate sibling tracks; further replies create another child track. The server names the track from the reply subject. Cancelling creates nothing. New top-level posts use the main track. Replying requires both reply and branch capabilities, an unlocked conversation and room below the configured maximum track depth.
 - The spatial appearance is decorative: post content and controls are never transformed into 3D space. Reduced-motion preferences are respected.
 - GitHub Actions installs Moodle 5.0 with PHP 8.3/MariaDB and runs plugin tests. This does not replace visual testing on the target Moodle/Workplace site. See `tests/STAGING.md`.
+- `npm ci --prefix tests/javascript --ignore-scripts` and `npm test --prefix tests/javascript` run DOM checks against the real Mustache template and both AMD source/build. These exercise unfolding, read persistence/failures, keyboard close, responsive fallback and cyclic imported references; they do not replace real-browser layout testing.
 
 - All write operations use Moodle capabilities and session keys.
 - Post content is rendered through Moodle's text formatting pipeline.

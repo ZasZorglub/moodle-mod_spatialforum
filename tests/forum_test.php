@@ -343,6 +343,9 @@ final class forum_test extends \advanced_testcase {
         $data = forum::export_view_data($activity, $cm, $root, $context, true);
         $html = $OUTPUT->render_from_template('mod_spatialforum/main', $data);
         $this->assertSame(2, substr_count($html, '<details '));
+        $this->assertSame(2, $data['postcount']);
+        $this->assertStringContainsString('/mod/spatialforum/read.php', $data['readurl']);
+        $this->assertStringContainsString('data-read-url="' . s($data['readurl']) . '"', $html);
         $this->assertStringContainsString('data-parent-id="' . $post->id . '"', $html);
         $this->assertStringContainsString('Answer preview', $html);
         $this->assertStringNotContainsString('Start track here', $html);
