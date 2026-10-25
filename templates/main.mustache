@@ -6,16 +6,32 @@
      data-read-url="{{readurl}}" data-read-label="{{#str}}readpost, mod_spatialforum{{/str}}"
      data-unread-label="{{#str}}unread, mod_spatialforum{{/str}}" data-root-label="{{#str}}maintrack, mod_spatialforum{{/str}}"
      data-whole-label="{{#str}}wholeconversation, mod_spatialforum{{/str}}"
-     data-depth-label="{{#str}}depth, mod_spatialforum{{/str}}">
+     data-depth-label="{{#str}}replylevel, mod_spatialforum{{/str}}" data-initial-view="{{initialview}}"
+     data-copied-label="{{#str}}linkcopied, mod_spatialforum{{/str}}"
+     data-copy-failed-label="{{#str}}copyfailed, mod_spatialforum{{/str}}">
     <header class="spatialforum-hero">
         <div>
-            <div class="spatialforum-eyebrow">{{#str}}conversationmap, mod_spatialforum{{/str}}</div>
-            <h2>{{forumname}}</h2>
+            <h2 class="sr-only">{{#str}}conversationmap, mod_spatialforum{{/str}}</h2>
             <p class="spatialforum-summary">{{postcount}} {{#str}}posts, mod_spatialforum{{/str}} ·
                 <span data-region="unread-count">{{readcount}}</span> {{#str}}unreadposts, mod_spatialforum{{/str}}</p>
         </div>
         {{#canreply}}<a class="btn btn-primary" href="{{newposturl}}">{{#str}}newpost, mod_spatialforum{{/str}}</a>{{/canreply}}
     </header>
+    <div class="spatialforum-tools" data-region="tools" hidden>
+        <div class="spatialforum-view-switch" role="group" aria-label="{{#str}}viewmode, mod_spatialforum{{/str}}">
+            <button type="button" class="btn btn-outline-secondary" data-view="map" aria-pressed="false">{{#str}}mapview, mod_spatialforum{{/str}}</button>
+            <button type="button" class="btn btn-outline-secondary" data-view="list" aria-pressed="false">{{#str}}listview, mod_spatialforum{{/str}}</button>
+        </div>
+        <label class="spatialforum-search">{{#str}}searchposts, mod_spatialforum{{/str}}
+            <input type="search" class="form-control" data-region="search" aria-controls="spatialforum-posts-{{cmid}}">
+        </label>
+        <label class="spatialforum-unread-filter"><input type="checkbox" data-region="only-unread"> {{#str}}onlyunread, mod_spatialforum{{/str}}</label>
+        <button type="button" class="btn btn-outline-secondary" data-next-unread>{{#str}}nextunread, mod_spatialforum{{/str}}</button>
+    </div>
+    <p class="spatialforum-result-status" data-region="filter-status" role="status" hidden>{{#str}}filteredlist, mod_spatialforum{{/str}}</p>
+    <p class="spatialforum-result-status" data-region="map-limit" hidden>{{#str}}maplimit, mod_spatialforum{{/str}}</p>
+    <p class="spatialforum-result-status" data-region="no-results" role="status" hidden>{{#str}}noresults, mod_spatialforum{{/str}}</p>
+    <p class="spatialforum-result-status" data-region="feedback" role="status"></p>
     {{#locked}}<div class="alert alert-warning" role="status">{{#str}}forumlocked, mod_spatialforum{{/str}}</div>{{/locked}}
     <nav class="spatialforum-route" data-region="route" aria-label="{{#str}}yourroute, mod_spatialforum{{/str}}">
         <span>{{#str}}wholeconversation, mod_spatialforum{{/str}}</span>
@@ -23,11 +39,12 @@
     <div class="alert alert-warning spatialforum-read-error" data-region="read-error" role="alert" hidden>
         {{#str}}readsavefailed, mod_spatialforum{{/str}}
     </div>
+    <section class="spatialforum-reader" data-region="reader" aria-label="{{#str}}readingpost, mod_spatialforum{{/str}}" hidden></section>
     <div class="spatialforum-viewport" data-region="viewport" tabindex="0" role="region"
          aria-label="{{#str}}conversationmap, mod_spatialforum{{/str}}">
-    <main class="spatialforum-stage" data-region="stage" aria-label="{{#str}}conversationmap, mod_spatialforum{{/str}}">
+    <section class="spatialforum-stage" data-region="stage" aria-label="{{#str}}conversationmap, mod_spatialforum{{/str}}">
         <svg class="spatialforum-connectors" data-region="connectors" aria-hidden="true" focusable="false"></svg>
-        <div class="spatialforum-posts">
+        <div class="spatialforum-posts" id="spatialforum-posts-{{cmid}}">
             {{#posts}}
                 <details class="spatialforum-post {{#unread}}is-unread{{/unread}}" id="post-{{id}}"
                          data-post-id="{{id}}" data-parent-id="{{parentid}}" data-colour="{{colour}}"
@@ -55,7 +72,10 @@
                                 <time datetime="{{creatediso}}">{{createdlabel}}</time>
                                 {{#edited}}<time datetime="{{editediso}}">{{editedlabel}}</time>{{/edited}}
                             </div>
-                            <button type="button" class="spatialforum-close" data-close>{{#str}}closepost, mod_spatialforum{{/str}}</button>
+                            <div class="spatialforum-reader-actions">
+                                <button type="button" class="spatialforum-close spatialforum-js-only" data-copy-link>{{#str}}copylink, mod_spatialforum{{/str}}</button>
+                                <button type="button" class="spatialforum-close" data-close>{{#str}}backoverview, mod_spatialforum{{/str}}</button>
+                            </div>
                         </div>
                         {{#tracklocked}}<p class="alert alert-warning">{{#str}}forumlocked, mod_spatialforum{{/str}}</p>{{/tracklocked}}
                         {{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
@@ -100,6 +120,7 @@
                                 <button type="submit" class="btn btn-outline-secondary" disabled>
                                     {{#str}}replyselection, mod_spatialforum{{/str}}
                                 </button>
+                                <p class="spatialforum-selection-help">{{#str}}selectionhint, mod_spatialforum{{/str}}</p>
                             </form>
                         {{/canreply}}
                         {{#haschildren}}
@@ -121,7 +142,7 @@
             {{/posts}}
         </div>
         {{^hasposts}}<p class="spatialforum-empty">{{#str}}noposts, mod_spatialforum{{/str}}</p>{{/hasposts}}
-    </main>
+    </section>
     </div>
     <footer class="spatialforum-legend">
         <span><i class="spatialforum-root-dot" aria-hidden="true"></i>{{#str}}maintrack, mod_spatialforum{{/str}}</span>

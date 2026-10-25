@@ -20,10 +20,10 @@
 .mod-spatialforum a { color: inherit; }
 .mod-spatialforum h2, .mod-spatialforum h3 { color: inherit; margin: 0; }
 .mod-spatialforum .btn-primary { background: var(--sf-active); border-color: var(--sf-active); color: var(--sf-onactive); }
-.spatialforum-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 24px; }
+.spatialforum-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; }
 .spatialforum-hero h2 { font-size: 1.7rem; }
 .spatialforum-eyebrow { color: var(--sf-muted); font-size: .7rem; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 7px; }
-.spatialforum-summary { color: var(--sf-muted); font-size: .8rem; margin: 8px 0 0; }
+.spatialforum-summary { color: var(--sf-muted); font-size: .875rem; margin: 0; }
 .spatialforum-route { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 9px; min-height: 46px; padding: 10px 24px; background: var(--sf-panel); border-block: 1px solid var(--sf-line); font-size: .75rem; }
 .spatialforum-route a { color: var(--sf-muted); padding-block: 4px; }
 .spatialforum-route a[aria-current] { color: var(--sf-ink); font-weight: 650; }
@@ -32,12 +32,12 @@
 .spatialforum-stage { position: relative; isolation: isolate; min-width: 0; }
 .spatialforum-connectors { display: none; pointer-events: none; position: absolute; inset: 0; max-width: none; overflow: visible; }
 .spatialforum-posts { display: grid; gap: 16px; padding-block: 20px; }
-.spatialforum-post { min-width: 0; margin: 0; border: 1px solid var(--sf-line); border-left: 4px solid var(--post-colour); border-radius: 10px; background: var(--sf-panel); box-shadow: 2px 6px 0 var(--sf-soft), 3px 12px 18px var(--sf-shadow); }
+.spatialforum-post { min-width: 0; margin: 0; scroll-margin-top: 100px; border: 1px solid var(--sf-line); border-left: 4px solid var(--post-colour); border-radius: 10px; background: var(--sf-panel); box-shadow: 2px 6px 0 var(--sf-soft), 3px 12px 18px var(--sf-shadow); }
 .spatialforum-card-toggle { display: block; border-radius: 8px; padding: 12px 10px; list-style: none; cursor: pointer; }
 .spatialforum-card-toggle::-webkit-details-marker { display: none; }
-.spatialforum-subject { display: block; overflow-wrap: anywhere; font-weight: 600; font-size: .8rem; line-height: 1.4; }
+.spatialforum-subject { display: block; overflow-wrap: anywhere; font-weight: 600; font-size: 1rem; line-height: 1.4; }
 .spatialforum-preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; max-height: 2.9em; overflow-wrap: anywhere; margin-top: 8px; font-size: .78rem; font-weight: 400; line-height: 1.45; color: var(--sf-muted); }
-.spatialforum-card-meta { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 5px; margin-top: 10px; color: var(--sf-muted); font-size: .7rem; }
+.spatialforum-card-meta { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 5px; margin-top: 10px; color: var(--sf-muted); font-size: .8125rem; }
 .spatialforum-read-state { white-space: nowrap; }
 .spatialforum-card-times { display: grid; gap: 3px; margin-top: 8px; color: var(--sf-muted); font-size: .7rem; line-height: 1.4; }
 .spatialforum-dates { display: grid; gap: 4px; }
@@ -95,9 +95,7 @@
 .mod-spatialforum.is-map .spatialforum-connectors { display: block; }
 .mod-spatialforum.is-map .spatialforum-post { position: absolute; }
 .spatialforum-post.is-on-route { border-top-color: var(--sf-active); }
-.spatialforum-post.is-muted { opacity: .65; }
-.spatialforum-post.is-muted.is-unread { opacity: .95; }
-.spatialforum-post.is-muted:hover, .spatialforum-post.is-muted:focus-within { opacity: 1; }
+.spatialforum-post.is-muted { background: #f8faf9; box-shadow: none; }
 .mod-spatialforum.is-list .spatialforum-post { position: relative; left: auto !important; top: auto !important; width: auto !important; margin: 12px 0; margin-left: min(calc(var(--post-depth, 0) * 12px), 36px); }
 .mod-spatialforum.is-list .spatialforum-post[open] { margin-left: 0; }
 .mod-spatialforum.is-list .spatialforum-stage { height: auto !important; }
@@ -108,4 +106,34 @@
 }
 @media (pointer: coarse) {
     .mod-spatialforum button, .mod-spatialforum .spatialforum-reply, .spatialforum-card-toggle { min-height: 44px; }
+}
+.spatialforum-tools { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 0 20px 14px; }
+.spatialforum-tools label { margin: 0; font-size: .875rem; }
+.spatialforum-view-switch { display: flex; gap: 4px; }
+.spatialforum-view-switch [aria-pressed="true"] { background: var(--sf-active); border-color: var(--sf-active); color: #fff; }
+.spatialforum-search { flex: 1 1 180px; }
+.spatialforum-unread-filter { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.spatialforum-result-status { margin: 0; padding: 0 20px 10px; font-size: .875rem; }
+.spatialforum-result-status:empty { display: none; }
+.spatialforum-reader { max-width: 720px; margin: 20px auto; padding: 0 12px; scroll-margin-top: 100px; }
+.spatialforum-reader .spatialforum-post { position: relative !important; inset: auto !important; width: 100% !important; margin: 0 !important; }
+.spatialforum-reader .spatialforum-message { font-size: 1.0625rem; line-height: 1.7; }
+.spatialforum-reader .spatialforum-subject { font-size: 1.25rem; }
+.spatialforum-reader-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.spatialforum-selection-help { font-size: .875rem; margin: 6px 0; color: var(--sf-muted); }
+.spatialforum-js-only { display: none; }
+.js-enabled .spatialforum-js-only { display: inline-block; }
+.mod-spatialforum button, .mod-spatialforum .btn { min-height: 44px; }
+.mod-spatialforum :focus-visible, .spatialforum-excerpt-composer :focus-visible { outline: 3px solid #206347; outline-offset: 3px; }
+.mod-spatialforum.is-list .spatialforum-stage { padding: 0 12px; }
+.spatialforum-excerpt-composer, .spatialforum-quote-options { border: 1px solid #c7d8cc; border-radius: 8px; padding: 14px; }
+.spatialforum-excerpt-composer summary, .spatialforum-quote-options summary, .spatialforum-original summary { cursor: pointer; min-height: 44px; padding: 10px 0; font-weight: 600; }
+.spatialforum-original .spatialforum-message { max-height: 350px; overflow: auto; padding: 12px; line-height: 1.65; }
+.spatialforum-quote-options { margin-bottom: 20px; }
+@media (max-width: 450px) {
+    .spatialforum-tools { padding-inline: 12px; gap: 10px; }
+    .spatialforum-search { flex-basis: 100%; }
+    .spatialforum-reader { padding: 0 8px; }
+    .mod-spatialforum.is-list .spatialforum-post { margin-left: min(calc(var(--post-depth, 0) * 8px), 16px); }
+    .spatialforum-reader .spatialforum-post-detail { padding-inline: 12px; }
 }

@@ -11,6 +11,41 @@ export const init = () => {
     const viewport = root.querySelector('[data-region="viewport"]');
     const svg = root.querySelector('[data-region="connectors"]');
     const route = root.querySelector('[data-region="route"]');
+    const reader = root.querySelector('[data-region="reader"]');
+    const search = root.querySelector('[data-region="search"]');
+    const onlyUnread = root.querySelector('[data-region="only-unread"]');
+    const viewButtons = Array.from(root.querySelectorAll('[data-view]'));
+    const slots = new Map();
+    const stateKey = 'mod_spatialforum:' + root.dataset.cmid;
+    let saved = {};
+    try {
+        saved = JSON.parse(window.sessionStorage.getItem(stateKey) || '{}') || {};
+    } catch (error) {
+        // Navigation and reading also work when browser storage is unavailable.
+    }
+    let view = ['map', 'list'].includes(root.dataset.initialView) ? root.dataset.initialView : saved.view;
+    if (!['map', 'list'].includes(view)) {
+        view = null;
+    }
+    let overview = {top: Number(saved.top) || 0, left: Number(saved.left) || 0};
+    const scrollHost = () => {
+        let node = root.parentElement;
+        while (node) {
+            if (/(auto|scroll)/.test(window.getComputedStyle(node).overflowY)) {
+                return node;
+            }
+            node = node.parentElement;
+        }
+        return document.scrollingElement || document.documentElement;
+    };
+    const remember = () => {
+        try {
+            // Store only presentation state per tab, never post bodies or drafts.
+            window.sessionStorage.setItem(stateKey, JSON.stringify({...overview, view}));
+        } catch (error) {
+            // Storage is an optional enhancement.
+        }
+    };
     const cards = Array.from(root.querySelectorAll('[data-post-id]'));
     const byId = new Map(cards.map(card => [card.dataset.postId, card]));
     const parents = new Map();
@@ -23,6 +58,7 @@ export const init = () => {
     let animation = 0;
     let relayout = 0;
     let lastWidth = 0;
+    let restoring = true;
 
     // Imported/missing/cyclic references must never hide an otherwise accessible post.
     cards.forEach(card => {
@@ -59,6 +95,12 @@ export const init = () => {
         children.get(parent).push(card.dataset.postId);
         card.style.setProperty('--post-depth', depths.get(card.dataset.postId));
     });
+    // List order follows the conversation hierarchy rather than interleaved creation times.
+    const appendTree = id => {
+        root.querySelector('.spatialforum-posts').appendChild(byId.get(id));
+        (children.get(id) || []).forEach(appendTree);
+    };
+    (children.get(null) || []).forEach(appendTree);
     // A continuous chain keeps its colour. At a fork each child starts a coloured segment.
     const palette = ['#237ba7', '#ad691b', '#8057ad', '#277e62', '#af4572', '#5264ab'];
     const colours = new Map();
@@ -113,6 +155,8 @@ export const init = () => {
     const updateCount = () => {
         root.querySelector('[data-region="unread-count"]').textContent =
             cards.filter(card => card.dataset.unread === '1').length;
+        root.querySelector('[data-next-unread]').disabled = !cards.some(card =>
+            card.dataset.unread === '1' && !card.hidden);
     };
     const markRead = async(card) => {
         const id = card.dataset.postId;
@@ -145,14 +189,11 @@ export const init = () => {
         }
     };
     const layout = (animate = true) => {
-        if (!cards.length) {
-            return;
-        }
         if (animation) {
             cancelAnimationFrame(animation);
             animation = 0;
         }
-        const width = viewport.getBoundingClientRect().width;
+        const width = active ? root.getBoundingClientRect().width : viewport.getBoundingClientRect().width;
         if (!width) {
             return;
         }
@@ -162,9 +203,23 @@ export const init = () => {
         const gap = 48;
         const mainColumn = Math.max(320, width * 0.5);
         const replyColumn = Math.max(240, width * 0.25);
-        const list = cards.length > 150;
+        const list = cards.length > 150 || view === 'list' || (!view && width < 640);
         root.classList.toggle('is-list', list);
         root.classList.toggle('is-map', !list);
+        viewButtons.forEach(button => {
+            button.setAttribute('aria-pressed', String(button.dataset.view === (list ? 'list' : 'map')));
+            button.disabled = button.dataset.view === 'map' && cards.length > 150;
+        });
+        root.querySelector('[data-region="map-limit"]').hidden = cards.length <= 150;
+        root.querySelectorAll('a.spatialforum-reply, .spatialforum-hero a, form[data-excerpt-start]').forEach(action => {
+            const attribute = action.tagName === 'FORM' ? 'action' : 'href';
+            const url = new URL(action.getAttribute(attribute), window.location.href);
+            url.searchParams.set('sfview', list ? 'list' : 'map');
+            action.setAttribute(attribute, url.toString());
+        });
+        if (active || !cards.length) {
+            return;
+        }
         if (list) {
             stage.style.width = 'auto';
             stage.style.height = 'auto';
@@ -287,46 +342,138 @@ export const init = () => {
         };
         animation = requestAnimationFrame(tick);
     };
-    const openCard = (card, focus = false) => {
+    const writeURL = (id, replace = false) => {
+        const url = new URL(window.location.href);
+        if (id) {
+            url.searchParams.set('postid', id);
+        } else {
+            url.searchParams.delete('postid');
+        }
+        url.hash = id ? 'post-' + id : '';
+        url.searchParams.set('sfview', root.classList.contains('is-list') ? 'list' : 'map');
+        if (url.toString() !== window.location.href) {
+            window.history[replace ? 'replaceState' : 'pushState'](window.history.state, '', url.toString());
+        }
+        remember();
+    };
+    const restoreCard = card => {
+        const slot = slots.get(card.dataset.postId);
+        if (slot) {
+            slot.parentNode.insertBefore(card, slot);
+            slot.remove();
+            slots.delete(card.dataset.postId);
+        }
+    };
+    const openCard = (card, focus = false, record = true) => {
+        if (active === card.dataset.postId) {
+            return;
+        }
+        if (!active && !restoring) {
+            overview = {top: scrollHost().scrollTop || 0, left: viewport.scrollLeft || 0};
+        }
         cards.forEach(other => {
             if (other !== card) {
                 other.removeAttribute('open');
+                restoreCard(other);
             }
         });
         if (!card.hasAttribute('open')) {
             card.setAttribute('open', '');
         }
         active = card.dataset.postId;
+        card.hidden = false;
+        const slot = document.createComment('post-' + active);
+        card.parentNode.insertBefore(slot, card);
+        slots.set(active, slot);
+        reader.appendChild(card);
+        reader.hidden = false;
+        viewport.hidden = true;
+        root.classList.add('is-reading');
         updateRoute();
-        layout();
-        const position = positions.get(active);
-        if (position) {
-            const left = viewport.scrollLeft || 0;
-            const right = left + viewport.getBoundingClientRect().width;
-            if (position.x < left || position.x + position.w > right) {
-                viewport.scrollLeft = Math.max(0, position.x - 24);
-            }
+        layout(false);
+        if (record) {
+            writeURL(active);
         }
         void markRead(card);
         if (focus) {
             card.querySelector('[data-close]').focus();
+            reader.scrollIntoView({block: 'start'});
         }
     };
-    const closeCard = card => {
+    const closeCard = (card, focus = true, record = true) => {
+        restoreCard(card);
         card.removeAttribute('open');
         active = null;
+        reader.hidden = true;
+        viewport.hidden = false;
+        root.classList.remove('is-reading');
+        const query = search.value.trim().toLocaleLowerCase();
+        card.hidden = !(title(card) + ' ' + card.querySelector('.spatialforum-message').textContent)
+            .toLocaleLowerCase().includes(query) || (onlyUnread.checked && card.dataset.unread !== '1');
+        root.querySelector('[data-region="no-results"]').hidden = cards.some(item => !item.hidden);
+        updateCount();
         updateRoute();
-        layout();
-        card.querySelector('summary').focus();
+        layout(false);
+        viewport.scrollLeft = overview.left;
+        scrollHost().scrollTop = overview.top;
+        if (record) {
+            writeURL(null);
+        }
+        if (focus) {
+            const target = card.hidden ? search : card.querySelector('summary');
+            target.focus({preventScroll: true});
+        }
     };
     root.classList.add('js-enabled');
+    root.querySelector('[data-region="tools"]').hidden = false;
+    const applyFilters = () => {
+        const query = search.value.trim().toLocaleLowerCase();
+        const filtering = !!query || onlyUnread.checked;
+        if (active) {
+            closeCard(byId.get(active), false);
+        }
+        if (filtering) {
+            view = 'list';
+        }
+        cards.forEach(card => {
+            const text = title(card) + ' ' + card.querySelector('.spatialforum-message').textContent;
+            card.hidden = !text.toLocaleLowerCase().includes(query) ||
+                (onlyUnread.checked && card.dataset.unread !== '1');
+        });
+        root.querySelector('[data-region="filter-status"]').hidden = !filtering;
+        root.querySelector('[data-region="no-results"]').hidden = !cards.length || cards.some(card => !card.hidden);
+        updateCount();
+        layout(false);
+        writeURL(null, true);
+    };
+    search.addEventListener('input', applyFilters);
+    onlyUnread.addEventListener('change', applyFilters);
+    viewButtons.forEach(button => button.addEventListener('click', () => {
+        view = button.dataset.view;
+        if (view === 'map') {
+            search.value = '';
+            onlyUnread.checked = false;
+            cards.forEach(card => card.hidden = false);
+            root.querySelector('[data-region="filter-status"]').hidden = true;
+            root.querySelector('[data-region="no-results"]').hidden = true;
+        }
+        layout(false);
+        writeURL(active, true);
+        updateCount();
+    }));
+    root.querySelector('[data-next-unread]').addEventListener('click', () => {
+        const index = cards.findIndex(card => card.dataset.postId === active);
+        const ordered = cards.slice(index + 1).concat(cards.slice(0, index + 1));
+        const next = ordered.find(card => card.dataset.unread === '1' && !card.hidden);
+        if (next) {
+            openCard(next, true);
+        }
+    });
     cards.forEach(card => card.addEventListener('toggle', () => {
         if (card.hasAttribute('open')) {
-            openCard(card);
+            openCard(card, true);
         } else if (active === card.dataset.postId) {
-            active = null;
-            updateRoute();
-            layout();
+            closeCard(card);
         }
     }));
     root.addEventListener('click', event => {
@@ -346,6 +493,13 @@ export const init = () => {
         if (remove && !window.confirm(remove.dataset.confirmMessage)) {
             event.preventDefault();
         }
+        const copy = event.target.closest('[data-copy-link]');
+        if (copy) {
+            const feedback = root.querySelector('[data-region="feedback"]');
+            Promise.resolve().then(() => window.navigator.clipboard.writeText(window.location.href))
+                .then(() => feedback.textContent = root.dataset.copiedLabel)
+                .catch(() => feedback.textContent = root.dataset.copyFailedLabel);
+        }
     });
     root.addEventListener('keydown', event => {
         if (event.key === 'Escape' && active) {
@@ -354,12 +508,29 @@ export const init = () => {
         }
     });
     const initial = byId.get(window.location.hash.replace(/^#post-/, '')) || cards.find(card => card.hasAttribute('open'));
+    updateCount();
     if (initial) {
-        openCard(initial);
+        layout(false);
+        openCard(initial, true, false);
     } else {
         updateRoute();
         layout(false);
     }
+    restoring = false;
+    window.addEventListener('popstate', () => {
+        const url = new URL(window.location.href);
+        const selectedView = url.searchParams.get('sfview');
+        if (['map', 'list'].includes(selectedView)) {
+            view = selectedView;
+        }
+        const target = byId.get(url.hash.replace(/^#post-/, '')) || byId.get(url.searchParams.get('postid'));
+        if (target) {
+            openCard(target, true, false);
+        } else if (active) {
+            closeCard(byId.get(active), true, false);
+        }
+        layout(false);
+    });
     if (typeof ResizeObserver !== 'undefined') {
         const observer = new ResizeObserver(entries => {
             const changed = entries.some(entry => {

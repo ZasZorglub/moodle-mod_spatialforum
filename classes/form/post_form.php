@@ -29,6 +29,8 @@ class post_form extends \moodleform {
         $mform->setType('trackid', PARAM_INT);
         $mform->addElement('hidden', 'originpostid', $customdata['originpostid']);
         $mform->setType('originpostid', PARAM_INT);
+        $mform->addElement('hidden', 'sfview', $customdata['sfview'] ?? '');
+        $mform->setType('sfview', PARAM_ALPHA);
 
         if ($isbranch) {
             $mform->addElement('text', 'branchname', get_string('branchname', 'mod_spatialforum'), ['size' => 64]);
@@ -46,22 +48,35 @@ class post_form extends \moodleform {
             global $OUTPUT;
             $mform->addElement('hidden', 'excerptdraft', '[]');
             $mform->setType('excerptdraft', PARAM_RAW);
-            $mform->addElement('html', $OUTPUT->render_from_template('mod_spatialforum/excerpt_composer', []));
-            $mform->addElement('advcheckbox', 'showparent', get_string('includeparent', 'mod_spatialforum'));
-            $mform->addHelpButton('showparent', 'includeparent', 'mod_spatialforum');
-            $mform->setDefault('showparent', 0);
+            $composer = $OUTPUT->render_from_template('mod_spatialforum/excerpt_composer',
+                ['excerptmode' => !empty($customdata['excerptmode'])]);
+            if (!empty($customdata['excerptmode'])) {
+                $mform->addElement('html', $composer);
+            }
         }
 
-        $mform->addElement('editor', 'message_editor', get_string('message', 'mod_spatialforum'), null, [
+        $messagelabel = !empty($customdata['excerptmode']) ? 'closingcomment' : 'message';
+        $mform->addElement('editor', 'message_editor', get_string($messagelabel, 'mod_spatialforum'), null, [
             'maxfiles' => 0,
             'trusttext' => false,
         ]);
         $mform->setType('message_editor', PARAM_RAW);
         if (empty($customdata['originpostid'])) {
             $mform->addRule('message_editor', null, 'required', null, 'client');
+        } else {
+            if (empty($customdata['excerptmode'])) {
+                $mform->addElement('html', $composer);
+            }
+            $mform->addElement('html', '<details class="spatialforum-quote-options"><summary>' .
+                get_string('quoteoptions', 'mod_spatialforum') . '</summary>');
+            $mform->addElement('advcheckbox', 'showparent', get_string('includeparent', 'mod_spatialforum'));
+            $mform->addHelpButton('showparent', 'includeparent', 'mod_spatialforum');
+            $mform->setDefault('showparent', 0);
+            $mform->addElement('html', '</details>');
         }
 
-        $this->add_action_buttons(true, get_string($isbranch ? 'createbranch' : 'postreply', 'mod_spatialforum'));
+        $submitlabel = $isbranch ? 'createbranch' : (empty($customdata['originpostid']) ? 'createpost' : 'postreply');
+        $this->add_action_buttons(true, get_string($submitlabel, 'mod_spatialforum'));
     }
 
     /**

@@ -34,15 +34,21 @@ $PAGE->requires->js_call_amd('mod_spatialforum/excerpts', 'init');
 
 spatialforum_view($activity, $course, $cm, $context);
 $data = forum::export_view_data($activity, $cm, $track, $context, true);
+$viewmode = optional_param('sfview', '', PARAM_ALPHA);
+$data['initialview'] = in_array($viewmode, ['map', 'list'], true) ? $viewmode : '';
 $openpostid = optional_param('postid', 0, PARAM_INT);
 foreach ($data['posts'] as &$post) {
     $post['opened'] = $post['id'] == $openpostid;
+    if ($data['initialview'] !== '') {
+        $post['replyurl'] = (new moodle_url($post['replyurl'], ['sfview' => $data['initialview']]))->out(false);
+    }
 }
 unset($post);
+if ($data['initialview'] !== '') {
+    $data['newposturl'] = (new moodle_url($data['newposturl'], ['sfview' => $data['initialview']]))->out(false);
+}
 
 echo $OUTPUT->header();
-if (trim($activity->intro ?? '') !== '') {
-    echo $OUTPUT->box(format_module_intro('spatialforum', $activity, $cm->id), 'generalbox mod_introbox');
-}
+// Moodle's activity header already renders the module introduction.
 echo $OUTPUT->render_from_template('mod_spatialforum/main', $data);
 echo $OUTPUT->footer();

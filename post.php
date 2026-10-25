@@ -10,6 +10,10 @@ $id = required_param('id', PARAM_INT);
 $action = optional_param('action', 'reply', PARAM_ALPHA);
 $trackid = required_param('trackid', PARAM_INT);
 $originpostid = optional_param('originpostid', 0, PARAM_INT);
+$viewmode = optional_param('sfview', '', PARAM_ALPHA);
+$viewmode = in_array($viewmode, ['map', 'list'], true) ? $viewmode : '';
+$excerptmode = optional_param('startquote', 0, PARAM_BOOL)
+    || optional_param('excerptdraft', '[]', PARAM_RAW) !== '[]';
 
 if (!in_array($action, ['reply', 'branch'], true)) {
     throw new moodle_exception('invalidaction', 'mod_spatialforum');
@@ -50,13 +54,21 @@ if ($createstrack) {
 }
 
 $returnurl = new moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id, 'trackid' => $track->id]);
+if ($originpostid) {
+    $returnurl->param('postid', $originpostid);
+    $returnurl->set_anchor('post-' . $originpostid);
+}
+if ($viewmode) {
+    $returnurl->param('sfview', $viewmode);
+}
+$pagelabel = $action === 'branch' ? 'createbranch' : ($originpostid ? 'postreply' : 'newpost');
 $PAGE->set_url('/mod/spatialforum/post.php', [
     'id' => $cm->id,
     'action' => $action,
     'trackid' => $track->id,
     'originpostid' => $originpostid,
 ]);
-$PAGE->set_title(get_string($action === 'branch' ? 'createbranch' : 'postreply', 'mod_spatialforum'));
+$PAGE->set_title(get_string($pagelabel, 'mod_spatialforum'));
 $PAGE->set_heading(format_string($course->fullname));
 
 $form = new post_form(null, [
@@ -67,6 +79,8 @@ $form = new post_form(null, [
     'newtrack' => $createstrack,
     'origin' => $origin ?? null,
     'context' => $context,
+    'sfview' => $viewmode,
+    'excerptmode' => $excerptmode,
 ]);
 
 if ($action === 'reply' && !empty($origin)) {
@@ -101,14 +115,18 @@ if ($form->is_cancelled()) {
         'id' => $cm->id,
         'trackid' => $targettrackid,
         'postid' => $newpostid,
+        'sfview' => $viewmode,
     ]), get_string('postsaved', 'mod_spatialforum'));
 }
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string($action === 'branch' ? 'createbranch' : 'postreply', 'mod_spatialforum'));
+echo $OUTPUT->heading(get_string($pagelabel, 'mod_spatialforum'));
 if (!empty($origin)) {
+    $origincontext = forum::export_reply_context($origin, $context, $cm->id);
+    $origincontext['compact'] = true;
+    $origincontext['excerptmode'] = $excerptmode;
     echo $OUTPUT->render_from_template('mod_spatialforum/reply_context',
-        forum::export_reply_context($origin, $context, $cm->id));
+        $origincontext);
 }
 $form->display();
 echo $OUTPUT->footer();

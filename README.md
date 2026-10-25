@@ -10,6 +10,14 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 This is a staging release with automated Moodle 5.0 regression tests. It must also be tested on a staging copy of the exact Moodle or Workplace build before production use.
 
+## 0.5.0 reading and reply experience
+
+Posts open in a dedicated reading surface up to 720 pixels wide, independently of their map column. Map and List are explicit choices; small available widths default to List. Search, Unread only and Next unread help navigate the loaded conversation. Copy link, reload, browser history and cancellation preserve the selected post; per-tab session storage keeps only presentation preferences and overview offsets, not post content.
+
+The activity uses Moodle's introduction once and a compact toolbar. Reading-route emphasis preserves text contrast. New posts have their own heading and Create post action. Ordinary replies start with the message editor and a compact, expandable original; passage quoting and whole-parent quoting are optional disclosures. Removing a quote restores logical keyboard focus. All UI labels are available in Danish and English. See `tests/UX-050.md` for acceptance and verification boundaries.
+
+Build the dependency-free AMD wrappers with `node scripts/build-amd.mjs`. This release changes no database schema or permission rules.
+
 ## 0.4.0 selective replies
 
 Select text in an opened post and choose **Reply to selection**. The reply form opens with that passage and a comment field. Select further passages in the original above the form and choose **Add selected text** to build an interleaved quote/comment reply. Remove any unwanted blocks before submitting. Up to ten blocks, each with a 4,000-character quotation/comment limit, form one reply and one automatically linked track. The regular message editor provides an optional closing comment. Plain Reply and optional whole-parent quoting remain available.
@@ -22,7 +30,7 @@ The map uses a white background. Main-track columns occupy 50% and reply-depth c
 
 Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and an Edited timestamp when an undeleted post's modification time is later than its creation time. Times follow the viewer's Moodle timezone/locale; quoted originals show the same metadata. Reading and reacting do not change a post's edit time. This is timestamp presentation, not a new post-editing workflow or revision history.
 
-- The complete activity is a connected map of posts. Opening a card unfolds its content in place and makes room in the hierarchy; only one post stays open. Close or Escape restores the overview. A highlighted route links back through ancestors.
+- The complete activity is a connected map of posts. Opening a card shows its content in the dedicated reading surface; only one post stays open. Back to overview or Escape restores the previous overview position. A highlighted route links back through ancestors.
 - Closed cards show two lines of the post's own text, with explicit Read/Unread labels. Previewing the map changes no read state. Opening a post sends an authenticated, session-key protected POST for that post only; the UI shows Read only after server confirmation. Each user's timestamps are independent. Existing timestamps are preserved during upgrade.
 - Participants simply choose Reply. The server automatically creates the linked child track and uses the editable reply subject as its internal name. There is no branch-name decision or duplicate Start track here action.
 - Native details and a Mark as read form work without JavaScript. Dense maps reflow into the same hierarchy as a list; text and controls remain untransformed. Reduced-motion preferences are respected.
@@ -65,7 +73,7 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 
 ## Security and operations
 
-- Version `0.3.1 (staging)` upgrades MVP or earlier staging versions to `2026102501`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved.
+- Version `0.5.0 (staging)` upgrades MVP or earlier staging versions to `2026102505`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved.
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.

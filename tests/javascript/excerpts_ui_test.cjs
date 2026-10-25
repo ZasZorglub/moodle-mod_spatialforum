@@ -13,8 +13,9 @@ for (const built of [false, true]) {
     const composer = Mustache.render(template, {str: () => text => text.split(',')[0]});
     const {document, window} = parseHTML('<div class="spatialforum-reply-context"><div class="spatialforum-message">' +
         '<p id="source">Målmænd: Pentz</p><blockquote>Someone else</blockquote></div></div>' +
-        '<form><input name="excerptdraft" value="[]">' + composer + '</form>');
-    window.HTMLElement.prototype.focus = function() {};
+        '<form><label for="id_message_editor">message</label><input name="excerptdraft" value="[]">' + composer + '</form>');
+    let focused = null;
+    window.HTMLElement.prototype.focus = function() { focused = this; };
     let inside = true, embedded = false, quote = 'Målmænd: Pentz';
     const range = {get startContainer() {return inside ? document.getElementById('source') : document;},
         get endContainer() {return inside ? document.getElementById('source') : document;},
@@ -35,6 +36,8 @@ for (const built of [false, true]) {
     add.click();
     assert.equal(JSON.parse(input.value)[0].quote, quote);
     const comment = document.querySelector('textarea');
+    assert.equal(focused, comment, 'New quotes focus their comment field');
+    assert.equal(document.querySelector('label[for="id_message_editor"]').textContent, 'closingcomment');
     comment.value = 'My first point'; comment.dispatchEvent(new window.Event('input'));
     assert.equal(JSON.parse(input.value)[0].comment, 'My first point');
     quote = '<img src=x onerror=alert(1)>'; select(); add.click();
@@ -43,6 +46,11 @@ for (const built of [false, true]) {
     document.querySelector('[data-excerpt-parts] button').click();
     assert.equal(JSON.parse(input.value).length, 1);
     assert.equal(JSON.parse(input.value)[0].quote, quote);
+    assert.equal(focused, document.querySelector('textarea'), 'Removing a quote focuses a remaining comment');
+    document.querySelector('[data-excerpt-parts] button').click();
+    assert.equal(focused, document.querySelector('[data-excerpt-heading]'), 'Removing the last quote focuses its disclosure');
+    assert.equal(document.querySelector('label[for="id_message_editor"]').textContent, 'message');
+    assert.equal(document.querySelector('[data-excerpt-status]').textContent, 'excerptremoved');
     inside = false; select(); assert.equal(add.disabled, true);
     inside = true; embedded = true; select(); assert.equal(add.disabled, true);
     embedded = false; quote = 'x'.repeat(4001); select(); assert.equal(add.disabled, true);

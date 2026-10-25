@@ -1,4 +1,6 @@
-# Staging validation for 0.4.0
+# Staging validation for 0.5.0
+
+The 0.5.0 UX scope, acceptance criteria and observed verification are in `UX-050.md`. The historical checks below still apply to source-aware replies, read persistence, roles, backup and privacy.
 
 Do not merge to main until the target Moodle/Workplace checks below pass.
 

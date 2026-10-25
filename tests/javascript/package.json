@@ -1,6 +1,6 @@
 {
   "name": "spatialforum-ui-tests",
   "private": true,
-  "scripts": {"test": "node map_ui_test.cjs && node excerpts_ui_test.cjs"},
+  "scripts": {"pretest": "node ../../scripts/build-amd.mjs --check", "test": "node map_ui_test.cjs && node excerpts_ui_test.cjs"},
   "devDependencies": {"linkedom": "0.18.12", "mustache": "4.2.0"}
 }

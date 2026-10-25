@@ -61,12 +61,22 @@ export const init = () => {
                     parts.splice(index, 1);
                     render();
                     save();
-                    add.focus();
+                    const next = container.querySelectorAll('textarea');
+                    if (next.length) {
+                        next[Math.min(index, next.length - 1)].focus();
+                    } else {
+                        composer.querySelector('[data-excerpt-heading]').focus();
+                    }
+                    status.textContent = composer.dataset.removedLabel;
                 });
                 block.append(quote, label, remove);
                 container.appendChild(block);
             });
             save();
+            const messageLabel = form.querySelector('label[for="id_message_editor"]');
+            if (messageLabel) {
+                messageLabel.textContent = parts.length ? composer.dataset.closingLabel : composer.dataset.messageLabel;
+            }
         };
         render();
         document.addEventListener('selectionchange', () => {

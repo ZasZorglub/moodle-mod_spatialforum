@@ -41,12 +41,28 @@ async function exercise(script, cyclic = false) {
     let observedFocus = null;
     window.HTMLElement.prototype.focus = function() { observedFocus = this; };
     window.HTMLElement.prototype.getBoundingClientRect = function() {
-        return {width: this.classList.contains('spatialforum-viewport') ? width : parseFloat(this.style.width) || 150,
+        return {width: this.matches('.spatialforum-viewport, .mod-spatialforum') ? width : parseFloat(this.style.width) || 150,
             height: this.classList.contains('spatialforum-post') ? (this.hasAttribute('open') ? 460 : 160) : 0};
     };
     const root = document.querySelector('[data-region="spatialforum"]');
-    const scope = {document, window: {location: {hash: ''}, matchMedia: () => ({matches: true}), confirm: () => false,
-        addEventListener: () => {}}, URLSearchParams, performance: {now: () => 0},
+    window.HTMLElement.prototype.scrollIntoView = function() {};
+    const storage = new Map();
+    const location = {href: 'https://example.test/mod/spatialforum/view.php?id=42', hash: ''};
+    const events = {};
+    const history = {state: null};
+    const navigations = [];
+    for (const method of ['pushState', 'replaceState']) {
+        history[method] = (state, _, href) => {
+            navigations.push({method, href});
+            location.href = href;
+            location.hash = new URL(href).hash;
+        };
+    }
+    const scope = {document, window: {location, history,
+        sessionStorage: {getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value)},
+        getComputedStyle: () => ({overflowY: 'visible'}),
+        matchMedia: () => ({matches: true}), confirm: () => false,
+        addEventListener: (name, fn) => {events[name] = fn;}}, URL, URLSearchParams, performance: {now: () => 0},
     requestAnimationFrame: callback => {callback(0); return 1;}, cancelAnimationFrame: () => {},
     ResizeObserver: class {constructor(cb) {observers.push(cb);} observe() {}},
     fetch: async(url, options) => {
@@ -100,7 +116,7 @@ async function exercise(script, cyclic = false) {
     assert.notEqual(card(13).style.getPropertyValue('--post-colour'), card(11).style.getPropertyValue('--post-colour'));
     noOverlap();
     if (cyclic) return;
-    open(11);
+    root.querySelector('[data-next-unread]').click();
     await settle();
     assert.equal(requests.length, 1);
     assert.equal(card(11).dataset.unread, '0');
@@ -110,7 +126,9 @@ async function exercise(script, cyclic = false) {
     assert.equal(requests[0].params.get('id'), '42');
     assert.equal(requests[0].params.get('sesskey'), 'token');
     assert.equal(requests[0].params.get('postid'), '11');
-    noOverlap();
+    assert.equal(card(11).parentElement, root.querySelector('[data-region="reader"]'));
+    assert.equal(root.querySelector('[data-region="viewport"]').hidden, true);
+    assert.equal(new URL(location.href).searchParams.get('postid'), '11');
     close(11); open(11); await settle();
     assert.equal(requests.length, 1, 'Already saved read state is idempotent');
     open(12); await settle();
@@ -129,14 +147,33 @@ async function exercise(script, cyclic = false) {
     esc.key = 'Escape'; card(12).dispatchEvent(esc);
     assert.equal(root.querySelectorAll('details[open]').length, 0);
     assert.equal(observedFocus, card(12).querySelector('summary'));
-    for (const post of posts) {open(post.id); await settle(); noOverlap();}
+    for (const post of posts) {open(post.id); await settle();}
+    close(15);
     width = 360;
     observers.forEach(cb => cb([{target: root.querySelector('[data-region="viewport"]')}]));
-    assert.ok(root.classList.contains('is-map'));
-    assert.ok(parseFloat(root.querySelector('[data-region="stage"]').style.width) > width);
+    assert.ok(root.classList.contains('is-list'), 'Narrow viewports default to a readable list');
     assert.equal(card(12).dataset.unread, '0');
     open(11); await settle();
     assert.equal(root.querySelectorAll('details[open]').length, 1);
+    root.querySelector('[data-close]').click();
+    assert.equal(root.querySelector('[data-region="reader"]').hidden, true);
+    assert.equal(new URL(location.href).searchParams.has('postid'), false);
+    const search = root.querySelector('[data-region="search"]');
+    search.value = 'Full content for post 12';
+    search.dispatchEvent(new window.Event('input'));
+    assert.equal(cardsVisible().length, 1);
+    assert.equal(cardsVisible()[0].dataset.postId, '12');
+    search.value = 'not present'; search.dispatchEvent(new window.Event('input'));
+    assert.equal(root.querySelector('[data-region="no-results"]').hidden, false);
+    root.querySelector('[data-view="map"]').click();
+    assert.equal(cardsVisible().length, 6);
+    assert.ok(root.classList.contains('is-map'), 'Explicit Map overrides the mobile default');
+    open(12); await settle();
+    location.href = 'https://example.test/mod/spatialforum/view.php?id=42&sfview=list#post-10';
+    location.hash = '#post-10'; events.popstate();
+    assert.equal(root.querySelector('[data-region="reader"] details').dataset.postId, '10');
+    assert.ok(root.classList.contains('is-list'));
+    function cardsVisible() {return [...root.querySelectorAll('[data-post-id]')].filter(el => !el.hidden);}
     return {root};
 }
 

@@ -50,4 +50,4 @@ jobs:
       - name: Moodle regression tests
         run: |
           cd moodle
-          vendor/bin/phpunit --configuration mod/spatialforum/phpunit.xml --fail-on-warning --fail-on-notice --display-notices --display-deprecations --display-phpunit-deprecations
+          vendor/bin/phpunit --configuration phpunit.xml --test-suffix _test.php mod/spatialforum/tests --fail-on-warning --fail-on-notice --display-notices --display-deprecations --display-phpunit-deprecations
