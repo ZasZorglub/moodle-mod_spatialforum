@@ -10,6 +10,14 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 This is a staging release with automated Moodle 5.0 regression tests. It must also be tested on a staging copy of the exact Moodle or Workplace build before production use.
 
+## 0.3.0 conversation map
+
+- The complete activity is a connected map of posts. Opening a card unfolds its content in place and makes room in the hierarchy; only one post stays open. Close or Escape restores the overview. A highlighted route links back through ancestors.
+- Closed cards show two lines of the post's own text, with explicit Read/Unread labels. Previewing the map changes no read state. Opening a post sends an authenticated, session-key protected POST for that post only; the UI shows Read only after server confirmation. Each user's timestamps are independent. Existing timestamps are preserved during upgrade.
+- Participants simply choose Reply. The server automatically creates the linked child track and uses the editable reply subject as its internal name. There is no branch-name decision or duplicate Start track here action.
+- Native details and a Mark as read form work without JavaScript. Narrow, deep or dense maps reflow into the same hierarchy as a list; text and controls remain untransformed. Reduced-motion preferences are respected.
+- The map currently loads the whole activity. Validate performance with representative course data; more than 150 posts use the list layout. This release does not introduce pagination or virtualisation.
+
 ## Install
 
 1. Unpack the archive as `<moodleroot>/mod/spatialforum`.

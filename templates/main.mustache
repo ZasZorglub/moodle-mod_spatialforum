@@ -1,139 +1,110 @@
 {{!
     @template mod_spatialforum/main
-
-    Spatial navigation and posts for one conversation track.
+    One activity-wide conversation map. Native details remain usable without JavaScript.
 }}
-<div class="mod-spatialforum" data-region="spatialforum" style="--track-colour: {{trackcolour}};">
+<div class="mod-spatialforum" data-region="spatialforum" data-cmid="{{cmid}}" data-sesskey="{{sesskey}}"
+     data-read-url="{{readurl}}" data-read-label="{{#str}}readpost, mod_spatialforum{{/str}}"
+     data-unread-label="{{#str}}unread, mod_spatialforum{{/str}}" data-root-label="{{#str}}maintrack, mod_spatialforum{{/str}}"
+     data-depth-label="{{#str}}depth, mod_spatialforum{{/str}}">
     <header class="spatialforum-hero">
         <div>
-            <div class="spatialforum-eyebrow">{{#str}}currenttrack, mod_spatialforum{{/str}}</div>
-            <h2>{{trackname}}</h2>
-            <div class="spatialforum-depth" aria-label="{{#str}}depthlabel, mod_spatialforum{{/str}}">
-                {{#str}}depth, mod_spatialforum{{/str}} {{depth}} {{#str}}of, mod_spatialforum{{/str}} {{maxdepth}}
-            </div>
+            <div class="spatialforum-eyebrow">{{#str}}conversationmap, mod_spatialforum{{/str}}</div>
+            <h2>{{forumname}}</h2>
+            <p class="spatialforum-summary">{{postcount}} {{#str}}posts, mod_spatialforum{{/str}} ·
+                <span data-region="unread-count">{{readcount}}</span> {{#str}}unreadposts, mod_spatialforum{{/str}}</p>
         </div>
-        <div class="spatialforum-actions">
-            {{#canreply}}
-                <a class="btn btn-primary" href="{{newposturl}}">{{#str}}postreply, mod_spatialforum{{/str}}</a>
-            {{/canreply}}
-            {{#canmoderate}}
-                <a class="btn btn-outline-secondary" href="{{moderateurl}}">{{moderatelabel}}</a>
-            {{/canmoderate}}
-        </div>
+        {{#canreply}}<a class="btn btn-primary" href="{{newposturl}}">{{#str}}newpost, mod_spatialforum{{/str}}</a>{{/canreply}}
     </header>
-
-    {{#locked}}
-        <div class="alert alert-warning" role="status">{{#str}}forumlocked, mod_spatialforum{{/str}}</div>
-    {{/locked}}
-
-    <div class="spatialforum-layout">
-        <aside class="spatialforum-route" aria-label="{{#str}}yourroute, mod_spatialforum{{/str}}">
-            <h3>{{#str}}yourroute, mod_spatialforum{{/str}}</h3>
-            <ol>
-                {{#path}}
-                    <li class="{{#active}}is-active{{/active}}" style="--node-colour: {{colour}};">
-                        <a href="{{url}}" data-track-link>
-                            <span class="spatialforum-route-dot" aria-hidden="true"></span>
-                            <span>
-                                <small>{{#str}}depth, mod_spatialforum{{/str}} {{depth}}</small>
-                                <strong>{{name}}</strong>
-                            </span>
-                        </a>
-                    </li>
-                {{/path}}
-            </ol>
-        </aside>
-
-        <main class="spatialforum-stage" data-region="stage">
-            <div class="spatialforum-depth-lines" aria-hidden="true">
-                <i></i><i></i><i></i><i></i>
-            </div>
-            <section class="spatialforum-plane" data-region="plane" aria-label="{{trackname}}">
-                <div class="spatialforum-plane-head">
-                    <span class="spatialforum-colour-mark" aria-hidden="true"></span>
-                    <div>
-                        <span>{{#str}}conversationtrack, mod_spatialforum{{/str}}</span>
-                        <h3>{{trackname}}</h3>
-                    </div>
-                </div>
-
-                {{^hasposts}}
-                    <div class="spatialforum-empty">
-                        <p>{{#str}}noposts, mod_spatialforum{{/str}}</p>
-                        {{#canreply}}<a href="{{newposturl}}" class="btn btn-primary">{{#str}}startconversation, mod_spatialforum{{/str}}</a>{{/canreply}}
-                    </div>
-                {{/hasposts}}
-
-                <div class="spatialforum-posts">
-                    {{#posts}}
-                        <article class="spatialforum-post {{#unread}}is-unread{{/unread}}" id="post-{{id}}">
-                            <div class="spatialforum-avatar" aria-hidden="true">{{initials}}</div>
-                            <div class="spatialforum-post-body">
-                                <header>
-                                    <div>
-                                        <h4>{{subject}}</h4>
-                                        <span>{{author}} · {{time}}</span>
-                                    </div>
-                                    {{#unread}}<span class="badge rounded-pill text-bg-primary">{{#str}}unread, mod_spatialforum{{/str}}</span>{{/unread}}
-                                </header>
-                                {{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
-                                <div class="spatialforum-message">{{{message}}}</div>
-                                <footer>
-                                    {{#showlikes}}
-                                        {{#canlike}}
-                                            <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
-                                                <input type="hidden" name="id" value="{{cmid}}">
-                                                <input type="hidden" name="postid" value="{{id}}">
-                                                <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                                <input type="hidden" name="reaction" value="{{nextreaction}}">
-                                                <button type="submit" class="spatialforum-like-button" aria-pressed="{{#liked}}true{{/liked}}{{^liked}}false{{/liked}}">{{likelabel}} ({{likecount}})</button>
-                                            </form>
-                                            <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
-                                                <input type="hidden" name="id" value="{{cmid}}">
-                                                <input type="hidden" name="postid" value="{{id}}">
-                                                <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                                <input type="hidden" name="reaction" value="{{nextdislike}}">
-                                                <button type="submit" class="spatialforum-like-button" aria-pressed="{{#disliked}}true{{/disliked}}{{^disliked}}false{{/disliked}}">{{dislikelabel}} ({{dislikecount}})</button>
-                                            </form>
-                                        {{/canlike}}
-                                        {{^canlike}}<span>{{#str}}likes, mod_spatialforum{{/str}}: {{likecount}} · {{#str}}dislikes, mod_spatialforum{{/str}}: {{dislikecount}}</span>{{/canlike}}
-                                    {{/showlikes}}
-                                    {{#canreply}}<a href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
-                                    {{#canbranch}}<a href="{{branchurl}}">{{#str}}branchfromhere, mod_spatialforum{{/str}}</a>{{/canbranch}}
-                                    {{#candelete}}<a href="{{deleteurl}}" class="text-danger" data-confirm-delete data-confirm-message="{{#str}}confirmdeletepost, mod_spatialforum{{/str}}">{{#str}}delete{{/str}}</a>{{/candelete}}
-                                </footer>
-                            </div>
-                        </article>
-                    {{/posts}}
-                </div>
-
-                {{#haschildren}}
-                    <section class="spatialforum-branches" aria-labelledby="spatialforum-branches-heading">
-                        <h3 id="spatialforum-branches-heading">{{#str}}continuingtracks, mod_spatialforum{{/str}}</h3>
-                        <div class="spatialforum-branch-grid">
-                            {{#children}}
-                                <a class="spatialforum-branch" href="{{url}}" data-track-link style="--branch-colour: {{colour}};">
-                                    <span class="spatialforum-branch-layer" aria-hidden="true"></span>
-                                    <strong>{{name}}</strong>
-                                    <span>{{postcount}} {{#str}}posts, mod_spatialforum{{/str}}</span>
-                                    <b aria-hidden="true">→</b>
-                                </a>
-                            {{/children}}
-                        </div>
-                    </section>
-                {{/haschildren}}
-            </section>
-        </main>
-
-        <aside class="spatialforum-map" aria-label="{{#str}}alltracks, mod_spatialforum{{/str}}">
-            <h3>{{#str}}alltracks, mod_spatialforum{{/str}}</h3>
-            <nav>
-                {{#tree}}
-                    <a href="{{url}}" data-track-link class="{{#active}}is-active{{/active}} {{#onpath}}is-on-path{{/onpath}}" style="--map-colour: {{colour}}; --map-indent: {{indent}}px;">
-                        <span aria-hidden="true"></span>{{name}}
-                    </a>
-                {{/tree}}
-            </nav>
-        </aside>
+    {{#locked}}<div class="alert alert-warning" role="status">{{#str}}forumlocked, mod_spatialforum{{/str}}</div>{{/locked}}
+    <nav class="spatialforum-route" data-region="route" aria-label="{{#str}}yourroute, mod_spatialforum{{/str}}">
+        <span>{{#str}}wholeconversation, mod_spatialforum{{/str}}</span>
+    </nav>
+    <div class="alert alert-warning spatialforum-read-error" data-region="read-error" role="alert" hidden>
+        {{#str}}readsavefailed, mod_spatialforum{{/str}}
     </div>
+    <main class="spatialforum-stage" data-region="stage" aria-label="{{#str}}conversationmap, mod_spatialforum{{/str}}">
+        <svg class="spatialforum-connectors" data-region="connectors" aria-hidden="true" focusable="false"></svg>
+        <div class="spatialforum-posts">
+            {{#posts}}
+                <details class="spatialforum-post {{#unread}}is-unread{{/unread}}" id="post-{{id}}"
+                         data-post-id="{{id}}" data-parent-id="{{parentid}}" data-colour="{{colour}}"
+                         data-unread="{{#unread}}1{{/unread}}{{^unread}}0{{/unread}}"
+                         data-readable="{{#cantrackread}}1{{/cantrackread}}{{^cantrackread}}0{{/cantrackread}}"
+                         style="--post-colour: {{colour}};" {{#opened}}open{{/opened}}>
+                    <summary class="spatialforum-card-toggle">
+                        <span class="spatialforum-subject">{{subject}}</span>
+                        <span class="spatialforum-preview" aria-hidden="true">{{preview}}</span>
+                        <span class="spatialforum-card-meta">
+                            <span>{{author}}</span>
+                            <span class="spatialforum-read-state" data-region="read-state">
+                                {{#unread}}● {{#str}}unread, mod_spatialforum{{/str}}{{/unread}}
+                                {{^unread}}{{#cantrackread}}✓ {{/cantrackread}}{{readlabel}}{{/unread}}
+                            </span>
+                        </span>
+                    </summary>
+                    <div class="spatialforum-post-detail">
+                        <div class="spatialforum-detail-head">
+                            <time>{{time}}</time>
+                            <button type="button" class="spatialforum-close" data-close>{{#str}}closepost, mod_spatialforum{{/str}}</button>
+                        </div>
+                        {{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
+                        <div class="spatialforum-message">{{{message}}}</div>
+                        {{#unread}}
+                            {{#cantrackread}}
+                                <form class="spatialforum-read-fallback" method="post" action="{{readurl}}">
+                                    <input type="hidden" name="id" value="{{cmid}}">
+                                    <input type="hidden" name="postid" value="{{id}}">
+                                    <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                    <button type="submit" class="btn btn-outline-secondary">{{#str}}markread, mod_spatialforum{{/str}}</button>
+                                </form>
+                            {{/cantrackread}}
+                        {{/unread}}
+                        <div class="spatialforum-reactions">
+                            {{#showlikes}}
+                                {{#canlike}}
+                                    <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
+                                        <input type="hidden" name="id" value="{{cmid}}">
+                                        <input type="hidden" name="postid" value="{{id}}">
+                                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                        <input type="hidden" name="reaction" value="{{nextreaction}}">
+                                        <button type="submit" class="spatialforum-like-button" aria-pressed="{{#liked}}true{{/liked}}{{^liked}}false{{/liked}}">{{likelabel}} ({{likecount}})</button>
+                                    </form>
+                                    <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
+                                        <input type="hidden" name="id" value="{{cmid}}">
+                                        <input type="hidden" name="postid" value="{{id}}">
+                                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                        <input type="hidden" name="reaction" value="{{nextdislike}}">
+                                        <button type="submit" class="spatialforum-like-button" aria-pressed="{{#disliked}}true{{/disliked}}{{^disliked}}false{{/disliked}}">{{dislikelabel}} ({{dislikecount}})</button>
+                                    </form>
+                                {{/canlike}}
+                                {{^canlike}}<span>{{#str}}likes, mod_spatialforum{{/str}}: {{likecount}} · {{#str}}dislikes, mod_spatialforum{{/str}}: {{dislikecount}}</span>{{/canlike}}
+                            {{/showlikes}}
+                        </div>
+                        {{#canreply}}<a class="btn btn-primary spatialforum-reply" href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
+                        {{#haschildren}}
+                            <div class="spatialforum-children">
+                                <h3>{{#str}}replieshere, mod_spatialforum{{/str}}</h3>
+                                {{#children}}
+                                    <a href="#post-{{id}}" data-open-post="{{id}}"><span>{{subject}}<small>{{author}}</small></span><span aria-hidden="true">→</span></a>
+                                {{/children}}
+                            </div>
+                        {{/haschildren}}
+                        {{#canmoderate}}
+                            <div class="spatialforum-moderation">
+                                <a href="{{moderateurl}}">{{moderatelabel}}</a>
+                                {{#candelete}}<a href="{{deleteurl}}" class="text-danger" data-confirm-delete data-confirm-message="{{#str}}confirmdeletepost, mod_spatialforum{{/str}}">{{#str}}delete{{/str}}</a>{{/candelete}}
+                            </div>
+                        {{/canmoderate}}
+                    </div>
+                </details>
+            {{/posts}}
+        </div>
+        {{^hasposts}}<p class="spatialforum-empty">{{#str}}noposts, mod_spatialforum{{/str}}</p>{{/hasposts}}
+    </main>
+    <footer class="spatialforum-legend">
+        <span><i class="spatialforum-root-dot" aria-hidden="true"></i>{{#str}}maintrack, mod_spatialforum{{/str}}</span>
+        <span><i class="spatialforum-route-dot" aria-hidden="true"></i>{{#str}}yourroute, mod_spatialforum{{/str}}</span>
+        <span>● {{#str}}unread, mod_spatialforum{{/str}}</span>
+        <span>✓ {{#str}}readpost, mod_spatialforum{{/str}}</span>
+    </footer>
 </div>

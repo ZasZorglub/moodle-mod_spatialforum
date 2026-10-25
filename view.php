@@ -32,8 +32,12 @@ $PAGE->set_context($context);
 $PAGE->requires->js_call_amd('mod_spatialforum/spatialforum', 'init');
 
 spatialforum_view($activity, $course, $cm, $context);
-$data = forum::export_view_data($activity, $cm, $track, $context);
-forum::mark_read(array_column($data['posts'], 'id'), $USER->id);
+$data = forum::export_view_data($activity, $cm, $track, $context, true);
+$openpostid = optional_param('postid', 0, PARAM_INT);
+foreach ($data['posts'] as &$post) {
+    $post['opened'] = $post['id'] == $openpostid;
+}
+unset($post);
 
 echo $OUTPUT->header();
 if (trim($activity->intro ?? '') !== '') {

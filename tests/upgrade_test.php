@@ -37,7 +37,7 @@ final class upgrade_test extends \advanced_testcase {
             $this->assertSame('Existing text', $DB->get_field('spatialforum_posts', 'message', ['id' => $postid]));
             $this->assertTrue($manager->table_exists(new \xmldb_table('spatialforum_likes')));
             // A repeat at the new version must not run the migration again.
-            $this->assertTrue(xmldb_spatialforum_upgrade(2026102401));
+            $this->assertTrue(xmldb_spatialforum_upgrade(2026102500));
         } finally {
             // Restore the current schema before PHPUnit resets the database.
             if (!$manager->table_exists(new \xmldb_table('spatialforum_likes')) || !$manager->field_exists($table, $field)) {
@@ -77,5 +77,23 @@ final class upgrade_test extends \advanced_testcase {
                 xmldb_spatialforum_upgrade(2026102400);
             }
         }
+    }
+
+    public function test_upgrade_from_021_preserves_existing_read_timestamps(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $postid = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
+            get_admin()->id, 'Existing', 'Existing body', FORMAT_HTML);
+        \mod_spatialforum\local\forum::mark_read([$postid], get_admin()->id);
+        $before = $DB->get_record('spatialforum_read', ['postid' => $postid]);
+        set_config('version', 2026102401, 'mod_spatialforum');
+        $this->assertTrue(xmldb_spatialforum_upgrade(2026102401));
+        $after = $DB->get_record('spatialforum_read', ['postid' => $postid]);
+        $this->assertEquals($before, $after);
+        $this->assertTrue(xmldb_spatialforum_upgrade(2026102500));
     }
 }

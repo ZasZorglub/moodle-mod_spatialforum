@@ -1,6 +1,16 @@
-# Staging validation for 0.2.1
+# Staging validation for 0.3.0
 
 Do not merge to main until the target Moodle/Workplace checks below pass.
+
+## 0.3.0 acceptance
+
+- Upgrade 0.2.1 without losing any read timestamp, reaction, quote preference or post/track link. No schema replacement is needed.
+- The activity-wide map must include every root post and child track. Open each card in turn, including post 5 and a long HTML post. Only one stays open. Other branches move without overlapping. Close, Escape and ancestor/child links preserve a usable keyboard focus and visible route.
+- Closed cards show the first two visual lines of their own text, not copied parent quotes. Unread posts have an explicit label and distinct marker. Merely loading the map, hovering or previewing must not mark anything read.
+- Open one unread post as student A: only that post becomes Read, after the server saves it. Reload and test as student B: A's read marker must not affect B. Repeat submissions preserve the first read timestamp. Simulate network/session failure: do not display a false saved Read label; reopening retries.
+- Direct read POSTs must enforce session key, activity access, non-guest user and matching activity/post; GET must not write. Guests show Not tracked. Without JavaScript, details and the explicit Mark as read form remain usable.
+- Reply must offer subject, optional parent quote and message, with no branch-name field or duplicate branch button. Saving automatically creates the linked track and opens the new post. Cancelling creates nothing. Check each post's actual track lock, permissions and depth, not merely the currently requested track.
+- Test desktop, tablet, mobile, reduced motion, images loading after the card opens, formatted content and repeated opening/closing. Narrow/deep maps and activities over 150 posts must reflow without horizontal clipping. Test realistic large activities before adopting this release.
 
 ## Additional 0.2.1 checks
 

@@ -284,15 +284,25 @@ class forum {
         if (!$postids || !$userid) {
             return;
         }
-        $existing = $DB->get_records_list('spatialforum_read', 'postid', $postids, '', 'id,postid');
-        $readids = array_map(static fn($read): int => (int) $read->postid, $existing);
-        $now = time();
-        foreach (array_diff($postids, $readids) as $postid) {
-            $DB->insert_record('spatialforum_read', (object) [
-                'userid' => $userid,
-                'postid' => $postid,
-                'timeread' => $now,
-            ]);
+        $postids = array_unique(array_map('intval', $postids));
+        $factory = \core\lock\lock_config::get_lock_factory('mod_spatialforum');
+        $lock = $factory->get_lock('read:' . $userid, 10);
+        if (!$lock) {
+            throw new \moodle_exception('readlocktimeout', 'mod_spatialforum');
+        }
+        try {
+            [$insql, $params] = $DB->get_in_or_equal($postids, SQL_PARAMS_NAMED);
+            $params['userid'] = $userid;
+            $existing = $DB->get_records_select('spatialforum_read',
+                "postid $insql AND userid = :userid", $params, '', 'id,postid');
+            $readids = array_map(static fn($read): int => (int) $read->postid, $existing);
+            foreach (array_diff($postids, $readids) as $postid) {
+                $DB->insert_record('spatialforum_read', (object) [
+                    'userid' => $userid, 'postid' => $postid, 'timeread' => time(),
+                ]);
+            }
+        } finally {
+            $lock->release();
         }
     }
 
@@ -327,25 +337,34 @@ class forum {
      * @param stdClass $cm
      * @param stdClass $currenttrack
      * @param context_module $context
+     * @param bool $wholemap Include every track in the activity, rather than only the current track.
      * @return array
      */
     public static function export_view_data(
         stdClass $activity,
         stdClass $cm,
         stdClass $currenttrack,
-        context_module $context
+        context_module $context,
+        bool $wholemap = false
     ): array {
         global $DB, $USER;
 
         $path = self::get_path($currenttrack->id, $activity->id);
         $tree = self::get_tree($activity->id, $activity->roottrackid);
-        $posts = $DB->get_records('spatialforum_posts', [
-            'trackid' => $currenttrack->id,
-        ], 'timecreated ASC, id ASC');
+        $posts = $DB->get_records('spatialforum_posts',
+            $wholemap ? ['spatialforumid' => $activity->id] : ['trackid' => $currenttrack->id],
+            'timecreated ASC, id ASC');
+        $maptracks = $DB->get_records('spatialforum_tracks', ['spatialforumid' => $activity->id]);
+        $maptracks[$currenttrack->id] = $currenttrack;
+        $depths = [];
+        foreach ($tree as $item) {
+            $depths[$item->id] = $item->depth + 1;
+        }
         $childtracks = $DB->get_records('spatialforum_tracks', [
             'parenttrackid' => $currenttrack->id,
         ], 'timecreated ASC');
-        $unreadids = array_flip(self::get_unread_postids($activity->id, $USER->id));
+        $cantrackread = !isguestuser() && !empty($USER->id);
+        $unreadids = $cantrackread ? array_flip(self::get_unread_postids($activity->id, $USER->id)) : [];
         $pathids = array_flip(array_column($path, 'id'));
         $canreply = has_capability('mod/spatialforum:reply', $context)
             && empty($activity->locked) && empty($currenttrack->locked);
@@ -357,20 +376,22 @@ class forum {
         $canlike = $showlikes && !isguestuser() && has_capability('mod/spatialforum:like', $context);
         $likecounts = [];
         $userlikes = [];
+        $scope = $wholemap ? 'p.spatialforumid = :scopeid' : 'p.trackid = :scopeid';
+        $scopeid = $wholemap ? $activity->id : $currenttrack->id;
         if ($showlikes) {
             $likecounts = $DB->get_records_sql(
-                'SELECT l.postid,
+                "SELECT l.postid,
                         SUM(CASE WHEN l.reaction = 1 THEN 1 ELSE 0 END) AS total,
                         SUM(CASE WHEN l.reaction = -1 THEN 1 ELSE 0 END) AS dislikes
                    FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
-                  WHERE p.trackid = :trackid AND p.deleted = 0
-               GROUP BY l.postid', ['trackid' => $currenttrack->id]);
+                  WHERE $scope AND p.deleted = 0
+               GROUP BY l.postid", ['scopeid' => $scopeid]);
             $userlikes = $DB->get_records_sql(
-                'SELECT l.postid, l.id, l.reaction FROM {spatialforum_likes} l
+                "SELECT l.postid, l.id, l.reaction FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
-                  WHERE p.trackid = :trackid AND l.userid = :userid',
-                ['trackid' => $currenttrack->id, 'userid' => $USER->id]);
+                  WHERE $scope AND l.userid = :userid",
+                ['scopeid' => $scopeid, 'userid' => $USER->id]);
         }
 
         $users = [];
@@ -382,6 +403,14 @@ class forum {
 
         $postdata = [];
         foreach ($posts as $post) {
+            $posttrack = $maptracks[$post->trackid] ?? null;
+            $postdepth = $depths[$post->trackid] ?? $activity->maxdepth;
+            $parentid = $post->replytoid ?: ($posttrack->originpostid ?? 0);
+            $parentid = isset($posts[$parentid]) && $parentid != $post->id ? (int) $parentid : 0;
+            $postcanreply = $posttrack && !$activity->locked && !$posttrack->locked
+                && $postdepth < $activity->maxdepth
+                && has_capability('mod/spatialforum:reply', $context)
+                && has_capability('mod/spatialforum:startbranch', $context);
             $replycontext = [];
             if (!$post->deleted && $post->replytoid && $post->showparent) {
                 $parent = $posts[$post->replytoid] ?? $DB->get_record('spatialforum_posts', [
@@ -398,6 +427,12 @@ class forum {
             $reaction = (int) ($userlikes[$post->id]->reaction ?? 0);
             $postdata[] = [
                 'id' => $post->id,
+                'parentid' => $parentid,
+                'colour' => self::normalise_colour($posttrack->colour ?? '#ffffff'),
+                'preview' => trim(preg_replace('/\s+/u', ' ', html_to_text($message, 0, false))),
+                'cantrackread' => $cantrackread && !$post->deleted,
+                'readlabel' => get_string($post->deleted ? 'removedpost' :
+                    ($cantrackread ? 'readpost' : 'readnottracked'), 'mod_spatialforum'),
                 'subject' => format_string($post->subject),
                 'message' => $message,
                 'author' => $fullname,
@@ -415,30 +450,50 @@ class forum {
                 'nextdislike' => $reaction === -1 ? 0 : -1,
                 'likelabel' => get_string($reaction === 1 ? 'unlike' : 'like', 'mod_spatialforum'),
                 'dislikelabel' => get_string($reaction === -1 ? 'undislike' : 'dislike', 'mod_spatialforum'),
-                'canreply' => $canreply && $canbranch && !$post->deleted,
+                'canreply' => $postcanreply && !$post->deleted,
                 'canbranch' => $canbranch && !$post->deleted,
                 'replyurl' => (new moodle_url('/mod/spatialforum/post.php', [
                     'id' => $cm->id,
                     'action' => 'reply',
-                    'trackid' => $currenttrack->id,
+                    'trackid' => $post->trackid,
                     'originpostid' => $post->id,
                 ]))->out(false),
                 'branchurl' => (new moodle_url('/mod/spatialforum/post.php', [
                     'id' => $cm->id,
                     'action' => 'branch',
-                    'trackid' => $currenttrack->id,
+                    'trackid' => $post->trackid,
                     'originpostid' => $post->id,
                 ]))->out(false),
                 'candelete' => $canmoderate && !$post->deleted,
+                'canmoderate' => $canmoderate && (bool) $posttrack,
+                'tracklocked' => !empty($posttrack->locked),
+                'moderatelabel' => get_string(!empty($posttrack->locked) ? 'unlocktrack' : 'locktrack', 'mod_spatialforum'),
+                'moderateurl' => (new moodle_url('/mod/spatialforum/action.php', [
+                    'id' => $cm->id, 'action' => 'toggletrack', 'trackid' => $post->trackid, 'sesskey' => sesskey(),
+                ]))->out(false),
                 'deleteurl' => (new moodle_url('/mod/spatialforum/action.php', [
                     'id' => $cm->id,
                     'action' => 'deletepost',
                     'postid' => $post->id,
-                    'trackid' => $currenttrack->id,
+                    'trackid' => $post->trackid,
                     'sesskey' => sesskey(),
                 ]))->out(false),
             ];
         }
+
+        $byparent = [];
+        foreach ($postdata as $item) {
+            if ($item['parentid']) {
+                $byparent[$item['parentid']][] = [
+                    'id' => $item['id'], 'subject' => $item['subject'], 'author' => $item['author'],
+                ];
+            }
+        }
+        foreach ($postdata as &$item) {
+            $item['children'] = $byparent[$item['id']] ?? [];
+            $item['haschildren'] = !empty($item['children']);
+        }
+        unset($item);
 
         $pathdata = [];
         foreach ($path as $index => $track) {
@@ -488,6 +543,9 @@ class forum {
             'action' => 'toggletrack',
             'trackid' => $currenttrack->id,
             'sesskey' => sesskey(),
+            'readurl' => (new moodle_url('/mod/spatialforum/read.php'))->out(false),
+            'readcount' => count(array_filter($postdata, static fn($item) => $item['unread'])),
+            'postcount' => count($postdata),
         ]);
         return [
             'forumname' => format_string($activity->name),

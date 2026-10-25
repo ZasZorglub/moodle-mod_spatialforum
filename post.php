@@ -56,7 +56,7 @@ $PAGE->set_url('/mod/spatialforum/post.php', [
     'trackid' => $track->id,
     'originpostid' => $originpostid,
 ]);
-$PAGE->set_title(get_string($createstrack ? 'createbranch' : 'postreply', 'mod_spatialforum'));
+$PAGE->set_title(get_string($action === 'branch' ? 'createbranch' : 'postreply', 'mod_spatialforum'));
 $PAGE->set_heading(format_string($course->fullname));
 
 $form = new post_form(null, [
@@ -70,7 +70,6 @@ $form = new post_form(null, [
 if ($action === 'reply' && !empty($origin)) {
     $form->set_data([
         'subject' => forum::reply_subject($origin->subject),
-        'branchname' => $origin->subject,
     ]);
 }
 
@@ -83,21 +82,21 @@ if ($form->is_cancelled()) {
     $format = $data->message_editor['format'];
     if ($createstrack) {
         $targettrackid = forum::reply_in_new_track($activity, $track, $originpostid, $USER->id,
-            $data->branchname, $data->subject, $message, $format, !empty($data->showparent));
+            $action === 'branch' ? $data->branchname : $data->subject,
+            $data->subject, $message, $format, !empty($data->showparent));
+        $newpostid = $DB->get_field('spatialforum_posts', 'id', ['trackid' => $targettrackid], MUST_EXIST);
     } else {
-        forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);
+        $newpostid = forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);
     }
     redirect(new moodle_url('/mod/spatialforum/view.php', [
         'id' => $cm->id,
         'trackid' => $targettrackid,
+        'postid' => $newpostid,
     ]), get_string('postsaved', 'mod_spatialforum'));
 }
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string($createstrack ? 'createbranch' : 'postreply', 'mod_spatialforum'));
-if ($action === 'reply' && $createstrack) {
-    echo $OUTPUT->notification(get_string('replystartsnewtrack', 'mod_spatialforum'), 'info');
-}
+echo $OUTPUT->heading(get_string($action === 'branch' ? 'createbranch' : 'postreply', 'mod_spatialforum'));
 if (!empty($origin)) {
     echo $OUTPUT->render_from_template('mod_spatialforum/reply_context',
         forum::export_reply_context($origin, $context, $cm->id));

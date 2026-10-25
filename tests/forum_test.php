@@ -241,4 +241,111 @@ final class forum_test extends \advanced_testcase {
         provider::delete_data_for_all_users_in_context($context);
         $this->assertSame(0, $DB->count_records('spatialforum_likes'));
     }
+
+    public function test_map_previews_do_not_mark_posts_read(): void {
+        global $DB;
+
+        [$activity, $root, $original, $user, $context, $cm] = $this->fixture();
+        $author = $this->getDataGenerator()->create_user();
+        $parentid = forum::create_post($activity, $root->id, $author->id,
+            'Other post', '<p>First line</p><p><strong>Second line</strong></p>', FORMAT_HTML);
+        $childid = forum::reply_in_new_track($activity, $root, $parentid, $author->id,
+            'Automatic', 'Child post', '<p>The actual answer</p>', FORMAT_HTML, true);
+        $data = forum::export_view_data($activity, $cm, $root, $context, true);
+        $this->assertCount(3, $data['posts']);
+        $this->assertSame(2, $data['readcount']);
+        $this->assertSame(0, $DB->count_records('spatialforum_read'));
+        $posts = array_column($data['posts'], null, 'id');
+        $parent = $posts[$parentid];
+        $this->assertStringContainsString('First line', $parent['preview']);
+        $this->assertStringContainsString('Second line', $parent['preview']);
+        $this->assertStringNotContainsString('<', $parent['preview']);
+        $childpostid = $DB->get_field('spatialforum_posts', 'id', ['trackid' => $childid], MUST_EXIST);
+        $this->assertEquals($parentid, $posts[$childpostid]['parentid']);
+        $this->assertSame('The actual answer', $posts[$childpostid]['preview']);
+        $this->assertCount(1, $posts[$childpostid]['replycontext']);
+        $this->setGuestUser();
+        $guest = forum::export_view_data($activity, $cm, $root, $context, true);
+        $this->assertSame(0, $guest['readcount']);
+        $this->assertFalse($guest['posts'][0]['cantrackread']);
+        $this->assertSame(0, $DB->count_records('spatialforum_read'));
+    }
+
+    public function test_read_marks_are_per_user_per_post_and_idempotent(): void {
+        global $DB;
+
+        [$activity, $root, $post, $user] = $this->fixture();
+        $other = $this->getDataGenerator()->create_user();
+        $secondid = forum::create_post($activity, $root->id, $user->id, 'Second', 'Still unread', FORMAT_HTML);
+        forum::mark_read([$post->id], $user->id);
+        forum::mark_read([$post->id], $other->id);
+        $this->assertSame(2, $DB->count_records('spatialforum_read', ['postid' => $post->id]));
+        $conditions = ['postid' => $post->id, 'userid' => $other->id];
+        $DB->set_field('spatialforum_read', 'timeread', 123, $conditions);
+        forum::mark_read([$post->id, $post->id], $other->id);
+        $this->assertEquals(123, $DB->get_field('spatialforum_read', 'timeread', $conditions));
+        $unread = array_map('intval', forum::get_unread_postids($activity->id, $other->id));
+        $this->assertNotContains((int) $post->id, $unread);
+        $this->assertContains($secondid, $unread);
+        $this->assertSame(0, $DB->count_records('spatialforum_read', ['postid' => $secondid]));
+        forum::mark_read([$post->id], 0);
+        $this->assertSame(2, $DB->count_records('spatialforum_read'));
+    }
+
+    public function test_whole_map_uses_each_posts_track_permissions_and_reactions(): void {
+        global $DB;
+
+        [$activity, $root, $post, $user, $context, $cm] = $this->fixture();
+        $childid = forum::reply_in_new_track($activity, $root, $post->id, $user->id,
+            'Child', 'Child title', 'Answer', FORMAT_HTML);
+        $child = $DB->get_record('spatialforum_posts', ['trackid' => $childid], '*', MUST_EXIST);
+        forum::set_reaction($activity, $child, $user->id, -1);
+        $DB->set_field('spatialforum_tracks', 'locked', 1, ['id' => $childid]);
+        $posts = array_column(forum::export_view_data($activity, $cm, $root, $context, true)['posts'], null, 'id');
+        $this->assertFalse($posts[$child->id]['canreply']);
+        $this->assertTrue($posts[$post->id]['canreply']);
+        $this->assertEquals(1, $posts[$child->id]['dislikecount']);
+        $DB->set_field('spatialforum_tracks', 'locked', 0, ['id' => $childid]);
+        $posts = array_column(forum::export_view_data($activity, $cm, $root, $context, true)['posts'], null, 'id');
+        $this->assertTrue($posts[$child->id]['canreply']);
+        $this->assertStringContainsString('trackid=' . $childid, $posts[$child->id]['replyurl']);
+        $this->assertEquals($child->id, $posts[$post->id]['children'][0]['id']);
+    }
+
+    public function test_automatic_reply_form_has_no_branch_name_choice(): void {
+        global $PAGE;
+
+        [$activity, $root, $post, $user, $context, $cm] = $this->fixture();
+        $PAGE->set_context($context);
+        $PAGE->set_url('/mod/spatialforum/post.php', ['id' => $cm->id]);
+        $form = new \mod_spatialforum\form\post_form(null, [
+            'cmid' => $cm->id, 'action' => 'reply', 'trackid' => $root->id,
+            'originpostid' => $post->id, 'newtrack' => true,
+        ]);
+        $errors = $form->validation([
+            'action' => 'reply', 'subject' => 'My reply',
+            'message_editor' => ['text' => 'Actual answer', 'format' => FORMAT_HTML],
+        ], []);
+        $this->assertArrayNotHasKey('branchname', $errors);
+        ob_start();
+        $form->display();
+        $html = ob_get_clean();
+        $this->assertStringNotContainsString('name="branchname"', $html);
+        $this->assertStringContainsString('name="showparent"', $html);
+    }
+
+    public function test_actual_template_renders_all_posts_as_unfolding_cards(): void {
+        global $OUTPUT;
+
+        [$activity, $root, $post, $user, $context, $cm] = $this->fixture();
+        forum::reply_in_new_track($activity, $root, $post->id, $user->id,
+            'Child', 'A reply', 'Answer preview', FORMAT_HTML);
+        $data = forum::export_view_data($activity, $cm, $root, $context, true);
+        $html = $OUTPUT->render_from_template('mod_spatialforum/main', $data);
+        $this->assertSame(2, substr_count($html, '<details '));
+        $this->assertStringContainsString('data-parent-id="' . $post->id . '"', $html);
+        $this->assertStringContainsString('Answer preview', $html);
+        $this->assertStringNotContainsString('Start track here', $html);
+        $this->assertStringNotContainsString('data-track-link', $html);
+    }
 }

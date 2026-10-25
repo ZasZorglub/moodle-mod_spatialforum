@@ -19,7 +19,7 @@ class post_form extends \moodleform {
     public function definition(): void {
         $mform = $this->_form;
         $customdata = $this->_customdata;
-        $isbranch = !empty($customdata['newtrack']) || $customdata['action'] === 'branch';
+        $isbranch = $customdata['action'] === 'branch';
 
         $mform->addElement('hidden', 'id', $customdata['cmid']);
         $mform->setType('id', PARAM_INT);
@@ -70,7 +70,7 @@ class post_form extends \moodleform {
         if (trim((string) ($data['subject'] ?? '')) === '') {
             $errors['subject'] = get_string('required');
         }
-        $isbranch = !empty($this->_customdata['newtrack']) || ($data['action'] ?? '') === 'branch';
+        $isbranch = ($this->_customdata['action'] ?? '') === 'branch';
         if ($isbranch && trim((string) ($data['branchname'] ?? '')) === '') {
             $errors['branchname'] = get_string('required');
         }

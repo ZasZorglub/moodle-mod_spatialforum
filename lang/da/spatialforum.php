@@ -2,6 +2,19 @@
 // This file is part of Moodle - http://moodle.org/
 
 $string['pluginname'] = 'Samtalespor';
+$string['conversationmap'] = 'Samtalekort';
+$string['wholeconversation'] = 'Hele samtalen';
+$string['maintrack'] = 'Hovedspor';
+$string['newpost'] = 'Nyt indlæg';
+$string['readpost'] = 'Læst';
+$string['unreadposts'] = 'ulæste';
+$string['readnottracked'] = 'Registreres ikke';
+$string['removedpost'] = 'Slettet';
+$string['markread'] = 'Markér som læst';
+$string['closepost'] = 'Luk';
+$string['replieshere'] = 'Svar herfra';
+$string['readsavefailed'] = 'Læsestatus kunne ikke gemmes. Indlægget er stadig markeret som ulæst. Luk og åbn det igen for at prøve igen.';
+$string['readlocktimeout'] = 'Læsestatus kunne ikke gemmes lige nu. Prøv igen.';
 $string['enablelikes'] = 'Tillad like/dislike på indlæg';
 $string['enablelikes_help'] = 'Deltagere kan vælge enten like eller dislike på et indlæg, skifte valg eller fjerne reaktionen. Administratoren kan slå begge fra for alle Samtalespor. Når funktionen slås fra, skjules knapper og antal, mens reaktionerne bevares.';
 $string['allowlikes'] = 'Tillad like/dislike på hele sitet';

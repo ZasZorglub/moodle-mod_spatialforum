@@ -2,6 +2,19 @@
 // This file is part of Moodle - http://moodle.org/
 
 $string['pluginname'] = 'Spatial forum';
+$string['conversationmap'] = 'Conversation map';
+$string['wholeconversation'] = 'Whole conversation';
+$string['maintrack'] = 'Main track';
+$string['newpost'] = 'New post';
+$string['readpost'] = 'Read';
+$string['unreadposts'] = 'unread';
+$string['readnottracked'] = 'Not tracked';
+$string['removedpost'] = 'Deleted';
+$string['markread'] = 'Mark as read';
+$string['closepost'] = 'Close';
+$string['replieshere'] = 'Replies from here';
+$string['readsavefailed'] = 'Read state could not be saved. The post is still marked unread. Close and reopen it to try again.';
+$string['readlocktimeout'] = 'Read state could not be saved right now. Please try again.';
 $string['enablelikes'] = 'Allow like/dislike on posts';
 $string['enablelikes_help'] = 'Participants can choose either like or dislike, switch their choice or remove their reaction. The administrator can disable both site-wide. Disabling hides buttons and counts but preserves reactions.';
 $string['allowlikes'] = 'Allow like/dislike site-wide';
