@@ -75,5 +75,9 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         // Restore inline threaded reading; no schema or stored user-data changes.
         upgrade_mod_savepoint(true, 2026102600, 'spatialforum');
     }
+    if ($oldversion < 2026102601) {
+        // Make the enabled selection-reply action visually prominent; no schema changes.
+        upgrade_mod_savepoint(true, 2026102601, 'spatialforum');
+    }
     return true;
 }

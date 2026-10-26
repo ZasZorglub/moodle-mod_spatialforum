@@ -82,6 +82,7 @@ export const init = () => {
         document.addEventListener('selectionchange', () => {
             selection = origin ? selected(origin) : '';
             add.disabled = !selection;
+            add.setAttribute('aria-disabled', String(add.disabled));
         });
         // Preserve the selection when pointer focus moves to the action button.
         add.addEventListener('mousedown', event => event.preventDefault());
@@ -110,6 +111,7 @@ export const init = () => {
         document.addEventListener('selectionchange', () => {
             input.value = selected(message);
             button.disabled = !input.value;
+            button.setAttribute('aria-disabled', String(button.disabled));
         });
         button.addEventListener('mousedown', event => event.preventDefault());
         form.addEventListener('submit', event => {

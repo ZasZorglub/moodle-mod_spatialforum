@@ -33,6 +33,7 @@ for (const built of [false, true]) {
     const input = document.querySelector('[name="excerptdraft"]');
     assert.equal(add.disabled, true);
     select(); assert.equal(add.disabled, false);
+    assert.equal(add.getAttribute('aria-disabled'), 'false');
     add.click();
     assert.equal(JSON.parse(input.value)[0].quote, quote);
     const comment = document.querySelector('textarea');
@@ -59,4 +60,7 @@ for (const built of [false, true]) {
     assert.equal(JSON.parse(input.value).length, 10);
     assert.ok(document.querySelector('[data-excerpt-status]').textContent);
 }
+const css = fs.readFileSync(path.join(plugin, 'styles.css'), 'utf8');
+assert.ok(css.includes('.spatialforum-excerpt-start button:not(:disabled)'));
+assert.ok(css.includes('box-shadow: 0 0 0 3px #26724d33'));
 console.log('PASS: excerpt source/build, selected text boundaries, multiple comments, escaping, removal and limits');

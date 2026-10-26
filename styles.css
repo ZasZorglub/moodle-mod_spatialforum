@@ -84,6 +84,19 @@
 .spatialforum-excerpt-comment { white-space: normal; margin: 12px 0 24px; }
 .spatialforum-excerpt-start { margin: 12px 0; }
 .spatialforum-excerpt-start button:disabled { opacity: .6; }
+.spatialforum-excerpt-start button:not(:disabled) {
+    background: var(--sf-active);
+    border-color: var(--sf-active);
+    color: var(--sf-onactive);
+    font-weight: 650;
+    box-shadow: 0 0 0 3px #26724d33;
+}
+.spatialforum-excerpt-start button:not(:disabled):hover,
+.spatialforum-excerpt-start button:not(:disabled):focus-visible {
+    background: #1d5b3d;
+    border-color: #1d5b3d;
+    color: var(--sf-onactive);
+}
 .spatialforum-excerpt-composer { margin: 20px 0; }
 .spatialforum-excerpt-composer h3 { font-size: 1.15rem; }
 .spatialforum-excerpt-draft { margin: 20px 0; }
