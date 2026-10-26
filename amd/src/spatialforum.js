@@ -11,11 +11,9 @@ export const init = () => {
     const viewport = root.querySelector('[data-region="viewport"]');
     const svg = root.querySelector('[data-region="connectors"]');
     const route = root.querySelector('[data-region="route"]');
-    const reader = root.querySelector('[data-region="reader"]');
     const search = root.querySelector('[data-region="search"]');
     const onlyUnread = root.querySelector('[data-region="only-unread"]');
     const viewButtons = Array.from(root.querySelectorAll('[data-view]'));
-    const slots = new Map();
     const stateKey = 'mod_spatialforum:' + root.dataset.cmid;
     let saved = {};
     try {
@@ -193,7 +191,7 @@ export const init = () => {
             cancelAnimationFrame(animation);
             animation = 0;
         }
-        const width = active ? root.getBoundingClientRect().width : viewport.getBoundingClientRect().width;
+        const width = viewport.getBoundingClientRect().width;
         if (!width) {
             return;
         }
@@ -217,7 +215,7 @@ export const init = () => {
             url.searchParams.set('sfview', list ? 'list' : 'map');
             action.setAttribute(attribute, url.toString());
         });
-        if (active || !cards.length) {
+        if (!cards.length) {
             return;
         }
         if (list) {
@@ -228,6 +226,12 @@ export const init = () => {
             return;
         }
         const widths = Array.from({length: maxDepth + 1}, (_, d) => (d ? replyColumn : mainColumn) - gap);
+        if (active) {
+            // Keep the opened post in its thread. Widen its column for readable text,
+            // then reflow cards and wires together instead of hiding the overview.
+            const depth = depths.get(active);
+            widths[depth] = Math.max(widths[depth], Math.min(680, Math.max(320, width * 0.5 - gap)));
+        }
         const total = widths.reduce((a, b) => a + b, 0) + maxDepth * gap;
         const xs = [];
         const canvasWidth = Math.max(width, total + gap);
@@ -356,14 +360,6 @@ export const init = () => {
         }
         remember();
     };
-    const restoreCard = card => {
-        const slot = slots.get(card.dataset.postId);
-        if (slot) {
-            slot.parentNode.insertBefore(card, slot);
-            slot.remove();
-            slots.delete(card.dataset.postId);
-        }
-    };
     const openCard = (card, focus = false, record = true) => {
         if (active === card.dataset.postId) {
             return;
@@ -374,7 +370,6 @@ export const init = () => {
         cards.forEach(other => {
             if (other !== card) {
                 other.removeAttribute('open');
-                restoreCard(other);
             }
         });
         if (!card.hasAttribute('open')) {
@@ -382,13 +377,6 @@ export const init = () => {
         }
         active = card.dataset.postId;
         card.hidden = false;
-        const slot = document.createComment('post-' + active);
-        card.parentNode.insertBefore(slot, card);
-        slots.set(active, slot);
-        reader.appendChild(card);
-        reader.hidden = false;
-        viewport.hidden = true;
-        root.classList.add('is-reading');
         updateRoute();
         layout(false);
         if (record) {
@@ -396,17 +384,13 @@ export const init = () => {
         }
         void markRead(card);
         if (focus) {
-            card.querySelector('[data-close]').focus();
-            reader.scrollIntoView({block: 'start'});
+            card.querySelector('summary').focus({preventScroll: true});
+            card.scrollIntoView({block: 'nearest', inline: 'nearest'});
         }
     };
     const closeCard = (card, focus = true, record = true) => {
-        restoreCard(card);
         card.removeAttribute('open');
         active = null;
-        reader.hidden = true;
-        viewport.hidden = false;
-        root.classList.remove('is-reading');
         const query = search.value.trim().toLocaleLowerCase();
         card.hidden = !(title(card) + ' ' + card.querySelector('.spatialforum-message').textContent)
             .toLocaleLowerCase().includes(query) || (onlyUnread.checked && card.dataset.unread !== '1');

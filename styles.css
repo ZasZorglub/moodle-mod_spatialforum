@@ -94,10 +94,10 @@
 .mod-spatialforum.js-enabled .spatialforum-posts { display: block; padding: 0; }
 .mod-spatialforum.is-map .spatialforum-connectors { display: block; }
 .mod-spatialforum.is-map .spatialforum-post { position: absolute; }
+.mod-spatialforum.is-map .spatialforum-post-detail { max-height: min(60vh, 560px); overflow-y: auto; overscroll-behavior-y: contain; }
 .spatialforum-post.is-on-route { border-top-color: var(--sf-active); }
 .spatialforum-post.is-muted { background: #f8faf9; box-shadow: none; }
 .mod-spatialforum.is-list .spatialforum-post { position: relative; left: auto !important; top: auto !important; width: auto !important; margin: 12px 0; margin-left: min(calc(var(--post-depth, 0) * 12px), 36px); }
-.mod-spatialforum.is-list .spatialforum-post[open] { margin-left: 0; }
 .mod-spatialforum.is-list .spatialforum-stage { height: auto !important; }
 @media (max-width: 450px) {
     .spatialforum-hero { padding: 20px 16px; }
@@ -117,10 +117,7 @@
 .spatialforum-unread-filter { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
 .spatialforum-result-status { margin: 0; padding: 0 20px 10px; font-size: .875rem; }
 .spatialforum-result-status:empty { display: none; }
-.spatialforum-reader { max-width: 720px; margin: 20px auto; padding: 0 12px; scroll-margin-top: 100px; }
-.spatialforum-reader .spatialforum-post { position: relative !important; inset: auto !important; width: 100% !important; margin: 0 !important; }
-.spatialforum-reader .spatialforum-message { font-size: 1.0625rem; line-height: 1.7; }
-.spatialforum-reader .spatialforum-subject { font-size: 1.25rem; }
+.spatialforum-post[open] .spatialforum-message { font-size: 1rem; line-height: 1.7; }
 .spatialforum-reader-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .spatialforum-selection-help { font-size: .875rem; margin: 6px 0; color: var(--sf-muted); }
 .spatialforum-js-only { display: none; }
@@ -134,7 +131,6 @@
 .spatialforum-quote-options { margin-bottom: 20px; }
 @media (max-width: 450px) {
     .spatialforum-search { flex-basis: 100%; }
-    .spatialforum-reader { padding: 0 8px; }
     .mod-spatialforum.is-list .spatialforum-post { margin-left: min(calc(var(--post-depth, 0) * 8px), 16px); }
-    .spatialforum-reader .spatialforum-post-detail { padding-inline: 12px; }
+    .spatialforum-post-detail { padding-inline: 12px; }
 }

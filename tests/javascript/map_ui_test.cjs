@@ -126,12 +126,19 @@ async function exercise(script, cyclic = false) {
     assert.equal(requests[0].params.get('id'), '42');
     assert.equal(requests[0].params.get('sesskey'), 'token');
     assert.equal(requests[0].params.get('postid'), '11');
-    assert.equal(card(11).parentElement, root.querySelector('[data-region="reader"]'));
-    assert.equal(root.querySelector('[data-region="viewport"]').hidden, true);
+    assert.equal(card(11).parentElement, root.querySelector('.spatialforum-posts'));
+    assert.equal(root.querySelector('[data-region="viewport"]').hidden, false);
+    assert.equal(root.querySelectorAll('[data-wire-post]').length, 4, 'All thread connections remain rendered');
+    assert.equal(cardsVisible().length, 6, 'Opening a post keeps the complete overview');
+    assert.ok(parseFloat(card(11).style.width) >= 320, 'Opened replies have a readable column width');
+    assert.ok(parseFloat(card(10).style.width) + parseFloat(card(11).style.width) + 96 <= width,
+        'The parent column and expanded reply fit side by side on desktop');
+    noOverlap();
     assert.equal(new URL(location.href).searchParams.get('postid'), '11');
     close(11); open(11); await settle();
     assert.equal(requests.length, 1, 'Already saved read state is idempotent');
     open(12); await settle();
+    noOverlap();
     assert.equal(root.querySelectorAll('details[open]').length, 1);
     assert.equal(card(12).dataset.unread, '1', 'Failed persistence must not show Read');
     assert.equal(root.querySelector('[data-region="read-error"]').hidden, false);
@@ -155,8 +162,9 @@ async function exercise(script, cyclic = false) {
     assert.equal(card(12).dataset.unread, '0');
     open(11); await settle();
     assert.equal(root.querySelectorAll('details[open]').length, 1);
-    root.querySelector('[data-close]').click();
-    assert.equal(root.querySelector('[data-region="reader"]').hidden, true);
+    card(11).querySelector('[data-close]').click();
+    assert.equal(root.querySelectorAll('details[open]').length, 0);
+    assert.equal(card(11).parentElement, root.querySelector('.spatialforum-posts'));
     assert.equal(new URL(location.href).searchParams.has('postid'), false);
     const search = root.querySelector('[data-region="search"]');
     search.value = 'Full content for post 12';
@@ -171,7 +179,7 @@ async function exercise(script, cyclic = false) {
     open(12); await settle();
     location.href = 'https://example.test/mod/spatialforum/view.php?id=42&sfview=list#post-10';
     location.hash = '#post-10'; events.popstate();
-    assert.equal(root.querySelector('[data-region="reader"] details').dataset.postId, '10');
+    assert.equal(root.querySelector('.spatialforum-posts details[open]').dataset.postId, '10');
     assert.ok(root.classList.contains('is-list'));
     function cardsVisible() {return [...root.querySelectorAll('[data-post-id]')].filter(el => !el.hidden);}
     return {root};

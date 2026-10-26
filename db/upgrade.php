@@ -71,5 +71,9 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         // UX release only: preserve all existing posts, quotations, reactions and read timestamps.
         upgrade_mod_savepoint(true, 2026102505, 'spatialforum');
     }
+    if ($oldversion < 2026102600) {
+        // Restore inline threaded reading; no schema or stored user-data changes.
+        upgrade_mod_savepoint(true, 2026102600, 'spatialforum');
+    }
     return true;
 }
