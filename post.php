@@ -100,6 +100,7 @@ if ($form->is_cancelled()) {
     redirect($returnurl);
 } elseif ($data = $form->get_data()) {
     require_sesskey();
+    $transaction = $DB->start_delegated_transaction();
     $targettrackid = $track->id;
     $message = $data->message_editor['text'];
     $format = $data->message_editor['format'];
@@ -111,6 +112,8 @@ if ($form->is_cancelled()) {
     } else {
         $newpostid = forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);
     }
+    \mod_spatialforum\local\media::save($newpostid, $data->message_editor, $context);
+    $transaction->allow_commit();
     redirect(new moodle_url('/mod/spatialforum/view.php', [
         'id' => $cm->id,
         'trackid' => $targettrackid,

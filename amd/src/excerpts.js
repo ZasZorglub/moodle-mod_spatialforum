@@ -112,6 +112,8 @@ export const init = () => {
             input.value = selected(message);
             button.disabled = !input.value;
             button.setAttribute('aria-disabled', String(button.disabled));
+            form.classList.toggle('has-selection', !!input.value);
+            form.querySelector('.spatialforum-selection-help').textContent = input.value ? form.dataset.ready : form.dataset.hint;
         });
         button.addEventListener('mousedown', event => event.preventDefault());
         form.addEventListener('submit', event => {

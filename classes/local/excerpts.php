@@ -53,15 +53,21 @@ class excerpts {
     }
 
     /** Render source-aware quotes interleaved with the reply author's comments. */
-    public static function render(\stdClass $post, \context $context, int $cmid): string {
+    public static function render(\stdClass $post, \context $context, int $cmid,
+            ?array $posts = null, ?array $users = null): string {
         global $DB;
         $html = '';
         $parts = json_decode($post->replyparts ?? '[]', true) ?: [];
         if ($parts) {
-            $origin = $DB->get_record('spatialforum_posts', ['id' => $post->replytoid,
-                'spatialforumid' => $post->spatialforumid, 'deleted' => 0]);
+            $origin = $posts !== null ? ($posts[$post->replytoid] ?? false)
+                : $DB->get_record('spatialforum_posts', ['id' => $post->replytoid,
+                    'spatialforumid' => $post->spatialforumid, 'deleted' => 0]);
+            if ($origin && ($origin->deleted || $origin->spatialforumid != $post->spatialforumid)) {
+                $origin = false;
+            }
             $source = $origin ? self::source($origin, $context) : '';
-            $user = $origin ? $DB->get_record('user', ['id' => $origin->userid]) : false;
+            $user = $origin ? ($users !== null ? ($users[$origin->userid] ?? false)
+                : $DB->get_record('user', ['id' => $origin->userid])) : false;
             foreach ($parts as $part) {
                 $quote = get_string('originalunavailable', 'mod_spatialforum');
                 $label = get_string('excerptquote', 'mod_spatialforum');
@@ -81,6 +87,6 @@ class excerpts {
                 $html .= \html_writer::div(nl2br(s($part['comment'] ?? '')), 'spatialforum-excerpt-comment');
             }
         }
-        return $html . format_text($post->message, $post->messageformat, ['context' => $context]);
+        return $html . format_text(media::message($post, $context), $post->messageformat, ['context' => $context]);
     }
 }

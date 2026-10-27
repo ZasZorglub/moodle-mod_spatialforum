@@ -108,7 +108,8 @@ export const init = () => {
         }
         const parent = parents.get(id);
         const siblings = parent ? children.get(parent) : [];
-        const colour = !parent ? '#ffffff' : !parents.get(parent) || siblings.length > 1 ?
+        const colour = !parent ? '#ffffff' : root.dataset.coloursEnabled === '0' ? '#dfe7e2' :
+            !parents.get(parent) || siblings.length > 1 ?
             palette[(Number(parent) + siblings.indexOf(id)) % palette.length] : colourFor(parent);
         colours.set(id, colour);
         return colour;
@@ -177,6 +178,10 @@ export const init = () => {
             card.classList.remove('is-unread');
             card.querySelector('[data-region="read-state"]').textContent = '✓ ' + root.dataset.readLabel;
             failed.delete(id);
+            if (active !== id && onlyUnread.checked) {
+                card.hidden = true;
+                root.querySelector('[data-region="no-results"]').hidden = cards.some(item => !item.hidden);
+            }
             updateCount();
         } catch (error) {
             failed.add(id);
@@ -370,6 +375,9 @@ export const init = () => {
         cards.forEach(other => {
             if (other !== card) {
                 other.removeAttribute('open');
+                const query = search.value.trim().toLocaleLowerCase();
+                other.hidden = !(title(other) + ' ' + other.querySelector('.spatialforum-message').textContent)
+                    .toLocaleLowerCase().includes(query) || (onlyUnread.checked && other.dataset.unread !== '1');
             }
         });
         if (!card.hasAttribute('open')) {
@@ -377,6 +385,8 @@ export const init = () => {
         }
         active = card.dataset.postId;
         card.hidden = false;
+        root.querySelector('[data-region="no-results"]').hidden = true;
+        updateCount();
         updateRoute();
         layout(false);
         if (record) {
@@ -472,10 +482,6 @@ export const init = () => {
         const close = event.target.closest('[data-close]');
         if (close) {
             closeCard(close.closest('[data-post-id]'));
-        }
-        const remove = event.target.closest('[data-confirm-delete]');
-        if (remove && !window.confirm(remove.dataset.confirmMessage)) {
-            event.preventDefault();
         }
         const copy = event.target.closest('[data-copy-link]');
         if (copy) {

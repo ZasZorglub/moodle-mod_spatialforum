@@ -79,5 +79,19 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         // Make the enabled selection-reply action visually prominent; no schema changes.
         upgrade_mod_savepoint(true, 2026102601, 'spatialforum');
     }
+    if ($oldversion < 2026102700) {
+        // Repair names left behind by earlier Privacy API erasures, preserving the track tree.
+        $ids = $DB->get_fieldset_sql('SELECT t.id FROM {spatialforum_tracks} t
+            JOIN {spatialforum_posts} p ON p.trackid = t.id
+            WHERE t.parenttrackid <> 0 AND p.userid = 0 AND p.deleted = 1
+              AND NOT EXISTS (SELECT 1 FROM {spatialforum_posts} earlier
+                              WHERE earlier.trackid = t.id AND earlier.id < p.id)');
+        if ($ids) {
+            [$insql, $params] = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
+            $DB->set_field_select('spatialforum_tracks', 'name', get_string('anonymoustrack', 'mod_spatialforum'),
+                "id $insql", $params);
+        }
+        upgrade_mod_savepoint(true, 2026102700, 'spatialforum');
+    }
     return true;
 }

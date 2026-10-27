@@ -12,7 +12,7 @@ const source = fs.readFileSync(path.join(plugin, 'amd/src/spatialforum.js'), 'ut
 const built = fs.readFileSync(path.join(plugin, 'amd/build/spatialforum.min.js'), 'utf8');
 const labels = {readpost: 'Read', unread: 'Unread', maintrack: 'Main track', depth: 'Depth', closepost: 'Close'};
 
-async function exercise(script, cyclic = false) {
+async function exercise(script, cyclic = false, mode = '') {
     const posts = [
         {id: 10, parentid: 0}, {id: 11, parentid: 10, unread: true},
         {id: 12, parentid: 11, unread: true}, {id: 13, parentid: 10},
@@ -25,12 +25,13 @@ async function exercise(script, cyclic = false) {
         editediso: '2026-10-25T13:00:00+00:00', editedshort: 'Edited 25/10, 14:00',
         editedlabel: 'Edited 25/10/2026, 14:00',
         showlikes: true, canlike: true, nextreaction: 1, nextdislike: -1, likecount: 0,
-        dislikecount: 0, likelabel: 'Like', dislikelabel: 'Dislike'}));
+        dislikecount: 0, likelabel: 'Like', dislikelabel: 'Dislike', canmoderate: true, candelete: true, trackid: 7}));
     if (cyclic) {
         posts[0].parentid = 12;
     }
     const html = Mustache.render(template, {posts, hasposts: true, cmid: 42, sesskey: 'token',
         readurl: '/read.php', readcount: 3, postcount: 6, likeurl: '/like.php',
+        moderationurl: '/action.php', enablecolors: mode === 'neutral' ? '0' : '1',
         str: () => text => labels[text.split(',')[0].trim()] || text.split(',')[0].trim()},
     {'mod_spatialforum/reply_context': partial});
     const {document, window} = parseHTML(html);
@@ -38,6 +39,7 @@ async function exercise(script, cyclic = false) {
     const observers = [];
     const requests = [];
     let failNext12 = true;
+    let releaseRead11;
     let observedFocus = null;
     window.HTMLElement.prototype.focus = function() { observedFocus = this; };
     window.HTMLElement.prototype.getBoundingClientRect = function() {
@@ -69,6 +71,9 @@ async function exercise(script, cyclic = false) {
         const params = new URLSearchParams(options.body);
         const id = params.get('postid');
         requests.push({url, options, params});
+        if (mode === 'unread-late' && id === '11') {
+            await new Promise(resolve => { releaseRead11 = resolve; });
+        }
         if (id === '12' && failNext12) {
             failNext12 = false;
             return {ok: false};
@@ -113,9 +118,44 @@ async function exercise(script, cyclic = false) {
     const wire = root.querySelector('[data-wire-post="12"]');
     assert.equal(wire.getAttribute('stroke'), card(12).style.getPropertyValue('--post-colour'));
     assert.equal(card(12).style.getPropertyValue('--post-colour'), card(11).style.getPropertyValue('--post-colour'));
+    for (const form of root.querySelectorAll('.spatialforum-moderation form')) {
+        assert.equal(form.getAttribute('method'), 'post');
+        assert.equal(form.querySelector('[name="id"]').getAttribute('value'), '42');
+        assert.equal(form.querySelector('[name="sesskey"]').getAttribute('value'), 'token');
+    }
+    assert.equal(root.querySelectorAll('.spatialforum-moderation a').length, 0);
+    if (mode === 'neutral') {
+        assert.equal(card(11).style.getPropertyValue('--post-colour'), '#dfe7e2');
+        assert.equal(card(13).style.getPropertyValue('--post-colour'), '#dfe7e2');
+        return;
+    }
     assert.notEqual(card(13).style.getPropertyValue('--post-colour'), card(11).style.getPropertyValue('--post-colour'));
     noOverlap();
     if (cyclic) return;
+    if (mode.startsWith('unread')) {
+        failNext12 = false;
+        const filter = root.querySelector('[data-region="only-unread"]');
+        filter.checked = true;
+        filter.dispatchEvent(new window.Event('change'));
+        root.querySelector('[data-next-unread]').click();
+        await settle();
+        assert.equal(card(11).hidden, false, 'The active post remains visible while being read.');
+        root.querySelector('[data-next-unread]').click();
+        await settle();
+        if (releaseRead11) {
+            releaseRead11();
+            await settle();
+        }
+        assert.equal(card(11).hidden, true, 'The previously read, closed post leaves Unread only.');
+        assert.equal(card(12).hidden, false);
+        root.querySelector('[data-next-unread]').click();
+        await settle();
+        assert.equal(card(12).hidden, true);
+        close(14);
+        assert.equal(root.querySelector('[data-region="no-results"]').hidden, false);
+        assert.equal(root.querySelector('[data-next-unread]').disabled, true);
+        return;
+    }
     root.querySelector('[data-next-unread]').click();
     await settle();
     assert.equal(requests.length, 1);
@@ -189,6 +229,9 @@ async function exercise(script, cyclic = false) {
     for (const code of [source, built]) {
         await exercise(code);
         await exercise(code, true);
+        await exercise(code, false, 'neutral');
+        await exercise(code, false, 'unread');
+        await exercise(code, false, 'unread-late');
     }
     const css = fs.readFileSync(path.join(plugin, 'styles.css'), 'utf8');
     assert.ok(css.includes('-webkit-line-clamp: 2'));

@@ -30,6 +30,24 @@ class backup_spatialforum_activity_task extends backup_activity_task {
         global $CFG;
 
         $base = preg_quote($CFG->wwwroot, '/');
+        // Canonicalise post/hash links before replacing the generic activity prefix.
+        $content = preg_replace_callback('~' . preg_quote($CFG->wwwroot, '~') .
+            '/mod/spatialforum/view\.php\?[^"\'<>\s]+~', static function($match) {
+                $url = parse_url(html_entity_decode($match[0], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                parse_str($url['query'] ?? '', $params);
+                $cmid = (int) ($params['id'] ?? 0);
+                $postid = (int) ($params['postid'] ?? 0);
+                if (preg_match('/^post-(\d+)$/', $url['fragment'] ?? '', $fragment)) {
+                    $postid = (int) $fragment[1];
+                }
+                if ($cmid && $postid) {
+                    return '$@SPATIALFORUMPOST*' . $cmid . '*' . $postid . '@$';
+                }
+                if ($cmid && !empty($params['trackid'])) {
+                    return '$@SPATIALFORUMTRACK*' . $cmid . '*' . (int) $params['trackid'] . '@$';
+                }
+                return $match[0];
+            }, $content);
         $content = preg_replace(
             "/({$base}\/mod\/spatialforum\/index\.php\?id=)([0-9]+)/",
             '$@SPATIALFORUMINDEX*$2@$',

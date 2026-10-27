@@ -65,6 +65,7 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
         $read->annotate_ids('user', 'userid');
         $like->annotate_ids('user', 'userid');
         $spatialforum->annotate_files('mod_spatialforum', 'intro', null);
+        $post->annotate_files('mod_spatialforum', 'post', 'id');
 
         return $this->prepare_activity_structure($spatialforum);
     }

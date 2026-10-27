@@ -31,13 +31,14 @@ class forum {
     }
 
     /** Parent content is read live so moderation and privacy erasure take effect in every quote. */
-    public static function export_reply_context(stdClass $post, context_module $context, int $cmid): array {
+    public static function export_reply_context(stdClass $post, context_module $context, int $cmid,
+            ?array $posts = null, ?array $users = null): array {
         global $DB;
 
         if (!empty($post->deleted)) {
             return ['available' => false];
         }
-        $user = $DB->get_record('user', ['id' => $post->userid]);
+        $user = $users !== null ? ($users[$post->userid] ?? null) : $DB->get_record('user', ['id' => $post->userid]);
         $url = new moodle_url('/mod/spatialforum/view.php', ['id' => $cmid, 'trackid' => $post->trackid]);
         $url->set_anchor('post-' . $post->id);
         return [
@@ -46,7 +47,7 @@ class forum {
             'subject' => format_string($post->subject),
             'author' => $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum'),
             'time' => userdate($post->timecreated),
-            'message' => excerpts::render($post, $context, $cmid),
+            'message' => excerpts::render($post, $context, $cmid, $posts, $users),
             'url' => $url->out(false),
         ];
     }
@@ -117,6 +118,9 @@ class forum {
     ): int {
         global $DB;
 
+        if (trim($name) === '' || \core_text::strlen(trim($name)) > 255) {
+            throw new \moodle_exception('invalidtrackname', 'mod_spatialforum');
+        }
         $depth = count(self::get_path($parenttrack->id, $activity->id));
         if ($depth >= $activity->maxdepth) {
             throw new \moodle_exception('maxdepthreached', 'mod_spatialforum');
@@ -206,6 +210,9 @@ class forum {
     ): int {
         global $DB;
 
+        if (trim($subject) === '' || \core_text::strlen(trim($subject)) > 255) {
+            throw new \moodle_exception('invalidsubject', 'mod_spatialforum');
+        }
         $replyparts = null;
         if ($excerptdraft !== '[]' && $excerptdraft !== '') {
             $origin = $DB->get_record('spatialforum_posts', ['id' => $replytoid,
@@ -367,6 +374,8 @@ class forum {
         $posts = $DB->get_records('spatialforum_posts',
             $wholemap ? ['spatialforumid' => $activity->id] : ['trackid' => $currenttrack->id],
             'timecreated ASC, id ASC');
+        // Quotes and parent previews share these records; never query per rendered post.
+        $renderposts = $wholemap ? $posts : $DB->get_records('spatialforum_posts', ['spatialforumid' => $activity->id]);
         $maptracks = $DB->get_records('spatialforum_tracks', ['spatialforumid' => $activity->id]);
         $maptracks[$currenttrack->id] = $currenttrack;
         $depths = [];
@@ -408,7 +417,7 @@ class forum {
         }
 
         $users = [];
-        $userids = array_unique(array_column($posts, 'userid'));
+        $userids = array_unique(array_column($renderposts, 'userid'));
         if ($userids) {
             $userfields = 'id,' . implode(',', \core_user\fields::get_name_fields());
             $users = $DB->get_records_list('user', 'id', $userids, '', $userfields);
@@ -426,21 +435,20 @@ class forum {
                 && has_capability('mod/spatialforum:startbranch', $context);
             $replycontext = [];
             if (!$post->deleted && $post->replytoid && $post->showparent) {
-                $parent = $posts[$post->replytoid] ?? $DB->get_record('spatialforum_posts', [
-                    'id' => $post->replytoid, 'spatialforumid' => $activity->id,
-                ]);
-                $replycontext[] = $parent ? self::export_reply_context($parent, $context, $cm->id)
+                $parent = $renderposts[$post->replytoid] ?? null;
+                $replycontext[] = $parent ? self::export_reply_context($parent, $context, $cm->id, $renderposts, $users)
                     : ['available' => false];
             }
             $user = $users[$post->userid] ?? null;
             $fullname = $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum');
             $message = $post->deleted
                 ? get_string('deletedpost', 'mod_spatialforum')
-                : excerpts::render($post, $context, $cm->id);
+                : excerpts::render($post, $context, $cm->id, $renderposts, $users);
             $reaction = (int) ($userlikes[$post->id]->reaction ?? 0);
             $postdata[] = [
                 ...self::post_times($post),
                 'id' => $post->id,
+                'trackid' => $post->trackid,
                 'parentid' => $parentid,
                 'colour' => self::normalise_colour($posttrack->colour ?? '#ffffff'),
                 'preview' => $post->deleted ? self::preview($message) :
@@ -524,9 +532,11 @@ class forum {
             ];
         }
 
+        $childcounts = $DB->get_records_sql('SELECT trackid, COUNT(1) AS total FROM {spatialforum_posts}
+            WHERE spatialforumid = ? GROUP BY trackid', [$activity->id]);
         $childdata = [];
         foreach ($childtracks as $child) {
-            $childpostcount = $DB->count_records('spatialforum_posts', ['trackid' => $child->id]);
+            $childpostcount = $childcounts[$child->id]->total ?? 0;
             $childdata[] = [
                 'name' => format_string($child->name),
                 'colour' => self::normalise_colour($child->colour),
@@ -563,11 +573,13 @@ class forum {
         return [
             'forumname' => format_string($activity->name),
             'cmid' => $cm->id,
+            'enablecolors' => empty($activity->enablecolors) ? 0 : 1,
             'sesskey' => sesskey(),
             'readurl' => (new moodle_url('/mod/spatialforum/read.php'))->out(false),
             'readcount' => count(array_filter($postdata, static fn($item) => $item['unread'])),
             'postcount' => count($postdata),
             'likeurl' => (new moodle_url('/mod/spatialforum/like.php'))->out(false),
+            'moderationurl' => (new moodle_url('/mod/spatialforum/action.php'))->out(false),
             'trackname' => format_string($currenttrack->name),
             'trackcolour' => self::normalise_colour($currenttrack->colour),
             'depth' => count($path),

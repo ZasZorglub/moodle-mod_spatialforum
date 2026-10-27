@@ -10,7 +10,17 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 This is a staging release with automated Moodle 5.0 regression tests. It must also be tested on a staging copy of the exact Moodle or Workplace build before production use.
 
-## 0.5.2 threaded reading and reply experience
+## 0.6.0 media and audit corrections
+
+Posts support Moodle-managed PNG/JPEG images, MP3 audio, MP4 video and VTT captions. Uploaded files belong to the post, use authenticated pluginfile URLs, and follow post backup/restore, privacy export/erasure and activity deletion. External URLs remain external. Site settings control accepted formats, file count, per-file size and combined uploaded size per post. Defaults are 10 files, 20 MB per file (subject to Moodle/course limits) and 50 MB per post. Media-only posts are accepted; visually empty HTML is rejected.
+
+Privacy erasure anonymises child-track names derived from the author's first post. Upgrade also repairs names left by earlier erasures. Restore remaps links inside post messages, including post/hash links. Quote rendering batches source posts and authors, instead of querying per quote. Very large conversations still load their full HTML; this is not pagination.
+
+Unread only removes a previously read card when moving to the next post, colours respect the activity setting, audio players fit narrow content areas, and the active Reply to selection action stays at the top of the open post while scrolling. Moderator actions require POST and a session key; deletion has a server confirmation page before files/content are removed. The thread layout and native reading fallback remain intact.
+
+See [tests/RELEASE-060.md](tests/RELEASE-060.md) for audit IDs, test evidence and limits.
+
+## Threaded reading and reply experience
 
 Posts unfold in their original place in the thread. The complete map and its connecting wires stay visible; the selected column widens for readable text and neighbouring cards reflow without overlaps. Long map cards scroll internally to keep the surrounding thread in view. In List, the opened post retains its hierarchical indentation and uses the full content height. Map and List are explicit choices; small available widths default to List. Search, Unread only and Next unread help navigate the loaded conversation. Copy link, reload, browser history and cancellation preserve the selected post; per-tab session storage keeps only presentation preferences and overview offsets, not post content.
 
@@ -68,14 +78,14 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 ## Current MVP limits
 
 - No subscriptions, notifications or digests
-- No attachments, groups, grading or activity completion based on posting
+- No separate attachment list, groups, grading or activity completion based on posting
 - No Moodle App/mobile service implementation
 - No import or synchronization with the standard Moodle forum activity
 - 3D is a progressive visual layer; core navigation remains conventional links for accessibility
 
 ## Security and operations
 
-- Version `0.5.2 (staging)` upgrades MVP or earlier staging versions to `2026102601`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved.
+- Version `0.6.0 (staging)` upgrades MVP or earlier staging versions to `2026102700`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved. Child-track names from previously privacy-erased authors are anonymised.
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.

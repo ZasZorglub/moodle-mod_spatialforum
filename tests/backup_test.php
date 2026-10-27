@@ -16,6 +16,43 @@ require_once($CFG->libdir . '/phpunit/classes/restore_date_testcase.php');
 #[CoversClass(\backup_spatialforum_activity_structure_step::class)]
 #[CoversClass(\restore_spatialforum_activity_structure_step::class)]
 final class backup_test extends \restore_date_testcase {
+    public function test_restore_remaps_post_links_and_embedded_media_files(): void {
+        global $DB, $CFG;
+        [$course, $activity] = $this->create_course_and_module('spatialforum');
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $cm = get_coursemodule_from_instance('spatialforum', $activity->id);
+        $context = \context_module::instance($cm->id);
+        $postid = forum::create_post($activity, $activity->roottrackid, $user->id, 'QA media backup', 'QA', FORMAT_HTML);
+        foreach (['qa.png', 'qa.mp3', 'qa.mp4'] as $filename) {
+            get_file_storage()->create_file_from_string([
+                'contextid' => $context->id, 'component' => 'mod_spatialforum', 'filearea' => 'post',
+                'itemid' => $postid, 'filepath' => '/', 'filename' => $filename,
+            ], 'QA file ' . $filename);
+        }
+        $base = $CFG->wwwroot . '/mod/spatialforum/view.php?id=' . $cm->id;
+        $html = '<p><a href="' . $base . '">QA activity</a> ' .
+            '<a href="' . $base . '&amp;postid=' . $postid . '">QA post</a> ' .
+            '<a href="' . $base . '&amp;trackid=' . $activity->roottrackid . '#post-' . $postid . '">QA hash</a></p>' .
+            '<img src="@@PLUGINFILE@@/qa.png" alt="QA image">' .
+            '<audio controls src="@@PLUGINFILE@@/qa.mp3"></audio><video controls src="@@PLUGINFILE@@/qa.mp4"></video>';
+        $DB->set_field('spatialforum_posts', 'message', $html, ['id' => $postid]);
+        $newcourseid = $this->backup_and_restore($course);
+        $new = $DB->get_record('spatialforum', ['course' => $newcourseid], '*', MUST_EXIST);
+        $newcm = get_coursemodule_from_instance('spatialforum', $new->id);
+        $newcontext = \context_module::instance($newcm->id);
+        $post = $DB->get_record('spatialforum_posts', ['spatialforumid' => $new->id], '*', MUST_EXIST);
+        $this->assertStringNotContainsString('$@SPATIALFORUM', $post->message);
+        $this->assertStringContainsString('view.php?id=' . $newcm->id, $post->message);
+        $decoded = html_entity_decode($post->message, ENT_QUOTES | ENT_HTML5);
+        $this->assertStringContainsString('view.php?id=' . $newcm->id . '&postid=' . $post->id, $decoded);
+        $this->assertStringNotContainsString('view.php?id=' . $cm->id, $decoded);
+        $files = get_file_storage()->get_area_files($newcontext->id, 'mod_spatialforum', 'post', $post->id, 'id', false);
+        $this->assertCount(3, $files);
+        $rendered = \mod_spatialforum\local\excerpts::render($post, $newcontext, $newcm->id);
+        $this->assertStringContainsString('/mod_spatialforum/post/' . $post->id . '/qa.mp4', $rendered);
+    }
+
     public function test_restore_remaps_quotes_likes_and_privacy_tombstones(): void {
         global $DB;
 

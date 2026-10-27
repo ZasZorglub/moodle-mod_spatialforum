@@ -49,7 +49,9 @@ class provider implements
         ], 'privacy:metadata:spatialforum_read');
         $collection->add_database_table('spatialforum_tracks', [
             'originpostid' => 'privacy:metadata:spatialforum_tracks:originpostid',
+            'name' => 'privacy:metadata:spatialforum_tracks:name',
         ], 'privacy:metadata:spatialforum_tracks');
+        $collection->link_subsystem('core_files', 'privacy:metadata:files');
         return $collection;
     }
 
@@ -138,7 +140,14 @@ class provider implements
                 'likes' => array_values($likes),
                 'posts' => array_values($posts),
                 'readstate' => array_values($reads),
+                'tracks' => array_values(self::authored_tracks($cm->instance, $userid)),
             ];
+            foreach ($posts as $post) {
+                $area = [get_string('posts', 'mod_spatialforum'), (string) $post->id];
+                $post->message = writer::with_context($context)->rewrite_pluginfile_urls(
+                    $area, 'mod_spatialforum', 'post', $post->id, $post->message);
+                writer::with_context($context)->export_area_files($area, 'mod_spatialforum', 'post', $post->id);
+            }
             writer::with_context($context)->export_data([], $data);
         }
     }
@@ -160,6 +169,9 @@ class provider implements
             $DB->delete_records_list('spatialforum_read', 'postid', $postids);
         }
         $DB->delete_records('spatialforum_posts', ['spatialforumid' => $cm->instance]);
+        get_file_storage()->delete_area_files($context->id, 'mod_spatialforum', 'post');
+        $DB->set_field_select('spatialforum_tracks', 'name', get_string('anonymoustrack', 'mod_spatialforum'),
+            'spatialforumid = ? AND parenttrackid <> 0', [$cm->instance]);
         $DB->set_field('spatialforum_tracks', 'originpostid', 0, ['spatialforumid' => $cm->instance]);
     }
 
@@ -206,6 +218,14 @@ class provider implements
             $DB->delete_records_list('spatialforum_likes', 'id', $likeids);
         }
         if ($postids) {
+            $tracks = self::authored_tracks($cm->instance, $userid);
+            foreach ($tracks as $track) {
+                $DB->set_field('spatialforum_tracks', 'name', get_string('anonymoustrack', 'mod_spatialforum'),
+                    ['id' => $track->id]);
+            }
+            foreach ($postids as $postid) {
+                \mod_spatialforum\local\media::delete((int) $postid, $context);
+            }
             [$insql, $params] = $DB->get_in_or_equal($postids, SQL_PARAMS_NAMED);
             $DB->execute("UPDATE {spatialforum_posts}
                             SET userid = 0, subject = '', message = '', replyparts = NULL, deleted = 1
@@ -221,5 +241,16 @@ class provider implements
         if ($readids) {
             $DB->delete_records_list('spatialforum_read', 'id', $readids);
         }
+    }
+
+    /** A child track is authored by its first post's author, not the parent post's author. */
+    private static function authored_tracks(int $forumid, int $userid): array {
+        global $DB;
+        return $DB->get_records_sql('SELECT t.id, t.name FROM {spatialforum_tracks} t
+            JOIN {spatialforum_posts} p ON p.trackid = t.id
+            WHERE t.spatialforumid = :forumid AND t.parenttrackid <> 0 AND p.userid = :userid
+              AND NOT EXISTS (SELECT 1 FROM {spatialforum_posts} earlier
+                              WHERE earlier.trackid = t.id AND earlier.id < p.id)',
+            ['forumid' => $forumid, 'userid' => $userid]);
     }
 }

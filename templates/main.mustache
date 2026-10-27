@@ -3,6 +3,7 @@
     One activity-wide conversation map. Native details remain usable without JavaScript.
 }}
 <div class="mod-spatialforum" data-region="spatialforum" data-cmid="{{cmid}}" data-sesskey="{{sesskey}}"
+     data-colours-enabled="{{enablecolors}}"
      data-read-url="{{readurl}}" data-read-label="{{#str}}readpost, mod_spatialforum{{/str}}"
      data-unread-label="{{#str}}unread, mod_spatialforum{{/str}}" data-root-label="{{#str}}maintrack, mod_spatialforum{{/str}}"
      data-whole-label="{{#str}}wholeconversation, mod_spatialforum{{/str}}"
@@ -77,6 +78,19 @@
                             </div>
                         </div>
                         {{#tracklocked}}<p class="alert alert-warning">{{#str}}forumlocked, mod_spatialforum{{/str}}</p>{{/tracklocked}}
+                        {{#canreply}}
+                            <form method="post" action="{{replyurl}}" class="spatialforum-excerpt-start" data-excerpt-start
+                                  data-hint="{{#str}}selectionhint, mod_spatialforum{{/str}}"
+                                  data-ready="{{#str}}selectionready, mod_spatialforum{{/str}}">
+                                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                <input type="hidden" name="startquote" value="1">
+                                <input type="hidden" name="initialexcerpt" value="">
+                                <button type="submit" class="btn btn-outline-secondary" disabled>
+                                    {{#str}}replyselection, mod_spatialforum{{/str}}
+                                </button>
+                                <p class="spatialforum-selection-help" role="status">{{#str}}selectionhint, mod_spatialforum{{/str}}</p>
+                            </form>
+                        {{/canreply}}
                         {{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
                         <div class="spatialforum-message">{{{message}}}</div>
                         {{#unread}}
@@ -111,17 +125,6 @@
                             {{/showlikes}}
                         </div>
                         {{#canreply}}<a class="btn btn-primary spatialforum-reply" href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
-                        {{#canreply}}
-                            <form method="post" action="{{replyurl}}" class="spatialforum-excerpt-start" data-excerpt-start>
-                                <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                <input type="hidden" name="startquote" value="1">
-                                <input type="hidden" name="initialexcerpt" value="">
-                                <button type="submit" class="btn btn-outline-secondary" disabled>
-                                    {{#str}}replyselection, mod_spatialforum{{/str}}
-                                </button>
-                                <p class="spatialforum-selection-help">{{#str}}selectionhint, mod_spatialforum{{/str}}</p>
-                            </form>
-                        {{/canreply}}
                         {{#haschildren}}
                             <div class="spatialforum-children">
                                 <h3>{{#str}}replieshere, mod_spatialforum{{/str}}</h3>
@@ -132,8 +135,22 @@
                         {{/haschildren}}
                         {{#canmoderate}}
                             <div class="spatialforum-moderation">
-                                <a href="{{moderateurl}}">{{moderatelabel}}</a>
-                                {{#candelete}}<a href="{{deleteurl}}" class="text-danger" data-confirm-delete data-confirm-message="{{#str}}confirmdeletepost, mod_spatialforum{{/str}}">{{#str}}delete{{/str}}</a>{{/candelete}}
+                                <form method="post" action="{{moderationurl}}">
+                                    <input type="hidden" name="id" value="{{cmid}}">
+                                    <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                    <input type="hidden" name="action" value="toggletrack">
+                                    <input type="hidden" name="trackid" value="{{trackid}}">
+                                    <button type="submit" class="btn btn-link">{{moderatelabel}}</button>
+                                </form>
+                                {{#candelete}}
+                                    <form method="post" action="{{moderationurl}}">
+                                        <input type="hidden" name="id" value="{{cmid}}">
+                                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                        <input type="hidden" name="action" value="deletepost">
+                                        <input type="hidden" name="postid" value="{{id}}">
+                                        <button type="submit" class="btn btn-link text-danger">{{#str}}delete{{/str}}</button>
+                                    </form>
+                                {{/candelete}}
                             </div>
                         {{/canmoderate}}
                     </div>

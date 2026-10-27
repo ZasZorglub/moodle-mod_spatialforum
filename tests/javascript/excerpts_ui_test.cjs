@@ -12,11 +12,11 @@ for (const built of [false, true]) {
     const code = fs.readFileSync(path.join(plugin, filename), 'utf8');
     const composer = Mustache.render(template, {str: () => text => text.split(',')[0]});
     const {document, window} = parseHTML('<div class="spatialforum-reply-context"><div class="spatialforum-message">' +
-        '<p id="source">Målmænd: Pentz</p><blockquote>Someone else</blockquote></div></div>' +
+        '<p id="source">Goalkeepers: José</p><blockquote>Someone else</blockquote></div></div>' +
         '<form><label for="id_message_editor">message</label><input name="excerptdraft" value="[]">' + composer + '</form>');
     let focused = null;
     window.HTMLElement.prototype.focus = function() { focused = this; };
-    let inside = true, embedded = false, quote = 'Målmænd: Pentz';
+    let inside = true, embedded = false, quote = 'Goalkeepers: José';
     const range = {get startContainer() {return inside ? document.getElementById('source') : document;},
         get endContainer() {return inside ? document.getElementById('source') : document;},
         intersectsNode: () => embedded};
@@ -59,6 +59,36 @@ for (const built of [false, true]) {
     for (let n = 0; n < 12; n++) add.click();
     assert.equal(JSON.parse(input.value).length, 10);
     assert.ok(document.querySelector('[data-excerpt-status]').textContent);
+
+    const main = fs.readFileSync(path.join(plugin, 'templates/main.mustache'), 'utf8');
+    const live = parseHTML(Mustache.render(main, {cmid: 7, posts: [{id: 1, message: '<p>English QA selection</p>',
+        canreply: true, replyurl: '/reply'}], str: () => text => text.split(',')[0]},
+    {'mod_spatialforum/reply_context': ''}));
+    const start = live.document.querySelector('[data-excerpt-start]');
+    const message = live.document.querySelector('.spatialforum-post-detail > .spatialforum-message');
+    let hasSelection = true;
+    const liveContext = vm.createContext({document: live.document, window: {getSelection: () => ({
+        rangeCount: 1, isCollapsed: !hasSelection,
+        getRangeAt: () => ({startContainer: message.firstChild, endContainer: message.firstChild,
+            intersectsNode: () => false}), toString: () => 'English QA selection',
+    })}});
+    if (built) {
+        liveContext.define = (name, deps, factory) => factory().init();
+        vm.runInContext(code, liveContext);
+    } else {
+        vm.runInContext(code.replace('export const init', 'const init') + ';init();', liveContext);
+    }
+    live.document.dispatchEvent(new live.window.Event('selectionchange'));
+    assert.equal(start.querySelector('button').disabled, false);
+    assert.equal(start.classList.contains('has-selection'), true);
+    assert.equal(start.querySelector('[name="initialexcerpt"]').value, 'English QA selection');
+    assert.equal(start.querySelector('[role="status"]').textContent, 'selectionready');
+    const siblings = [...message.parentNode.children];
+    assert.ok(siblings.indexOf(start) < siblings.indexOf(message), 'The sticky action precedes long content.');
+    hasSelection = false;
+    live.document.dispatchEvent(new live.window.Event('selectionchange'));
+    assert.equal(start.querySelector('button').disabled, true);
+    assert.equal(start.querySelector('[role="status"]').textContent, 'selectionhint');
 }
 const css = fs.readFileSync(path.join(plugin, 'styles.css'), 'utf8');
 assert.ok(css.includes('.spatialforum-excerpt-start button:not(:disabled)'));

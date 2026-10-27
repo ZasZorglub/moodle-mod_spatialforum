@@ -96,6 +96,9 @@ function spatialforum_delete_instance(int $id): bool {
     if (!$DB->record_exists('spatialforum', ['id' => $id])) {
         return false;
     }
+    if ($cm = get_coursemodule_from_instance('spatialforum', $id)) {
+        get_file_storage()->delete_area_files(context_module::instance($cm->id)->id, 'mod_spatialforum', 'post');
+    }
     $transaction = $DB->start_delegated_transaction();
     $postids = $DB->get_fieldset_select('spatialforum_posts', 'id', 'spatialforumid = :id', ['id' => $id]);
     if ($postids) {
@@ -107,6 +110,32 @@ function spatialforum_delete_instance(int $id): bool {
     $DB->delete_records('spatialforum', ['id' => $id]);
     $transaction->allow_commit();
     return true;
+}
+
+/** Serve embedded post files only to participants who can view this activity and post. */
+function spatialforum_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []) {
+    global $DB;
+    if ($context->contextlevel !== CONTEXT_MODULE || (int) $context->instanceid !== (int) $cm->id
+            || $filearea !== 'post' || count($args) < 2) {
+        return false;
+    }
+    if (!has_capability('mod/spatialforum:view', $context)) {
+        return false;
+    }
+    require_course_login($course, true, $cm);
+    $postid = (int) array_shift($args);
+    if (!$DB->record_exists('spatialforum_posts', [
+        'id' => $postid, 'spatialforumid' => $cm->instance, 'deleted' => 0,
+    ])) {
+        return false;
+    }
+    $filename = array_pop($args);
+    $filepath = '/' . ($args ? implode('/', $args) . '/' : '');
+    $file = get_file_storage()->get_file($context->id, 'mod_spatialforum', 'post', $postid, $filepath, $filename);
+    if (!$file || $file->is_directory()) {
+        return false;
+    }
+    send_stored_file($file, 0, 0, $forcedownload, $options);
 }
 
 /**

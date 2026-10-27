@@ -26,7 +26,8 @@ class restore_spatialforum_activity_task extends restore_activity_task {
      * @return array
      */
     public static function define_decode_contents(): array {
-        return [new restore_decode_content('spatialforum', ['intro'], 'spatialforum')];
+        return [new restore_decode_content('spatialforum', ['intro'], 'spatialforum'),
+            new restore_decode_content('spatialforum_posts', ['message'], 'spatialforum_post')];
     }
 
     /**
@@ -36,6 +37,14 @@ class restore_spatialforum_activity_task extends restore_activity_task {
      */
     public static function define_decode_rules(): array {
         return [
+            new restore_decode_rule('SPATIALFORUMTRACK', '/mod/spatialforum/view.php?id=$1&trackid=$2',
+                ['course_module', 'spatialforum_track']),
+            new restore_decode_rule('SPATIALFORUMPOST', '/mod/spatialforum/view.php?id=$1&postid=$2',
+                ['course_module', 'spatialforum_post']),
+            new restore_decode_rule('SPATIALFORUMANCHOR', '/mod/spatialforum/view.php?id=$1#post-$2',
+                ['course_module', 'spatialforum_post']),
+            new restore_decode_rule('SPATIALFORUMTRACKPOST', '/mod/spatialforum/view.php?id=$1&trackid=$2#post-$3',
+                ['course_module', 'spatialforum_track', 'spatialforum_post']),
             new restore_decode_rule('SPATIALFORUMVIEWBYID', '/mod/spatialforum/view.php?id=$1', 'course_module'),
             new restore_decode_rule('SPATIALFORUMINDEX', '/mod/spatialforum/index.php?id=$1', 'course'),
         ];

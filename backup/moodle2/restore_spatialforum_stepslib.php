@@ -139,5 +139,6 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $DB->set_field('spatialforum', 'roottrackid',
             $this->get_mappingid('spatialforum_track', $this->oldroottrackid, 0), ['id' => $forumid]);
         $this->add_related_files('mod_spatialforum', 'intro', null);
+        $this->add_related_files('mod_spatialforum', 'post', 'spatialforum_post');
     }
 }

@@ -56,14 +56,13 @@ class post_form extends \moodleform {
         }
 
         $messagelabel = !empty($customdata['excerptmode']) ? 'closingcomment' : 'message';
-        $mform->addElement('editor', 'message_editor', get_string($messagelabel, 'mod_spatialforum'), null, [
-            'maxfiles' => 0,
-            'trusttext' => false,
-        ]);
+        $options = isset($customdata['context'])
+            ? \mod_spatialforum\local\media::editor_options($customdata['context'])
+            : ['maxfiles' => 10, 'trusttext' => false];
+        $mform->addElement('editor', 'message_editor', get_string($messagelabel, 'mod_spatialforum'), null, $options);
         $mform->setType('message_editor', PARAM_RAW);
-        if (empty($customdata['originpostid'])) {
-            $mform->addRule('message_editor', null, 'required', null, 'client');
-        } else {
+        // Server validation recognises media-only posts; generic text-required checks do not.
+        if (!empty($customdata['originpostid'])) {
             if (empty($customdata['excerptmode'])) {
                 $mform->addElement('html', $composer);
             }
@@ -90,10 +89,14 @@ class post_form extends \moodleform {
         $errors = parent::validation($data, $files);
         if (trim((string) ($data['subject'] ?? '')) === '') {
             $errors['subject'] = get_string('required');
+        } else if (\core_text::strlen(trim($data['subject'])) > 255) {
+            $errors['subject'] = get_string('maximumchars', '', 255);
         }
         $isbranch = ($this->_customdata['action'] ?? '') === 'branch';
         if ($isbranch && trim((string) ($data['branchname'] ?? '')) === '') {
             $errors['branchname'] = get_string('required');
+        } else if ($isbranch && \core_text::strlen(trim($data['branchname'])) > 255) {
+            $errors['branchname'] = get_string('maximumchars', '', 255);
         }
         $message = trim((string) ($data['message_editor']['text'] ?? ''));
         $hascomments = false;
@@ -108,8 +111,15 @@ class post_form extends \moodleform {
                 $errors['message_editor'] = get_string('invalidexcerpt', 'mod_spatialforum');
             }
         }
-        if (trim(strip_tags($message)) === '' && !$hascomments) {
+        if (!\mod_spatialforum\local\media::has_content($message) && !$hascomments) {
             $errors['message_editor'] = get_string('required');
+        }
+        if (isset($this->_customdata['context'])) {
+            $options = \mod_spatialforum\local\media::editor_options($this->_customdata['context']);
+            if ($error = \mod_spatialforum\local\media::validate_draft(
+                    (int) ($data['message_editor']['itemid'] ?? 0), $options)) {
+                $errors['message_editor'] = $error;
+            }
         }
         return $errors;
     }

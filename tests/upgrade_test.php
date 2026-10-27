@@ -14,6 +14,27 @@ require_once($CFG->dirroot . '/mod/spatialforum/db/upgrade.php');
 /** Existing activities and posts survive the schema upgrade. */
 #[CoversFunction('xmldb_spatialforum_upgrade')]
 final class upgrade_test extends \advanced_testcase {
+    public function test_upgrade_repairs_names_from_previously_erased_authors(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $root = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid]);
+        $parent = \mod_spatialforum\local\forum::create_post($activity, $root->id,
+            get_admin()->id, 'QA parent', 'QA text', FORMAT_HTML);
+        $trackid = \mod_spatialforum\local\forum::reply_in_new_track($activity, $root, $parent,
+            get_admin()->id, 'QA erased title', 'QA reply', 'QA text', FORMAT_HTML);
+        $DB->set_field('spatialforum_posts', 'userid', 0, ['trackid' => $trackid]);
+        $DB->set_field('spatialforum_posts', 'deleted', 1, ['trackid' => $trackid]);
+        set_config('version', 2026102601, 'mod_spatialforum');
+        $this->assertTrue(xmldb_spatialforum_upgrade(2026102601));
+        $this->assertSame(get_string('anonymoustrack', 'mod_spatialforum'),
+            $DB->get_field('spatialforum_tracks', 'name', ['id' => $trackid]));
+        $this->assertSame($activity->name, $DB->get_field('spatialforum_tracks', 'name', ['id' => $root->id]));
+        $this->assertEquals(2, $DB->count_records('spatialforum_posts', ['spatialforumid' => $activity->id]));
+    }
+
     public function test_upgrade_from_033_adds_excerpt_storage_without_changing_posts(): void {
         global $DB;
         $this->resetAfterTest();

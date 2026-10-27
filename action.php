@@ -3,6 +3,9 @@
 
 require_once(__DIR__ . '/../../config.php');
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    throw new moodle_exception('invalidrequest', 'error');
+}
 $id = required_param('id', PARAM_INT);
 $action = required_param('action', PARAM_ALPHA);
 $trackid = optional_param('trackid', 0, PARAM_INT);
@@ -33,8 +36,24 @@ if ($action === 'toggletrack') {
         'id' => $postid,
         'spatialforumid' => $activity->id,
     ], '*', MUST_EXIST);
+    if (!optional_param('confirmed', 0, PARAM_BOOL)) {
+        $PAGE->set_url('/mod/spatialforum/action.php', ['id' => $cm->id, 'action' => 'deletepost', 'postid' => $post->id]);
+        $PAGE->set_title(get_string('delete'));
+        $PAGE->set_heading(format_string($course->fullname));
+        $confirmurl = new moodle_url('/mod/spatialforum/action.php', [
+            'id' => $cm->id, 'action' => 'deletepost', 'postid' => $post->id,
+            'confirmed' => 1, 'sesskey' => sesskey(),
+        ]);
+        echo $OUTPUT->header();
+        echo $OUTPUT->confirm(get_string('confirmdeletepost', 'mod_spatialforum'),
+            new single_button($confirmurl, get_string('delete'), 'post'), $returnurl);
+        echo $OUTPUT->footer();
+        exit;
+    }
+    \mod_spatialforum\local\media::delete($post->id, $context);
     $post->deleted = 1;
     $post->message = '';
+    $post->replyparts = null;
     $post->timemodified = time();
     $DB->update_record('spatialforum_posts', $post);
     $returnurl->param('trackid', $post->trackid);
@@ -42,5 +61,5 @@ if ($action === 'toggletrack') {
     throw new moodle_exception('invalidaction', 'mod_spatialforum');
 }
 
-redirect($returnurl, get_string('changesaved'));
+redirect($returnurl, get_string('changessaved'));
 
