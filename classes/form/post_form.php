@@ -105,7 +105,8 @@ class post_form extends \moodleform {
                 $parts = \mod_spatialforum\local\excerpts::prepare((string) ($data['excerptdraft'] ?? '[]'),
                     $this->_customdata['origin'], $this->_customdata['context']);
                 foreach (json_decode($parts, true) as $part) {
-                    $hascomments = $hascomments || trim($part['comment']) !== '';
+                    // Quote comments are plain text, so escape markup before checking visible content.
+                    $hascomments = $hascomments || \mod_spatialforum\local\media::has_content(s($part['comment']));
                 }
             } catch (\moodle_exception $e) {
                 $errors['message_editor'] = get_string('invalidexcerpt', 'mod_spatialforum');

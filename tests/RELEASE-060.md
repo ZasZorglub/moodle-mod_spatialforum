@@ -20,7 +20,7 @@ Baseline: `c58905f` / 0.5.2. Scope: the eleven prioritised findings from the 27 
 
 Moodle 5.2.2+ (Build 20260818), PHP 8.3.36, MariaDB 11.4.13. The existing GitHub workflow also targets Moodle 5.0, but a new remote CI result is not claimed for this local release.
 
-- Final full Moodle regression run: **41 tests, 246 assertions passed**.
+- Final full Moodle regression run: **41 tests, 249 assertions passed**.
 - Both JavaScript suites exercise original Mustache plus AMD source/build.
 - PHP syntax, reproducible AMD build and Git whitespace checks pass.
 - Local logs/screenshots: `../rapporter/samtalespor-0.6.0-verifikation-2026-10-27` relative to the plugin checkout. Database backups are private local files outside this repository.

@@ -85,6 +85,12 @@ final class excerpts_test extends \advanced_testcase {
         $this->assertSame([], $form->validation($data, []));
         $data['excerptdraft'] = json_encode([['quote' => 'Pentz', 'comment' => '']]);
         $this->assertArrayHasKey('message_editor', $form->validation($data, []));
+        foreach (["\u{00A0}", "\u{200B}"] as $invisible) {
+            $data['excerptdraft'] = json_encode([['quote' => 'Pentz', 'comment' => $invisible]]);
+            $this->assertArrayHasKey('message_editor', $form->validation($data, []));
+        }
+        $data['excerptdraft'] = json_encode([['quote' => 'Pentz', 'comment' => '<script> is literal QA text']]);
+        $this->assertSame([], $form->validation($data, []));
         $data['excerptdraft'] = json_encode([['quote' => 'Forged', 'comment' => 'My point']]);
         $this->assertArrayHasKey('message_editor', $form->validation($data, []));
     }
