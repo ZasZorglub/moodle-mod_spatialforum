@@ -502,4 +502,21 @@ final class forum_test extends \advanced_testcase {
         $this->assertFalse($data['posts'][0]['edited']);
         $this->assertSame('', $data['posts'][0]['editedlabel']);
     }
+
+    /**
+     * Moodle's real activity navigation must render without missing-string debugging.
+     */
+    public function test_activity_settings_navigation_renders_with_valid_strings(): void {
+        global $PAGE;
+
+        [, , , , $context, $cm, $course] = $this->fixture();
+        $this->setAdminUser();
+        $PAGE = new \moodle_page();
+        $PAGE->set_context($context);
+        $PAGE->set_url('/mod/spatialforum/view.php', ['id' => $cm->id]);
+        $PAGE->set_cm($cm, $course);
+        $node = $PAGE->settingsnav->find('modulesettings', \navigation_node::TYPE_SETTING);
+        $this->assertNotFalse($node);
+        $this->assertStringNotContainsString('[[', $node->text);
+    }
 }

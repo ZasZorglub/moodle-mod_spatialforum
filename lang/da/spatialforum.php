@@ -108,6 +108,7 @@ $string['noresults'] = 'Ingen indlæg matcher dine filtre. Ryd søgefeltet eller
 $string['of'] = 'af';
 $string['onlyunread'] = 'Kun ulæste';
 $string['originalunavailable'] = 'Det oprindelige indlæg er ikke længere tilgængeligt.';
+$string['pluginadministration'] = 'Administration af Samtalespor';
 $string['pluginname'] = 'Samtalespor';
 $string['postreply'] = 'Send svar';
 $string['posts'] = 'indlæg';

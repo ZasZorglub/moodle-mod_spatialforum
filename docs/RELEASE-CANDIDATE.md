@@ -5,6 +5,7 @@ Prepared on 28 October 2026. This is a release candidate, not a Marketplace appr
 ## Changes
 
 - Added the full GNU GPL v3 license and explicit copyright/license headers across source files.
+- Added the missing activity-administration language string discovered by a real page request with full developer debugging, with a regression test exercising Moodle settings navigation.
 - Corrected Moodle coding-standard findings, expanded PHPDoc descriptions and removed a redundant identical English string key. Function-only files no longer contain unnecessary top-level guards; request entry points retain their access controls.
 - Added a deterministic ZIP builder, archive checks and an English-only release package. Danish is retained in Git for later AMOS submission; no existing installation's language files are deleted by this preparation.
 - Published a separate public issue tracker and English user guide: https://github.com/ZasZorglub/moodle-mod_spatialforum-support
@@ -14,10 +15,11 @@ Prepared on 28 October 2026. This is a release candidate, not a Marketplace appr
 
 The test environments are disposable local Docker containers. The existing Moodle test-server source was mounted read-only for copying; its database and data directories were not used by these tests. Additional non-core plugins were removed from the isolated copies.
 
-- Moodle LMS 5.2.2+, PHP 8.3.36, PostgreSQL 16: clean Moodle/plugin installation from the release archive; 41 tests / 249 assertions passed.
+- Moodle LMS 5.2.2+, PHP 8.3.36, PostgreSQL 16: clean Moodle/plugin installation from the release archive; 42 tests / 251 assertions passed.
 - Moodle coding standard (`moodlehq/moodle-cs` 3.7.0): zero errors and zero warnings.
 - Both JavaScript suites passed against source/build and the real templates.
-- Moodle LMS 5.2.2+, PHP 8.3.36, MariaDB 11.4.13: clean installation; 41 tests / 249 assertions passed.
+- Own-browser check on the isolated English guest demo: the activity page renders with full developer debugging, opening a card preserves surrounding threads, Close restores the overview and Enter opens the focused card. Screenshots use only synthetic content/participants. This does not cover authenticated Reply to selection or media playback for the new candidate.
+- Moodle LMS 5.2.2+, PHP 8.3.36, MariaDB 11.4.13: clean installation; 42 tests / 251 assertions passed.
 - Moodle's own ZIP validator passed. Its expected warnings identify RC maturity and an existing writable target directory; no validation errors remain. The builder writes explicit directory entries, as required by this validator.
 - PostgreSQL schema check passed. PHP syntax checks and Git whitespace checks passed.
 - Executable-token review found only the declared version/maturity change, equivalent `elseif` formatting, interface ordering and language-key sorting/removal of identical duplicates; the other PHP changes are comments/formatting or removal of unnecessary function-only guards.

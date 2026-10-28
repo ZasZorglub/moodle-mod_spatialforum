@@ -108,6 +108,7 @@ $string['noresults'] = 'No posts match your filters. Clear the search or turn of
 $string['of'] = 'of';
 $string['onlyunread'] = 'Unread only';
 $string['originalunavailable'] = 'The original post is no longer available.';
+$string['pluginadministration'] = 'Spatial forum administration';
 $string['pluginname'] = 'Spatial forum';
 $string['postreply'] = 'Post reply';
 $string['posts'] = 'posts';
