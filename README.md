@@ -2,13 +2,15 @@
 
 Samtalespor is a Moodle activity module that turns branching discussion into named, colour-coded spatial tracks. The main track stays white, each branch gets its own colour, and the interface keeps both the route back and the complete track map visible.
 
-## Compatibility
+## Compatibility and release status
 
-- Moodle LMS 5.0 or newer (`requires = 2025041400`)
-- Moodle Workplace 5.x, using public Moodle activity, capability, backup and privacy APIs only
-- PHP and database requirements follow the installed Moodle 5.x release
+- Release candidate: **0.6.1-rc.1**; not yet approved or published on Moodle Marketplace.
+- Declared installation minimum: Moodle LMS 5.0 (`requires = 2025041400`). This is a minimum-version gate, not proof that every later version has been tested.
+- The previous release was tested on Moodle LMS 5.2.2+, PHP 8.3 and MariaDB 11.4. Current release results and database coverage are recorded in [docs/RELEASE-CANDIDATE.md](docs/RELEASE-CANDIDATE.md).
+- Moodle Workplace compatibility has not been verified and is not claimed for this release.
+- No additional plugins, external service accounts or subscriptions are required. Administrator installation requires no Node.js or Composer commands.
 
-This is a staging release with automated Moodle 5.0 regression tests. It must also be tested on a staging copy of the exact Moodle or Workplace build before production use.
+For setup and use, see [the user guide](https://github.com/ZasZorglub/moodle-mod_spatialforum-support/blob/main/USER-GUIDE.md). For support and issue reporting, see [the support policy](SUPPORT.md).
 
 ## 0.6.0 media and audit corrections
 
@@ -26,7 +28,7 @@ Posts unfold in their original place in the thread. The complete map and its con
 
 When text is selected inside a post, **Reply to selection** becomes green, high-contrast and visibly emphasized; the button exposes its enabled state to assistive technology.
 
-The activity uses Moodle's introduction once and a compact toolbar. Reading-route emphasis preserves text contrast. New posts have their own heading and Create post action. Ordinary replies start with the message editor and a compact, expandable original; passage quoting and whole-parent quoting are optional disclosures. Removing a quote restores logical keyboard focus. All UI labels are available in Danish and English. See `tests/UX-050.md` for acceptance and verification boundaries.
+The activity uses Moodle's introduction once and a compact toolbar. Reading-route emphasis preserves text contrast. New posts have their own heading and Create post action. Ordinary replies start with the message editor and a compact, expandable original; passage quoting and whole-parent quoting are optional disclosures. Removing a quote restores logical keyboard focus. The Marketplace package ships English labels. The Danish translation is retained in the source repository for later AMOS submission. See `tests/UX-050.md` for acceptance and verification boundaries.
 
 Build the dependency-free AMD wrappers with `node scripts/build-amd.mjs`. This release changes no database schema or permission rules.
 
@@ -72,7 +74,7 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 - Activity completion on view
 - Course backup and restore
 - Privacy API metadata, export and deletion
-- Danish and English language packs
+- English language pack; Danish translation retained separately in source for AMOS
 - Responsive layout for desktop, tablet and mobile
 
 ## Current MVP limits
@@ -85,13 +87,13 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 
 ## Security and operations
 
-- Version `0.6.0 (staging)` upgrades MVP or earlier staging versions to `2026102700`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved. Child-track names from previously privacy-erased authors are anonymised.
+- Version `0.6.1-rc.1` upgrades earlier versions to `2026102800`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved. Child-track names from previously privacy-erased authors are anonymised.
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.
 - Each Reply to an existing post starts a new child track on submission. Two replies to the same post create separate sibling tracks; further replies create another child track. The server names the track from the reply subject. Cancelling creates nothing. New top-level posts use the main track. Replying requires both reply and branch capabilities, an unlocked conversation and room below the configured maximum track depth.
 - The spatial appearance is decorative: post content and controls are never transformed into 3D space. Reduced-motion preferences are respected.
-- GitHub Actions installs Moodle 5.0 with PHP 8.3/MariaDB and runs plugin tests. This does not replace visual testing on the target Moodle/Workplace site. See `tests/STAGING.md`.
+- GitHub Actions defines Moodle 5.0/5.2 checks with PHP 8.3 on MariaDB and PostgreSQL. A workflow definition alone is not a passing run. This does not replace visual testing on the target Moodle/Workplace site. See `tests/STAGING.md`.
 - `npm ci --prefix tests/javascript --ignore-scripts` and `npm test --prefix tests/javascript` run DOM checks against the real Mustache template and both AMD source/build. These exercise unfolding, read persistence/failures, keyboard close, responsive fallback and cyclic imported references; they do not replace real-browser layout testing.
 
 - All write operations use Moodle capabilities and session keys.

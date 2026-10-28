@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 namespace mod_spatialforum;
 
@@ -9,10 +31,17 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 defined('MOODLE_INTERNAL') || die();
 
-/** Source-aware, interleaved excerpt replies with real Moodle forms and persistence. */
+/**
+
+ * Source-aware, interleaved excerpt replies with real Moodle forms and persistence.
+
+ */
 #[CoversClass(excerpts::class)]
 #[CoversClass(forum::class)]
 final class excerpts_test extends \advanced_testcase {
+    /**
+     * Create a course, participant and quoted source post.
+     */
     private function fixture(): array {
         global $DB;
         $this->resetAfterTest();
@@ -22,8 +51,14 @@ final class excerpts_test extends \advanced_testcase {
         $cm = get_coursemodule_from_instance('spatialforum', $activity->id);
         $context = \context_module::instance($cm->id);
         $track = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid]);
-        $id = forum::create_post($activity, $track->id, get_admin()->id, 'Original',
-            '<p>Målmænd: <strong>Pentz</strong></p><p>Forsvar: &lt;Alves&gt; &amp; venner</p>', FORMAT_HTML);
+        $id = forum::create_post(
+            $activity,
+            $track->id,
+            get_admin()->id,
+            'Original',
+            '<p>Målmænd: <strong>Pentz</strong></p><p>Forsvar: &lt;Alves&gt; &amp; venner</p>',
+            FORMAT_HTML
+        );
         $origin = $DB->get_record('spatialforum_posts', ['id' => $id]);
         return [$activity, $track, $origin, $context, $cm];
     }
@@ -35,8 +70,18 @@ final class excerpts_test extends \advanced_testcase {
             ['quote' => 'Målmænd: Pentz', 'comment' => 'Min første kommentar'],
             ['quote' => 'Forsvar: <Alves> & venner', 'comment' => '<script>alert(1)</script> Min anden kommentar'],
         ]);
-        $newtrack = forum::reply_in_new_track($activity, $track, $origin->id, get_admin()->id,
-            'Reply', 'Reply', '', FORMAT_HTML, false, $draft);
+        $newtrack = forum::reply_in_new_track(
+            $activity,
+            $track,
+            $origin->id,
+            get_admin()->id,
+            'Reply',
+            'Reply',
+            '',
+            FORMAT_HTML,
+            false,
+            $draft
+        );
         $post = $DB->get_record('spatialforum_posts', ['trackid' => $newtrack]);
         $this->assertEquals($origin->id, $post->replytoid);
         $this->assertStringNotContainsString('Pentz', $post->replyparts);
@@ -64,9 +109,11 @@ final class excerpts_test extends \advanced_testcase {
 
     public function test_forged_and_oversized_selections_are_rejected(): void {
         [$activity, $track, $origin, $context] = $this->fixture();
-        foreach (['{}', 'null', '[1]', json_encode([['quote' => 'Invented text', 'comment' => 'Hi']]),
+        foreach (
+            ['{}', 'null', '[1]', json_encode([['quote' => 'Invented text', 'comment' => 'Hi']]),
                 json_encode(array_fill(0, 11, ['quote' => 'Pentz', 'comment' => 'Hi'])),
-                json_encode([['quote' => 'Pentz', 'comment' => str_repeat('a', 4001)]])] as $draft) {
+                json_encode([['quote' => 'Pentz', 'comment' => str_repeat('a', 4001)]])] as $draft
+        ) {
             try {
                 excerpts::prepare($draft, $origin, $context);
                 $this->fail('Invalid quotation accepted');
@@ -99,14 +146,25 @@ final class excerpts_test extends \advanced_testcase {
         global $DB;
         [$activity, $track, $origin, $context, $cm] = $this->fixture();
         $other = $this->getDataGenerator()->create_user();
-        $replyid = forum::create_post($activity, $track->id, $other->id, 'Reply', '', FORMAT_HTML,
-            $origin->id, false, json_encode([['quote' => 'Pentz', 'comment' => 'Private comment']]));
+        $replyid = forum::create_post(
+            $activity,
+            $track->id,
+            $other->id,
+            'Reply',
+            '',
+            FORMAT_HTML,
+            $origin->id,
+            false,
+            json_encode([['quote' => 'Pentz', 'comment' => 'Private comment']])
+        );
         $reply = $DB->get_record('spatialforum_posts', ['id' => $replyid]);
         \mod_spatialforum\privacy\provider::delete_data_for_user(
-            new \core_privacy\local\request\approved_contextlist(get_admin(), 'mod_spatialforum', [$context->id]));
+            new \core_privacy\local\request\approved_contextlist(get_admin(), 'mod_spatialforum', [$context->id])
+        );
         $this->assertStringNotContainsString('Pentz', excerpts::render($reply, $context, $cm->id));
         \mod_spatialforum\privacy\provider::delete_data_for_user(
-            new \core_privacy\local\request\approved_contextlist($other, 'mod_spatialforum', [$context->id]));
+            new \core_privacy\local\request\approved_contextlist($other, 'mod_spatialforum', [$context->id])
+        );
         $this->assertNull($DB->get_field('spatialforum_posts', 'replyparts', ['id' => $replyid]));
     }
 }

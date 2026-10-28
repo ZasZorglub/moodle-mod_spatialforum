@@ -1,3 +1,11 @@
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 // Selection and composer regressions against the actual template and shipped AMD modules.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 namespace mod_spatialforum\local;
 
@@ -7,21 +29,25 @@ use context_module;
 use moodle_url;
 use stdClass;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Domain operations and view data for a spatial forum.
  *
  * @package mod_spatialforum
  */
 class forum {
-    /** @var array Track colour palette. */
+    /**
+     * @var array Track colour palette.
+     */
     private const COLOURS = [
         '#54b9ec', '#f0aa4f', '#a98be8', '#ef769c',
         '#59d6c2', '#ff8366', '#78d59b', '#c18bea',
     ];
 
-    /** Editable reply subject, without accumulating repeated Re: prefixes. */
+    /**
+
+     * Editable reply subject, without accumulating repeated Re: prefixes.
+
+     */
     public static function reply_subject(string $subject): string {
         $subject = trim($subject);
         if (!preg_match('/^re\s*:/i', $subject)) {
@@ -30,9 +56,18 @@ class forum {
         return \core_text::substr($subject, 0, 255);
     }
 
-    /** Parent content is read live so moderation and privacy erasure take effect in every quote. */
-    public static function export_reply_context(stdClass $post, context_module $context, int $cmid,
-            ?array $posts = null, ?array $users = null): array {
+    /**
+
+     * Parent content is read live so moderation and privacy erasure take effect in every quote.
+
+     */
+    public static function export_reply_context(
+        stdClass $post,
+        context_module $context,
+        int $cmid,
+        ?array $posts = null,
+        ?array $users = null
+    ): array {
         global $DB;
 
         if (!empty($post->deleted)) {
@@ -52,17 +87,29 @@ class forum {
         ];
     }
 
-    /** Whether the site and this activity both allow likes. Disabling preserves existing data. */
+    /**
+
+     * Whether the site and this activity both allow likes. Disabling preserves existing data.
+
+     */
     public static function likes_enabled(stdClass $activity): bool {
         return !empty($activity->enablelikes) && get_config('mod_spatialforum', 'allowlikes') !== '0';
     }
 
-    /** Set one user's like state, serialising duplicate submissions. Caller must check capabilities. */
+    /**
+
+     * Set one user's like state, serialising duplicate submissions. Caller must check capabilities.
+
+     */
     public static function set_like(stdClass $activity, stdClass $post, int $userid, bool $liked): void {
         self::set_reaction($activity, $post, $userid, $liked ? 1 : 0);
     }
 
-    /** One reaction per user: 1 = like, -1 = dislike, 0 = remove. */
+    /**
+
+     * One reaction per user: 1 = like, -1 = dislike, 0 = remove.
+
+     */
     public static function set_reaction(stdClass $activity, stdClass $post, int $userid, int $reaction): void {
         global $DB;
 
@@ -143,7 +190,11 @@ class forum {
         ]);
     }
 
-    /** Publish each reply in a separate child track. Caller checks reply and branch capabilities. */
+    /**
+
+     * Publish each reply in a separate child track. Caller checks reply and branch capabilities.
+
+     */
     public static function reply_in_new_track(
         stdClass $activity,
         stdClass $parenttrack,
@@ -174,8 +225,17 @@ class forum {
         $transaction = $DB->start_delegated_transaction();
         try {
             $trackid = self::create_track($activity, $parenttrack, $originpostid, $branchname);
-            self::create_post($activity, $trackid, $userid, $subject, $message, $messageformat,
-                $originpostid, $showparent, $excerptdraft);
+            self::create_post(
+                $activity,
+                $trackid,
+                $userid,
+                $subject,
+                $message,
+                $messageformat,
+                $originpostid,
+                $showparent,
+                $excerptdraft
+            );
             $transaction->allow_commit();
         } catch (\Throwable $e) {
             $transaction->rollback($e);
@@ -277,7 +337,7 @@ class forum {
             $children[(int) $track->parenttrackid][] = $track;
         }
         $flat = [];
-        $walk = function(int $id, int $depth) use (&$walk, &$flat, $children, $tracks): void {
+        $walk = function (int $id, int $depth) use (&$walk, &$flat, $children, $tracks): void {
             if (!isset($tracks[$id])) {
                 return;
             }
@@ -313,8 +373,13 @@ class forum {
         try {
             [$insql, $params] = $DB->get_in_or_equal($postids, SQL_PARAMS_NAMED);
             $params['userid'] = $userid;
-            $existing = $DB->get_records_select('spatialforum_read',
-                "postid $insql AND userid = :userid", $params, '', 'id,postid');
+            $existing = $DB->get_records_select(
+                'spatialforum_read',
+                "postid $insql AND userid = :userid",
+                $params,
+                '',
+                'id,postid'
+            );
             $readids = array_map(static fn($read): int => (int) $read->postid, $existing);
             foreach (array_diff($postids, $readids) as $postid) {
                 $DB->insert_record('spatialforum_read', (object) [
@@ -371,9 +436,11 @@ class forum {
 
         $path = self::get_path($currenttrack->id, $activity->id);
         $tree = self::get_tree($activity->id, $activity->roottrackid);
-        $posts = $DB->get_records('spatialforum_posts',
+        $posts = $DB->get_records(
+            'spatialforum_posts',
             $wholemap ? ['spatialforumid' => $activity->id] : ['trackid' => $currenttrack->id],
-            'timecreated ASC, id ASC');
+            'timecreated ASC, id ASC'
+        );
         // Quotes and parent previews share these records; never query per rendered post.
         $renderposts = $wholemap ? $posts : $DB->get_records('spatialforum_posts', ['spatialforumid' => $activity->id]);
         $maptracks = $DB->get_records('spatialforum_tracks', ['spatialforumid' => $activity->id]);
@@ -408,12 +475,15 @@ class forum {
                    FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
                   WHERE $scope AND p.deleted = 0
-               GROUP BY l.postid", ['scopeid' => $scopeid]);
+               GROUP BY l.postid",
+                ['scopeid' => $scopeid]
+            );
             $userlikes = $DB->get_records_sql(
                 "SELECT l.postid, l.id, l.reaction FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
                   WHERE $scope AND l.userid = :userid",
-                ['scopeid' => $scopeid, 'userid' => $USER->id]);
+                ['scopeid' => $scopeid, 'userid' => $USER->id]
+            );
         }
 
         $users = [];
@@ -605,7 +675,11 @@ class forum {
         ];
     }
 
-    /** Localised creation/edit labels plus unambiguous machine-readable timestamps. */
+    /**
+
+     * Localised creation/edit labels plus unambiguous machine-readable timestamps.
+
+     */
     private static function post_times(stdClass $post): array {
         $shortformat = get_string('strftimedatetimeshort', 'langconfig');
         $edited = empty($post->deleted) && $post->timemodified > $post->timecreated;
@@ -616,12 +690,19 @@ class forum {
             'edited' => $edited,
             'editediso' => $edited ? gmdate('c', $post->timemodified) : '',
             'editedlabel' => $edited ? get_string('editedat', 'mod_spatialforum', userdate($post->timemodified)) : '',
-            'editedshort' => $edited ? get_string('editedat', 'mod_spatialforum',
-                userdate($post->timemodified, $shortformat)) : '',
+            'editedshort' => $edited ? get_string(
+                'editedat',
+                'mod_spatialforum',
+                userdate($post->timemodified, $shortformat)
+            ) : '',
         ];
     }
 
-    /** Plain preview of already formatted content, preserving the author's letter case. */
+    /**
+
+     * Plain preview of already formatted content, preserving the author's letter case.
+
+     */
     private static function preview(string $formatted): string {
         $formatted = preg_replace('~<(script|style)\b[^>]*>.*?</\1>~is', '', $formatted);
         $formatted = preg_replace('~<(?:br\b[^>]*|/(?:p|div|li|h[1-6]|tr|blockquote))\s*>~i', ' ', $formatted);

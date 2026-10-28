@@ -1,18 +1,48 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 namespace mod_spatialforum\local;
 
-defined('MOODLE_INTERNAL') || die();
+/**
 
-/** Selective quotations reference the source; they never store another author's text. */
+ * Selective quotations reference the source; they never store another author's text.
+
+ */
 class excerpts {
-    /** Stable whitespace for browser selections and formatted Moodle content. */
+    /**
+     * Stable whitespace for browser selections and formatted Moodle content.
+     */
     public static function normalise(string $text): string {
         return trim(preg_replace('/\s+/u', ' ', str_replace("\xc2\xa0", ' ', $text)));
     }
 
-    /** Plain text from the author's own content, excluding quotations. */
+    /**
+
+     * Plain text from the author's own content, excluding quotations.
+
+     */
     public static function source(\stdClass $post, \context $context): string {
         $parts = json_decode($post->replyparts ?? '[]', true) ?: [];
         $comments = array_column($parts, 'comment');
@@ -23,14 +53,20 @@ class excerpts {
         return self::normalise(implode(' ', $comments) . ' ' . $text);
     }
 
-    /** Validate a submitted draft and turn selections into source offsets and fingerprints. */
+    /**
+
+     * Validate a submitted draft and turn selections into source offsets and fingerprints.
+
+     */
     public static function prepare(string $draft, \stdClass $origin, \context $context): string {
         if (strlen($draft) > 100000 || $origin->deleted) {
             throw new \moodle_exception('invalidexcerpt', 'mod_spatialforum');
         }
         $items = json_decode($draft ?: '[]', true);
-        if (!str_starts_with(ltrim($draft ?: '[]'), '[') || !is_array($items) ||
-                !array_is_list($items) || count($items) > 10) {
+        if (
+            !str_starts_with(ltrim($draft ?: '[]'), '[') || !is_array($items) ||
+                !array_is_list($items) || count($items) > 10
+        ) {
             throw new \moodle_exception('invalidexcerpt', 'mod_spatialforum');
         }
         $source = self::source($origin, $context);
@@ -42,8 +78,10 @@ class excerpts {
             $quote = self::normalise($item['quote']);
             $comment = trim($item['comment']);
             $start = strpos($source, $quote);
-            if ($quote === '' || $start === false || \core_text::strlen($quote) > 4000 ||
-                    \core_text::strlen($comment) > 4000) {
+            if (
+                $quote === '' || $start === false || \core_text::strlen($quote) > 4000 ||
+                    \core_text::strlen($comment) > 4000
+            ) {
                 throw new \moodle_exception('invalidexcerpt', 'mod_spatialforum');
             }
             $parts[] = ['start' => $start, 'length' => strlen($quote), 'hash' => hash('sha256', $source),
@@ -52,9 +90,18 @@ class excerpts {
         return json_encode($parts, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 
-    /** Render source-aware quotes interleaved with the reply author's comments. */
-    public static function render(\stdClass $post, \context $context, int $cmid,
-            ?array $posts = null, ?array $users = null): string {
+    /**
+
+     * Render source-aware quotes interleaved with the reply author's comments.
+
+     */
+    public static function render(
+        \stdClass $post,
+        \context $context,
+        int $cmid,
+        ?array $posts = null,
+        ?array $users = null
+    ): string {
         global $DB;
         $html = '';
         $parts = json_decode($post->replyparts ?? '[]', true) ?: [];
@@ -81,9 +128,12 @@ class excerpts {
                     $quote = $valid ? substr($source, $part['start'], $part['length']) :
                         get_string('excerptchanged', 'mod_spatialforum');
                 }
-                $html .= \html_writer::tag('blockquote',
+                $html .= \html_writer::tag(
+                    'blockquote',
                     \html_writer::div($label, 'spatialforum-excerpt-source') .
-                    \html_writer::div(s($quote), 'spatialforum-excerpt-text'), ['class' => 'spatialforum-excerpt']);
+                    \html_writer::div(s($quote), 'spatialforum-excerpt-text'),
+                    ['class' => 'spatialforum-excerpt']
+                );
                 $html .= \html_writer::div(nl2br(s($part['comment'] ?? '')), 'spatialforum-excerpt-comment');
             }
         }

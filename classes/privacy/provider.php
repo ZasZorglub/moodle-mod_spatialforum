@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 namespace mod_spatialforum\privacy;
 
@@ -14,19 +36,15 @@ use core_privacy\local\request\plugin\provider as plugin_provider;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Privacy provider for spatial forum user data.
  *
  * @package mod_spatialforum
  */
-class provider implements
-    \core_privacy\local\metadata\provider,
-    plugin_provider,
-    core_userlist_provider {
-
-    /** @inheritDoc */
+class provider implements \core_privacy\local\metadata\provider, core_userlist_provider, plugin_provider {
+    /**
+     * {@inheritDoc}
+     */
     public static function get_metadata(collection $collection): collection {
         $collection->add_database_table('spatialforum_likes', [
             'userid' => 'privacy:metadata:spatialforum_likes:userid',
@@ -55,7 +73,11 @@ class provider implements
         return $collection;
     }
 
-    /** @inheritDoc */
+    /**
+
+     * {@inheritDoc}
+
+     */
     public static function get_contexts_for_userid(int $userid): contextlist {
         $contextlist = new contextlist();
         $sql = "SELECT ctx.id
@@ -81,7 +103,11 @@ class provider implements
         return $contextlist;
     }
 
-    /** @inheritDoc */
+    /**
+
+     * {@inheritDoc}
+
+     */
     public static function get_users_in_context(userlist $userlist): void {
         $context = $userlist->get_context();
         if (!$context instanceof context_module) {
@@ -91,23 +117,33 @@ class provider implements
         if (!$cm) {
             return;
         }
-        $userlist->add_from_sql('userid',
+        $userlist->add_from_sql(
+            'userid',
             'SELECT userid FROM {spatialforum_posts} WHERE spatialforumid = :forumid',
-            ['forumid' => $cm->instance]);
-        $userlist->add_from_sql('userid',
+            ['forumid' => $cm->instance]
+        );
+        $userlist->add_from_sql(
+            'userid',
             'SELECT l.userid FROM {spatialforum_likes} l
                JOIN {spatialforum_posts} p ON p.id = l.postid
               WHERE p.spatialforumid = :forumid',
-            ['forumid' => $cm->instance]);
-        $userlist->add_from_sql('userid',
+            ['forumid' => $cm->instance]
+        );
+        $userlist->add_from_sql(
+            'userid',
             'SELECT r.userid
                FROM {spatialforum_read} r
                JOIN {spatialforum_posts} p ON p.id = r.postid
               WHERE p.spatialforumid = :forumid',
-            ['forumid' => $cm->instance]);
+            ['forumid' => $cm->instance]
+        );
     }
 
-    /** @inheritDoc */
+    /**
+
+     * {@inheritDoc}
+
+     */
     public static function export_user_data(approved_contextlist $contextlist): void {
         global $DB;
 
@@ -120,10 +156,15 @@ class provider implements
             if (!$cm) {
                 continue;
             }
-            $posts = $DB->get_records('spatialforum_posts', [
-                'spatialforumid' => $cm->instance,
-                'userid' => $userid,
-            ], 'timecreated ASC', 'id,trackid,replytoid,showparent,replyparts,subject,message,messageformat,timecreated,timemodified');
+            $posts = $DB->get_records(
+                'spatialforum_posts',
+                [
+                    'spatialforumid' => $cm->instance,
+                    'userid' => $userid,
+                ],
+                'timecreated ASC',
+                'id,trackid,replytoid,showparent,replyparts,subject,message,messageformat,timecreated,timemodified'
+            );
             $reads = $DB->get_records_sql(
                 'SELECT r.*
                    FROM {spatialforum_read} r
@@ -135,7 +176,8 @@ class provider implements
                 'SELECT l.* FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
                   WHERE p.spatialforumid = :forumid AND l.userid = :userid',
-                ['forumid' => $cm->instance, 'userid' => $userid]);
+                ['forumid' => $cm->instance, 'userid' => $userid]
+            );
             $data = (object) [
                 'likes' => array_values($likes),
                 'posts' => array_values($posts),
@@ -145,14 +187,23 @@ class provider implements
             foreach ($posts as $post) {
                 $area = [get_string('posts', 'mod_spatialforum'), (string) $post->id];
                 $post->message = writer::with_context($context)->rewrite_pluginfile_urls(
-                    $area, 'mod_spatialforum', 'post', $post->id, $post->message);
+                    $area,
+                    'mod_spatialforum',
+                    'post',
+                    $post->id,
+                    $post->message
+                );
                 writer::with_context($context)->export_area_files($area, 'mod_spatialforum', 'post', $post->id);
             }
             writer::with_context($context)->export_data([], $data);
         }
     }
 
-    /** @inheritDoc */
+    /**
+
+     * {@inheritDoc}
+
+     */
     public static function delete_data_for_all_users_in_context(context $context): void {
         global $DB;
 
@@ -170,19 +221,32 @@ class provider implements
         }
         $DB->delete_records('spatialforum_posts', ['spatialforumid' => $cm->instance]);
         get_file_storage()->delete_area_files($context->id, 'mod_spatialforum', 'post');
-        $DB->set_field_select('spatialforum_tracks', 'name', get_string('anonymoustrack', 'mod_spatialforum'),
-            'spatialforumid = ? AND parenttrackid <> 0', [$cm->instance]);
+        $DB->set_field_select(
+            'spatialforum_tracks',
+            'name',
+            get_string('anonymoustrack', 'mod_spatialforum'),
+            'spatialforumid = ? AND parenttrackid <> 0',
+            [$cm->instance]
+        );
         $DB->set_field('spatialforum_tracks', 'originpostid', 0, ['spatialforumid' => $cm->instance]);
     }
 
-    /** @inheritDoc */
+    /**
+
+     * {@inheritDoc}
+
+     */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
         foreach ($contextlist->get_contexts() as $context) {
             self::delete_user_in_context($contextlist->get_user()->id, $context);
         }
     }
 
-    /** @inheritDoc */
+    /**
+
+     * {@inheritDoc}
+
+     */
     public static function delete_data_for_users(approved_userlist $userlist): void {
         foreach ($userlist->get_userids() as $userid) {
             self::delete_user_in_context($userid, $userlist->get_context());
@@ -207,21 +271,30 @@ class provider implements
         if (!$cm) {
             return;
         }
-        $postids = $DB->get_fieldset_select('spatialforum_posts', 'id',
-            'spatialforumid = ? AND userid = ?', [$cm->instance, $userid]);
+        $postids = $DB->get_fieldset_select(
+            'spatialforum_posts',
+            'id',
+            'spatialforumid = ? AND userid = ?',
+            [$cm->instance, $userid]
+        );
         $likeids = $DB->get_fieldset_sql(
             'SELECT l.id FROM {spatialforum_likes} l
                JOIN {spatialforum_posts} p ON p.id = l.postid
               WHERE l.userid = :userid AND p.spatialforumid = :forumid',
-            ['userid' => $userid, 'forumid' => $cm->instance]);
+            ['userid' => $userid, 'forumid' => $cm->instance]
+        );
         if ($likeids) {
             $DB->delete_records_list('spatialforum_likes', 'id', $likeids);
         }
         if ($postids) {
             $tracks = self::authored_tracks($cm->instance, $userid);
             foreach ($tracks as $track) {
-                $DB->set_field('spatialforum_tracks', 'name', get_string('anonymoustrack', 'mod_spatialforum'),
-                    ['id' => $track->id]);
+                $DB->set_field(
+                    'spatialforum_tracks',
+                    'name',
+                    get_string('anonymoustrack', 'mod_spatialforum'),
+                    ['id' => $track->id]
+                );
             }
             foreach ($postids as $postid) {
                 \mod_spatialforum\local\media::delete((int) $postid, $context);
@@ -243,14 +316,20 @@ class provider implements
         }
     }
 
-    /** A child track is authored by its first post's author, not the parent post's author. */
+    /**
+
+     * A child track is authored by its first post's author, not the parent post's author.
+
+     */
     private static function authored_tracks(int $forumid, int $userid): array {
         global $DB;
-        return $DB->get_records_sql('SELECT t.id, t.name FROM {spatialforum_tracks} t
+        return $DB->get_records_sql(
+            'SELECT t.id, t.name FROM {spatialforum_tracks} t
             JOIN {spatialforum_posts} p ON p.trackid = t.id
             WHERE t.spatialforumid = :forumid AND t.parenttrackid <> 0 AND p.userid = :userid
               AND NOT EXISTS (SELECT 1 FROM {spatialforum_posts} earlier
                               WHERE earlier.trackid = t.id AND earlier.id < p.id)',
-            ['forumid' => $forumid, 'userid' => $userid]);
+            ['forumid' => $forumid, 'userid' => $userid]
+        );
     }
 }

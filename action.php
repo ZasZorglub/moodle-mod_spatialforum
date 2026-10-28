@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 require_once(__DIR__ . '/../../config.php');
 
@@ -30,7 +52,7 @@ if ($action === 'toggletrack') {
     $track->timemodified = time();
     $DB->update_record('spatialforum_tracks', $track);
     $returnurl->param('trackid', $track->id);
-} elseif ($action === 'deletepost') {
+} else if ($action === 'deletepost') {
     $postid = required_param('postid', PARAM_INT);
     $post = $DB->get_record('spatialforum_posts', [
         'id' => $postid,
@@ -45,8 +67,11 @@ if ($action === 'toggletrack') {
             'confirmed' => 1, 'sesskey' => sesskey(),
         ]);
         echo $OUTPUT->header();
-        echo $OUTPUT->confirm(get_string('confirmdeletepost', 'mod_spatialforum'),
-            new single_button($confirmurl, get_string('delete'), 'post'), $returnurl);
+        echo $OUTPUT->confirm(
+            get_string('confirmdeletepost', 'mod_spatialforum'),
+            new single_button($confirmurl, get_string('delete'), 'post'),
+            $returnurl
+        );
         echo $OUTPUT->footer();
         exit;
     }
@@ -62,4 +87,3 @@ if ($action === 'toggletrack') {
 }
 
 redirect($returnurl, get_string('changessaved'));
-

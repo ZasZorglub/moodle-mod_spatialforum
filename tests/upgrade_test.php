@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 namespace mod_spatialforum;
 
@@ -11,7 +33,11 @@ global $CFG;
 require_once($CFG->libdir . '/upgradelib.php');
 require_once($CFG->dirroot . '/mod/spatialforum/db/upgrade.php');
 
-/** Existing activities and posts survive the schema upgrade. */
+/**
+
+ * Existing activities and posts survive the schema upgrade.
+
+ */
 #[CoversFunction('xmldb_spatialforum_upgrade')]
 final class upgrade_test extends \advanced_testcase {
     public function test_upgrade_repairs_names_from_previously_erased_authors(): void {
@@ -21,16 +47,32 @@ final class upgrade_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
         $root = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid]);
-        $parent = \mod_spatialforum\local\forum::create_post($activity, $root->id,
-            get_admin()->id, 'QA parent', 'QA text', FORMAT_HTML);
-        $trackid = \mod_spatialforum\local\forum::reply_in_new_track($activity, $root, $parent,
-            get_admin()->id, 'QA erased title', 'QA reply', 'QA text', FORMAT_HTML);
+        $parent = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $root->id,
+            get_admin()->id,
+            'QA parent',
+            'QA text',
+            FORMAT_HTML
+        );
+        $trackid = \mod_spatialforum\local\forum::reply_in_new_track(
+            $activity,
+            $root,
+            $parent,
+            get_admin()->id,
+            'QA erased title',
+            'QA reply',
+            'QA text',
+            FORMAT_HTML
+        );
         $DB->set_field('spatialforum_posts', 'userid', 0, ['trackid' => $trackid]);
         $DB->set_field('spatialforum_posts', 'deleted', 1, ['trackid' => $trackid]);
         set_config('version', 2026102601, 'mod_spatialforum');
         $this->assertTrue(xmldb_spatialforum_upgrade(2026102601));
-        $this->assertSame(get_string('anonymoustrack', 'mod_spatialforum'),
-            $DB->get_field('spatialforum_tracks', 'name', ['id' => $trackid]));
+        $this->assertSame(
+            get_string('anonymoustrack', 'mod_spatialforum'),
+            $DB->get_field('spatialforum_tracks', 'name', ['id' => $trackid])
+        );
         $this->assertSame($activity->name, $DB->get_field('spatialforum_tracks', 'name', ['id' => $root->id]));
         $this->assertEquals(2, $DB->count_records('spatialforum_posts', ['spatialforumid' => $activity->id]));
     }
@@ -41,8 +83,14 @@ final class upgrade_test extends \advanced_testcase {
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
-        $postid = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
-            get_admin()->id, 'Before', 'Unchanged body', FORMAT_HTML);
+        $postid = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'Before',
+            'Unchanged body',
+            FORMAT_HTML
+        );
         $table = new \xmldb_table('spatialforum_posts');
         $field = new \xmldb_field('replyparts');
         $manager = $DB->get_manager();
@@ -68,8 +116,14 @@ final class upgrade_test extends \advanced_testcase {
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
-        $postid = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
-            get_admin()->id, 'Before upgrade', 'Existing text', FORMAT_HTML);
+        $postid = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'Before upgrade',
+            'Existing text',
+            FORMAT_HTML
+        );
         $manager = $DB->get_manager();
         $table = new \xmldb_table('spatialforum');
         $field = new \xmldb_field('enablelikes');
@@ -101,10 +155,23 @@ final class upgrade_test extends \advanced_testcase {
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
-        $parent = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
-            get_admin()->id, 'Parent', 'Text', FORMAT_HTML);
-        $reply = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
-            get_admin()->id, 'Reply', 'Answer', FORMAT_HTML, $parent);
+        $parent = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'Parent',
+            'Text',
+            FORMAT_HTML
+        );
+        $reply = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'Reply',
+            'Answer',
+            FORMAT_HTML,
+            $parent
+        );
         $DB->insert_record('spatialforum_likes', (object) [
             'userid' => get_admin()->id, 'postid' => $parent, 'timecreated' => time(),
         ]);
@@ -118,8 +185,10 @@ final class upgrade_test extends \advanced_testcase {
             $this->assertEquals(1, $DB->get_field('spatialforum_posts', 'showparent', ['id' => $reply]));
             $this->assertEquals(0, $DB->get_field('spatialforum_posts', 'showparent', ['id' => $parent]));
         } finally {
-            if (!$manager->field_exists(new \xmldb_table('spatialforum_likes'), new \xmldb_field('reaction'))
-                    || !$manager->field_exists(new \xmldb_table('spatialforum_posts'), new \xmldb_field('showparent'))) {
+            if (
+                !$manager->field_exists(new \xmldb_table('spatialforum_likes'), new \xmldb_field('reaction'))
+                    || !$manager->field_exists(new \xmldb_table('spatialforum_posts'), new \xmldb_field('showparent'))
+            ) {
                 set_config('version', 2026102400, 'mod_spatialforum');
                 xmldb_spatialforum_upgrade(2026102400);
             }
@@ -133,8 +202,14 @@ final class upgrade_test extends \advanced_testcase {
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
-        $postid = \mod_spatialforum\local\forum::create_post($activity, $activity->roottrackid,
-            get_admin()->id, 'Existing', 'Existing body', FORMAT_HTML);
+        $postid = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'Existing',
+            'Existing body',
+            FORMAT_HTML
+        );
         \mod_spatialforum\local\forum::mark_read([$postid], get_admin()->id);
         $before = $DB->get_record('spatialforum_read', ['postid' => $postid]);
         set_config('version', 2026102401, 'mod_spatialforum');

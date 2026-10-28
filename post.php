@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 require_once(__DIR__ . '/../../config.php');
 
@@ -98,16 +120,25 @@ $PAGE->requires->js_call_amd('mod_spatialforum/excerpts', 'init');
 
 if ($form->is_cancelled()) {
     redirect($returnurl);
-} elseif ($data = $form->get_data()) {
+} else if ($data = $form->get_data()) {
     require_sesskey();
     $transaction = $DB->start_delegated_transaction();
     $targettrackid = $track->id;
     $message = $data->message_editor['text'];
     $format = $data->message_editor['format'];
     if ($createstrack) {
-        $targettrackid = forum::reply_in_new_track($activity, $track, $originpostid, $USER->id,
+        $targettrackid = forum::reply_in_new_track(
+            $activity,
+            $track,
+            $originpostid,
+            $USER->id,
             $action === 'branch' ? $data->branchname : $data->subject,
-            $data->subject, $message, $format, !empty($data->showparent), (string) ($data->excerptdraft ?? '[]'));
+            $data->subject,
+            $message,
+            $format,
+            !empty($data->showparent),
+            (string) ($data->excerptdraft ?? '[]')
+        );
         $newpostid = $DB->get_field('spatialforum_posts', 'id', ['trackid' => $targettrackid], MUST_EXIST);
     } else {
         $newpostid = forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);
@@ -128,9 +159,10 @@ if (!empty($origin)) {
     $origincontext = forum::export_reply_context($origin, $context, $cm->id);
     $origincontext['compact'] = true;
     $origincontext['excerptmode'] = $excerptmode;
-    echo $OUTPUT->render_from_template('mod_spatialforum/reply_context',
-        $origincontext);
+    echo $OUTPUT->render_from_template(
+        'mod_spatialforum/reply_context',
+        $origincontext
+    );
 }
 $form->display();
 echo $OUTPUT->footer();
-

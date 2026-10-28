@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
+<!--
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+-->
 <XMLDB PATH="mod/spatialforum/db" VERSION="2026102504" COMMENT="XMLDB file for mod_spatialforum"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">

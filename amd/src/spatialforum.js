@@ -1,3 +1,11 @@
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 // This file is part of Moodle - http://moodle.org/
 
 /** Activity-wide map with one unfolding post and explicit, per-user read persistence. */

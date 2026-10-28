@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 namespace mod_spatialforum;
 
@@ -12,12 +34,19 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 defined('MOODLE_INTERNAL') || die();
 
-/** Regressions from the 0.5.2 audit: media lifecycle, validation, erasure and bounded export. */
+/**
+
+ * Regressions from the 0.5.2 audit: media lifecycle, validation, erasure and bounded export.
+
+ */
 #[CoversClass(media::class)]
 #[CoversClass(post_form::class)]
 #[CoversClass(provider::class)]
 #[CoversClass(forum::class)]
 final class audit_fixes_test extends \advanced_testcase {
+    /**
+     * Create a course, participant, activity and first post.
+     */
     private function fixture(): array {
         global $PAGE;
         $this->resetAfterTest();
@@ -31,6 +60,9 @@ final class audit_fixes_test extends \advanced_testcase {
         return [$course, $activity, $cm, $context];
     }
 
+    /**
+     * Create an uploaded file in the current user draft area.
+     */
     private function draft(string $name, string $contents, int $draftid = 0): int {
         global $USER, $CFG;
         require_once($CFG->libdir . '/filelib.php');
@@ -51,9 +83,11 @@ final class audit_fixes_test extends \advanced_testcase {
                 'message_editor' => ['text' => $blank, 'format' => FORMAT_HTML]], []);
             $this->assertArrayHasKey('message_editor', $errors);
         }
-        foreach (['<img src="https://example.test/image.png" alt="QA image">',
+        foreach (
+            ['<img src="https://example.test/image.png" alt="QA image">',
                 '<audio controls src="https://example.test/sample.mp3"></audio>',
-                '<video controls><source src="https://example.test/sample.mp4"></video>'] as $html) {
+                '<video controls><source src="https://example.test/sample.mp4"></video>'] as $html
+        ) {
             $this->assertSame([], $form->validation(['subject' => 'QA media without caption',
                 'message_editor' => ['text' => $html, 'format' => FORMAT_HTML]], []));
         }
@@ -132,15 +166,28 @@ final class audit_fixes_test extends \advanced_testcase {
         $author = $this->getDataGenerator()->create_user();
         $root = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid]);
         $parent = forum::create_post($activity, $root->id, get_admin()->id, 'QA parent', 'QA text', FORMAT_HTML);
-        $trackid = forum::reply_in_new_track($activity, $root, $parent, $author->id,
-            'QA author private title', 'QA author private title', 'QA authored text', FORMAT_HTML);
+        $trackid = forum::reply_in_new_track(
+            $activity,
+            $root,
+            $parent,
+            $author->id,
+            'QA author private title',
+            'QA author private title',
+            'QA authored text',
+            FORMAT_HTML
+        );
         $post = $DB->get_record('spatialforum_posts', ['trackid' => $trackid]);
         get_file_storage()->create_file_from_string(['contextid' => $context->id, 'component' => 'mod_spatialforum',
             'filearea' => 'post', 'itemid' => $post->id, 'filepath' => '/', 'filename' => 'qa.png'], 'QA');
         provider::delete_data_for_user(new \core_privacy\local\request\approved_contextlist(
-            $author, 'mod_spatialforum', [$context->id]));
-        $this->assertSame(get_string('anonymoustrack', 'mod_spatialforum'),
-            $DB->get_field('spatialforum_tracks', 'name', ['id' => $trackid]));
+            $author,
+            'mod_spatialforum',
+            [$context->id]
+        ));
+        $this->assertSame(
+            get_string('anonymoustrack', 'mod_spatialforum'),
+            $DB->get_field('spatialforum_tracks', 'name', ['id' => $trackid])
+        );
         $this->assertSame($activity->name, $DB->get_field('spatialforum_tracks', 'name', ['id' => $root->id]));
         $this->assertCount(0, get_file_storage()->get_area_files($context->id, 'mod_spatialforum', 'post', $post->id));
         $this->assertSame('QA parent', $DB->get_field('spatialforum_posts', 'subject', ['id' => $parent]));
@@ -152,14 +199,24 @@ final class audit_fixes_test extends \advanced_testcase {
         [$course, $activity, $cm, $context] = $this->fixture();
         $root = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid]);
         $parent = forum::create_post($activity, $root->id, get_admin()->id, 'QA parent', 'QA', FORMAT_HTML);
-        $child = forum::reply_in_new_track($activity, $root, $parent, get_admin()->id,
-            'QA private name', 'QA reply', 'QA reply', FORMAT_HTML);
+        $child = forum::reply_in_new_track(
+            $activity,
+            $root,
+            $parent,
+            get_admin()->id,
+            'QA private name',
+            'QA reply',
+            'QA reply',
+            FORMAT_HTML
+        );
         get_file_storage()->create_file_from_string(['contextid' => $context->id, 'component' => 'mod_spatialforum',
             'filearea' => 'post', 'itemid' => $parent, 'filepath' => '/', 'filename' => 'qa.png'], 'QA');
         provider::delete_data_for_all_users_in_context($context);
         $this->assertSame(0, $DB->count_records('spatialforum_posts', ['spatialforumid' => $activity->id]));
-        $this->assertSame(get_string('anonymoustrack', 'mod_spatialforum'),
-            $DB->get_field('spatialforum_tracks', 'name', ['id' => $child]));
+        $this->assertSame(
+            get_string('anonymoustrack', 'mod_spatialforum'),
+            $DB->get_field('spatialforum_tracks', 'name', ['id' => $child])
+        );
         $this->assertCount(0, get_file_storage()->get_area_files($context->id, 'mod_spatialforum', 'post'));
     }
 
@@ -169,8 +226,17 @@ final class audit_fixes_test extends \advanced_testcase {
         $root = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid]);
         $parent = forum::create_post($activity, $root->id, get_admin()->id, 'QA source', 'QA source text', FORMAT_HTML);
         for ($i = 0; $i < 100; $i++) {
-            forum::create_post($activity, $root->id, get_admin()->id, 'QA quote ' . $i, 'QA body', FORMAT_HTML,
-                $parent, true, json_encode([['quote' => 'QA source', 'comment' => 'QA comment']]));
+            forum::create_post(
+                $activity,
+                $root->id,
+                get_admin()->id,
+                'QA quote ' . $i,
+                'QA body',
+                FORMAT_HTML,
+                $parent,
+                true,
+                json_encode([['quote' => 'QA source', 'comment' => 'QA comment']])
+            );
         }
         forum::export_view_data($activity, $cm, $root, $context, true);
         $before = $DB->perf_get_reads();
@@ -186,8 +252,14 @@ final class audit_fixes_test extends \advanced_testcase {
         $other = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
         $postid = forum::create_post($other, $other->roottrackid, get_admin()->id, 'QA other activity', 'QA', FORMAT_HTML);
         $this->assertFalse(spatialforum_pluginfile($course, $cm, $context, 'post', [$postid, 'qa.png'], false));
-        $this->assertFalse(spatialforum_pluginfile($course, $cm, \context_module::instance($other->cmid),
-            'post', [$postid, 'qa.png'], false));
+        $this->assertFalse(spatialforum_pluginfile(
+            $course,
+            $cm,
+            \context_module::instance($other->cmid),
+            'post',
+            [$postid, 'qa.png'],
+            false
+        ));
         $ownid = forum::create_post($activity, $activity->roottrackid, get_admin()->id, 'QA deleted', 'QA', FORMAT_HTML);
         $DB->set_field('spatialforum_posts', 'deleted', 1, ['id' => $ownid]);
         $this->assertFalse(spatialforum_pluginfile($course, $cm, $context, 'post', [$ownid, 'qa.png'], false));

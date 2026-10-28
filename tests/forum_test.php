@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 namespace mod_spatialforum;
 
@@ -9,11 +31,17 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 defined('MOODLE_INTERNAL') || die();
 
-/** Regression tests using a real Moodle database and capability system. */
+/**
+
+ * Regression tests using a real Moodle database and capability system.
+
+ */
 #[CoversClass(forum::class)]
 #[CoversClass(provider::class)]
 final class forum_test extends \advanced_testcase {
-    /** Create an enrolled participant, activity, root track and first post. */
+    /**
+     * Create an enrolled participant, activity, root track and first post.
+     */
     private function fixture(): array {
         global $DB;
 
@@ -26,8 +54,14 @@ final class forum_test extends \advanced_testcase {
         $context = \context_module::instance($activity->cmid);
         $cm = get_coursemodule_from_id('spatialforum', $activity->cmid);
         $track = $DB->get_record('spatialforum_tracks', ['id' => $activity->roottrackid], '*', MUST_EXIST);
-        $id = forum::create_post($activity, $track->id, $user->id, 'Original subject',
-            '<p>Original body</p>', FORMAT_HTML);
+        $id = forum::create_post(
+            $activity,
+            $track->id,
+            $user->id,
+            'Original subject',
+            '<p>Original body</p>',
+            FORMAT_HTML
+        );
         $post = $DB->get_record('spatialforum_posts', ['id' => $id], '*', MUST_EXIST);
         $this->setUser($user);
         return [$activity, $track, $post, $user, $context, $cm, $course];
@@ -118,10 +152,27 @@ final class forum_test extends \advanced_testcase {
         global $DB;
 
         [$activity, $root, $post, $user, $context, $cm] = $this->fixture();
-        $firstid = forum::reply_in_new_track($activity, $root, $post->id, $user->id,
-            'First reply track', 'Re: Original', 'First answer', FORMAT_HTML);
-        $secondid = forum::reply_in_new_track($activity, $root, $post->id, $user->id,
-            'Second reply track', 'Different subject', 'Second answer', FORMAT_HTML, true);
+        $firstid = forum::reply_in_new_track(
+            $activity,
+            $root,
+            $post->id,
+            $user->id,
+            'First reply track',
+            'Re: Original',
+            'First answer',
+            FORMAT_HTML
+        );
+        $secondid = forum::reply_in_new_track(
+            $activity,
+            $root,
+            $post->id,
+            $user->id,
+            'Second reply track',
+            'Different subject',
+            'Second answer',
+            FORMAT_HTML,
+            true
+        );
         $this->assertNotEquals($firstid, $secondid);
         foreach ([$firstid, $secondid] as $id) {
             $track = $DB->get_record('spatialforum_tracks', ['id' => $id], '*', MUST_EXIST);
@@ -135,10 +186,20 @@ final class forum_test extends \advanced_testcase {
         $secondpost = $DB->get_record('spatialforum_posts', ['trackid' => $secondid], '*', MUST_EXIST);
         $data = forum::export_view_data($activity, $cm, $second, $context);
         $this->assertStringContainsString('Original body', $data['posts'][0]['replycontext'][0]['message']);
-        $thirdid = forum::reply_in_new_track($activity, $second, $secondpost->id, $user->id,
-            'Reply to reply', 'Re: Different subject', 'Third answer', FORMAT_HTML);
-        $this->assertEquals([$root->id, $secondid, $thirdid],
-            array_column(forum::get_path($thirdid, $activity->id), 'id'));
+        $thirdid = forum::reply_in_new_track(
+            $activity,
+            $second,
+            $secondpost->id,
+            $user->id,
+            'Reply to reply',
+            'Re: Different subject',
+            'Third answer',
+            FORMAT_HTML
+        );
+        $this->assertEquals(
+            [$root->id, $secondid, $thirdid],
+            array_column(forum::get_path($thirdid, $activity->id), 'id')
+        );
         $this->assertSame(1, $DB->count_records('spatialforum_posts', ['trackid' => $root->id]));
     }
 
@@ -161,8 +222,16 @@ final class forum_test extends \advanced_testcase {
                 $testtrack->id = -1;
             }
             try {
-                forum::reply_in_new_track($testactivity, $testtrack, $post->id, $user->id,
-                    'Rejected', 'Subject', 'Answer', FORMAT_HTML);
+                forum::reply_in_new_track(
+                    $testactivity,
+                    $testtrack,
+                    $post->id,
+                    $user->id,
+                    'Rejected',
+                    'Subject',
+                    'Answer',
+                    FORMAT_HTML
+                );
                 $this->fail('Invalid reply accepted: ' . $case);
             } catch (\moodle_exception $e) {
                 $this->assertSame(1, $DB->count_records('spatialforum_tracks', ['spatialforumid' => $activity->id]));
@@ -247,10 +316,25 @@ final class forum_test extends \advanced_testcase {
 
         [$activity, $root, $original, $user, $context, $cm] = $this->fixture();
         $author = $this->getDataGenerator()->create_user();
-        $parentid = forum::create_post($activity, $root->id, $author->id,
-            'Other post', '<p>First line</p><p><strong>Second line</strong></p>', FORMAT_HTML);
-        $childid = forum::reply_in_new_track($activity, $root, $parentid, $author->id,
-            'Automatic', 'Child post', '<p>The actual answer</p>', FORMAT_HTML, true);
+        $parentid = forum::create_post(
+            $activity,
+            $root->id,
+            $author->id,
+            'Other post',
+            '<p>First line</p><p><strong>Second line</strong></p>',
+            FORMAT_HTML
+        );
+        $childid = forum::reply_in_new_track(
+            $activity,
+            $root,
+            $parentid,
+            $author->id,
+            'Automatic',
+            'Child post',
+            '<p>The actual answer</p>',
+            FORMAT_HTML,
+            true
+        );
         $data = forum::export_view_data($activity, $cm, $root, $context, true);
         $this->assertCount(3, $data['posts']);
         $this->assertSame(2, $data['readcount']);
@@ -296,8 +380,16 @@ final class forum_test extends \advanced_testcase {
         global $DB;
 
         [$activity, $root, $post, $user, $context, $cm] = $this->fixture();
-        $childid = forum::reply_in_new_track($activity, $root, $post->id, $user->id,
-            'Child', 'Child title', 'Answer', FORMAT_HTML);
+        $childid = forum::reply_in_new_track(
+            $activity,
+            $root,
+            $post->id,
+            $user->id,
+            'Child',
+            'Child title',
+            'Answer',
+            FORMAT_HTML
+        );
         $child = $DB->get_record('spatialforum_posts', ['trackid' => $childid], '*', MUST_EXIST);
         forum::set_reaction($activity, $child, $user->id, -1);
         $DB->set_field('spatialforum_tracks', 'locked', 1, ['id' => $childid]);
@@ -342,8 +434,16 @@ final class forum_test extends \advanced_testcase {
         global $OUTPUT;
 
         [$activity, $root, $post, $user, $context, $cm] = $this->fixture();
-        forum::reply_in_new_track($activity, $root, $post->id, $user->id,
-            'Child', 'A reply', 'Answer preview', FORMAT_HTML);
+        forum::reply_in_new_track(
+            $activity,
+            $root,
+            $post->id,
+            $user->id,
+            'Child',
+            'A reply',
+            'Answer preview',
+            FORMAT_HTML
+        );
         $data = forum::export_view_data($activity, $cm, $root, $context, true);
         $html = $OUTPUT->render_from_template('mod_spatialforum/main', $data);
         $this->assertSame(2, substr_count($html, '<details '));
@@ -368,8 +468,11 @@ final class forum_test extends \advanced_testcase {
         $data = forum::export_view_data($activity, $cm, $root, $context, true);
         $this->assertFalse($data['posts'][0]['edited']);
         $this->assertSame(gmdate('c', $created), $data['posts'][0]['creatediso']);
-        $expected = get_string('createdat', 'mod_spatialforum',
-            userdate($created, get_string('strftimedatetimeshort', 'langconfig')));
+        $expected = get_string(
+            'createdat',
+            'mod_spatialforum',
+            userdate($created, get_string('strftimedatetimeshort', 'langconfig'))
+        );
         $this->assertSame($expected, $data['posts'][0]['createdshort']);
         $html = $OUTPUT->render_from_template('mod_spatialforum/main', $data);
         $this->assertStringContainsString(s($expected), $html);

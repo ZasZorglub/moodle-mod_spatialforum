@@ -1,17 +1,49 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-defined('MOODLE_INTERNAL') || die();
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
-/** Upgrade existing MVP installations without discarding posts or tracks. */
+
+/**
+
+ * Upgrade existing MVP installations without discarding posts or tracks.
+
+ */
 function xmldb_spatialforum_upgrade($oldversion): bool {
     global $DB;
 
     $dbman = $DB->get_manager();
     if ($oldversion < 2026102400) {
         $table = new xmldb_table('spatialforum');
-        $field = new xmldb_field('enablelikes', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL,
-            null, '1', 'enablecolors');
+        $field = new xmldb_field(
+            'enablelikes',
+            XMLDB_TYPE_INTEGER,
+            '1',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            '1',
+            'enablecolors'
+        );
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
@@ -32,14 +64,30 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
     }
     if ($oldversion < 2026102401) {
         $table = new xmldb_table('spatialforum_likes');
-        $field = new xmldb_field('reaction', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL,
-            null, '1', 'postid');
+        $field = new xmldb_field(
+            'reaction',
+            XMLDB_TYPE_INTEGER,
+            '2',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            '1',
+            'postid'
+        );
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
         $table = new xmldb_table('spatialforum_posts');
-        $field = new xmldb_field('showparent', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL,
-            null, '0', 'replytoid');
+        $field = new xmldb_field(
+            'showparent',
+            XMLDB_TYPE_INTEGER,
+            '1',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            '0',
+            'replytoid'
+        );
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
             // Preserve quotes already published before authors could choose.
@@ -88,8 +136,13 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
                               WHERE earlier.trackid = t.id AND earlier.id < p.id)');
         if ($ids) {
             [$insql, $params] = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
-            $DB->set_field_select('spatialforum_tracks', 'name', get_string('anonymoustrack', 'mod_spatialforum'),
-                "id $insql", $params);
+            $DB->set_field_select(
+                'spatialforum_tracks',
+                'name',
+                get_string('anonymoustrack', 'mod_spatialforum'),
+                "id $insql",
+                $params
+            );
         }
         upgrade_mod_savepoint(true, 2026102700, 'spatialforum');
     }

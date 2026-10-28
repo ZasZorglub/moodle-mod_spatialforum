@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 namespace mod_spatialforum\form;
 
@@ -48,8 +70,10 @@ class post_form extends \moodleform {
             global $OUTPUT;
             $mform->addElement('hidden', 'excerptdraft', '[]');
             $mform->setType('excerptdraft', PARAM_RAW);
-            $composer = $OUTPUT->render_from_template('mod_spatialforum/excerpt_composer',
-                ['excerptmode' => !empty($customdata['excerptmode'])]);
+            $composer = $OUTPUT->render_from_template(
+                'mod_spatialforum/excerpt_composer',
+                ['excerptmode' => !empty($customdata['excerptmode'])]
+            );
             if (!empty($customdata['excerptmode'])) {
                 $mform->addElement('html', $composer);
             }
@@ -102,8 +126,11 @@ class post_form extends \moodleform {
         $hascomments = false;
         if (!empty($this->_customdata['origin'])) {
             try {
-                $parts = \mod_spatialforum\local\excerpts::prepare((string) ($data['excerptdraft'] ?? '[]'),
-                    $this->_customdata['origin'], $this->_customdata['context']);
+                $parts = \mod_spatialforum\local\excerpts::prepare(
+                    (string) ($data['excerptdraft'] ?? '[]'),
+                    $this->_customdata['origin'],
+                    $this->_customdata['context']
+                );
                 foreach (json_decode($parts, true) as $part) {
                     // Quote comments are plain text, so escape markup before checking visible content.
                     $hascomments = $hascomments || \mod_spatialforum\local\media::has_content(s($part['comment']));
@@ -117,8 +144,12 @@ class post_form extends \moodleform {
         }
         if (isset($this->_customdata['context'])) {
             $options = \mod_spatialforum\local\media::editor_options($this->_customdata['context']);
-            if ($error = \mod_spatialforum\local\media::validate_draft(
-                    (int) ($data['message_editor']['itemid'] ?? 0), $options)) {
+            if (
+                $error = \mod_spatialforum\local\media::validate_draft(
+                    (int) ($data['message_editor']['itemid'] ?? 0),
+                    $options
+                )
+            ) {
                 $errors['message_editor'] = $error;
             }
         }
