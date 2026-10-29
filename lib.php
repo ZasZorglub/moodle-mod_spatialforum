@@ -119,6 +119,8 @@ function spatialforum_delete_instance(int $id): bool {
         $DB->delete_records_list('spatialforum_likes', 'postid', $postids);
         $DB->delete_records_list('spatialforum_read', 'postid', $postids);
     }
+    $DB->delete_records('spatialforum_subscriptions', ['spatialforumid' => $id]);
+    $DB->delete_records('spatialforum_deliveries', ['spatialforumid' => $id]);
     $DB->delete_records('spatialforum_posts', ['spatialforumid' => $id]);
     $DB->delete_records('spatialforum_tracks', ['spatialforumid' => $id]);
     $DB->delete_records('spatialforum', ['id' => $id]);

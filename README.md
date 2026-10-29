@@ -4,13 +4,21 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 ## Compatibility and release status
 
-- Development build: **0.7.0-dev** (alpha); not approved or published on Moodle Marketplace.
+- Development build: **0.8.0-dev** (alpha); not approved or published on Moodle Marketplace.
 - Declared installation minimum: Moodle LMS 5.0 (`requires = 2025041400`). This is a minimum-version gate, not proof that every later version has been tested.
 - The previous release was tested on Moodle LMS 5.2.2+, PHP 8.3 and MariaDB 11.4. Current release results and database coverage are recorded in [docs/RELEASE-CANDIDATE.md](docs/RELEASE-CANDIDATE.md).
 - Moodle Workplace compatibility has not been verified and is not claimed for this release.
-- No additional plugins, external service accounts or subscriptions are required. Administrator installation requires no Node.js or Composer commands.
+- No additional plugins, external service accounts or paid service subscriptions are required. Administrator installation requires no Node.js or Composer commands.
 
 For setup and use, see [the user guide](https://github.com/ZasZorglub/moodle-mod_spatialforum-support/blob/main/USER-GUIDE.md). For support and issue reporting, see [the support policy](SUPPORT.md).
+
+## 0.8.0 notifications and daily digests
+
+Use **Notification preferences** below the conversation to choose Off, Each new post or Daily digest for this activity. New users and existing activities start unsubscribed. Notifications cover only new posts from other participants that the recipient can currently access; they do not mark posts as read. Normal Moodle notification preferences control channels. Uploaded media remain in Moodle behind activity access checks.
+
+Moodle cron must run regularly: a post creates a transactional fan-out task, then the scheduled notification task hands due work to Moodle Message API. Daily cutoffs default to 17:00 in the recipient's Moodle timezone, configurable in module site settings. Large digests are split into batches of at most 100 posts. Unsubscribe cancels plugin delivery work; already accepted messages cannot be recalled. Imports can explicitly suppress notifications; restores never copy subscriptions or delivery queues and require fresh opt-in.
+
+Administrators can inspect **Spatial forum notification delivery** under the activity-plugin settings. Accepted means handed to Moodle, not verified inbox delivery. Explicit failures retry up to five times with backoff. Ambiguous dispatches require administrator review and are not automatically resent. Delivery metadata expire after 30 days. See [notification verification](tests/NOTIFICATIONS-080.md) for observed evidence and limits.
 
 ## 0.6.0 media and audit corrections
 
@@ -73,6 +81,7 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 - Moodle capabilities for view, reply, branching and moderation
 - Activity completion on view
 - No/separate/visible groups and groupings, with a shared server-side audience policy
+- Opt-in activity notifications: each new post or daily digest through Moodle
 - Course backup and restore
 - Privacy API metadata, export and deletion
 - English language pack; Danish translation retained separately in source for AMOS
@@ -82,7 +91,6 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 
 The [feature expansion plan](docs/FEATURE-EXPANSION.md) defines the proposed delivery order and acceptance criteria for the five omissions below. It is a plan, not shipped functionality.
 
-- No subscriptions, notifications or digests
 - No separate attachment list, grading or activity completion based on posting
 - No Moodle App/mobile service implementation
 - No import or synchronization with the standard Moodle forum activity
@@ -90,7 +98,7 @@ The [feature expansion plan](docs/FEATURE-EXPANSION.md) defines the proposed del
 
 ## Security and operations
 
-- Version `0.7.0-dev` upgrades earlier versions to `2026102900`. Existing activities keep their content and require explicit audience review before learners can use group mode. Activities without groups continue normally. Only a user with manage-activities and access-all-groups can confirm the audience for all legacy posts. Cancel if different conversations require different audiences; this first review workflow assigns one audience to the entire legacy activity. New replies inherit their stored parent audience. See [tests/GROUPS-070.md](tests/GROUPS-070.md).
+- Version `0.8.0-dev` upgrades earlier versions to `2026102901`. Existing activities keep their content and require explicit audience review before learners can use group mode. Activities without groups continue normally. Only a user with manage-activities and access-all-groups can confirm the audience for all legacy posts. Cancel if different conversations require different audiences; this first review workflow assigns one audience to the entire legacy activity. New replies inherit their stored parent audience. See [tests/GROUPS-070.md](tests/GROUPS-070.md).
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.

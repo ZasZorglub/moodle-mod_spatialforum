@@ -278,7 +278,8 @@ class forum {
         int $replytoid = 0,
         bool $showparent = false,
         string $excerptdraft = '[]',
-        ?int $groupid = null
+        ?int $groupid = null,
+        bool $notify = true
     ): int {
         global $DB;
 
@@ -308,7 +309,9 @@ class forum {
             $replyparts = excerpts::prepare($excerptdraft, $origin, context_module::instance($cm->id));
         }
         $now = time();
-        return $DB->insert_record('spatialforum_posts', (object) [
+        $transaction = $DB->start_delegated_transaction();
+        try {
+            $postid = $DB->insert_record('spatialforum_posts', (object) [
             'spatialforumid' => $activity->id,
             'trackid' => $trackid,
             'groupid' => $groupid,
@@ -322,7 +325,15 @@ class forum {
             'deleted' => 0,
             'timecreated' => $now,
             'timemodified' => $now,
-        ]);
+            ]);
+            if ($notify) {
+                notifications::schedule_post($postid);
+            }
+            $transaction->allow_commit();
+            return $postid;
+        } catch (\Throwable $e) {
+            $transaction->rollback($e);
+        }
     }
 
     /**

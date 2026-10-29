@@ -286,4 +286,48 @@ final class upgrade_test extends \advanced_testcase {
             }
         }
     }
+
+    /**
+     * Upgrade creates empty opt-in tables without queuing historical posts, and can be retried.
+     */
+    public function test_notification_upgrade_preserves_content_and_creates_no_subscriptions(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $id = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'Legacy without mail',
+            'Legacy body',
+            FORMAT_HTML,
+            0,
+            false,
+            '[]',
+            -1,
+            false
+        );
+        $dbman = $DB->get_manager();
+        try {
+            $dbman->drop_table(new \xmldb_table('spatialforum_deliveries'));
+            $dbman->drop_table(new \xmldb_table('spatialforum_subscriptions'));
+            set_config('version', 2026102900, 'mod_spatialforum');
+            $this->assertTrue(xmldb_spatialforum_upgrade(2026102900));
+            $this->assertSame(0, $DB->count_records('spatialforum_subscriptions'));
+            $this->assertSame(0, $DB->count_records('spatialforum_deliveries'));
+            $this->assertSame('Legacy body', $DB->get_field('spatialforum_posts', 'message', ['id' => $id]));
+            $this->assertFalse($DB->record_exists('task_adhoc', ['component' => 'mod_spatialforum']));
+            $subid = $DB->insert_record('spatialforum_subscriptions', (object) [
+                'spatialforumid' => $activity->id, 'userid' => get_admin()->id, 'mode' => 2, 'firstpostid' => $id,
+            ]);
+            set_config('version', 2026102900, 'mod_spatialforum');
+            xmldb_spatialforum_upgrade(2026102900);
+            $this->assertEquals(2, $DB->get_field('spatialforum_subscriptions', 'mode', ['id' => $subid]));
+        } finally {
+            set_config('version', 2026102900, 'mod_spatialforum');
+            xmldb_spatialforum_upgrade(2026102900);
+        }
+    }
 }

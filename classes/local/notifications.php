@@ -1,0 +1,388 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+
+namespace mod_spatialforum\local;
+
+/**
+ * Opt-in subscriptions, transactional fan-out and permission-aware notification delivery.
+ */
+class notifications {
+    /** No opt-in. */
+    public const OFF = 0;
+    /** One notification for each new post. */
+    public const IMMEDIATE = 1;
+    /** A digest at the next daily cutoff. */
+    public const DAILY = 2;
+    /** Not yet handed to Moodle. */
+    public const PENDING = 0;
+    /** Accepted by the Moodle Message API. */
+    public const ACCEPTED = 1;
+    /** Explicit send failures exhausted the retry budget. */
+    public const FAILED = 2;
+    /** Dispatch started but acceptance is not known. */
+    public const UNCERTAIN = 3;
+    /** Maximum age of delivery metadata, in seconds. */
+    public const RETENTION = 30 * DAYSECS;
+
+    /**
+     * An active participant must be able to view the activity now.
+     *
+     * @param \stdClass $cm
+     * @param \stdClass $user
+     * @return bool
+     */
+    public static function eligible(\stdClass $cm, \stdClass $user): bool {
+        if (empty($user->id) || !empty($user->deleted) || !empty($user->suspended) || isguestuser($user)) {
+            return false;
+        }
+        global $DB;
+        $course = $DB->get_record('course', ['id' => $cm->course], 'id,visible');
+        if (
+            !$course || (!$course->visible && !has_capability(
+                'moodle/course:viewhiddencourses',
+                \context_course::instance($cm->course),
+                $user->id
+            ))
+        ) {
+            return false;
+        }
+        $context = \context_module::instance($cm->id);
+        return is_enrolled($context, $user, 'mod/spatialforum:view', true)
+            && get_fast_modinfo($cm->course, $user->id)->get_cm($cm->id)->uservisible;
+    }
+
+    /**
+     * Set only the authenticated user's preference. Unsubscribe also works after access is lost.
+     *
+     * @param int $forumid
+     * @param int $mode
+     */
+    public static function set_mode(int $forumid, int $mode): void {
+        global $DB, $USER;
+        if (!isloggedin() || isguestuser() || !in_array($mode, [self::OFF, self::IMMEDIATE, self::DAILY], true)) {
+            throw new \moodle_exception('invalidsubscription', 'mod_spatialforum');
+        }
+        $cm = get_coursemodule_from_instance('spatialforum', $forumid, 0, false, MUST_EXIST);
+        if ($mode && !self::eligible($cm, $USER)) {
+            throw new \moodle_exception('invalidsubscription', 'mod_spatialforum');
+        }
+        $lock = self::lock($forumid, $USER->id);
+        if (!$lock) {
+            throw new \moodle_exception('notificationbusy', 'mod_spatialforum');
+        }
+        try {
+            $transaction = $DB->start_delegated_transaction();
+            $where = ['spatialforumid' => $forumid, 'userid' => $USER->id];
+            $old = $DB->get_record('spatialforum_subscriptions', $where);
+            if ($mode === self::OFF) {
+                $DB->delete_records('spatialforum_subscriptions', $where);
+                $DB->delete_records('spatialforum_deliveries', $where);
+            } else if (!$old) {
+                $first = (int) $DB->get_field_sql('SELECT MAX(id) FROM {spatialforum_posts} WHERE spatialforumid = ?', [$forumid]);
+                $DB->insert_record('spatialforum_subscriptions', (object) ($where + [
+                    'mode' => $mode, 'firstpostid' => $first, 'timecreated' => time(), 'timemodified' => time(),
+                ]));
+            } else if ((int) $old->mode !== $mode) {
+                $old->mode = $mode;
+                $old->timemodified = time();
+                $DB->update_record('spatialforum_subscriptions', $old);
+                $DB->set_field('spatialforum_deliveries', 'mode', $mode, $where + ['status' => self::PENDING]);
+                $DB->set_field(
+                    'spatialforum_deliveries',
+                    'due',
+                    self::due($mode, $USER, time()),
+                    $where + ['status' => self::PENDING]
+                );
+            }
+            $transaction->allow_commit();
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * Queue a task inside the post transaction; the worker cannot see uncommitted posts.
+     *
+     * @param int $postid
+     */
+    public static function schedule_post(int $postid): void {
+        $task = new \mod_spatialforum\task\fanout_post();
+        $task->set_component('mod_spatialforum');
+        $task->set_custom_data(['postid' => $postid]);
+        \core\task\manager::queue_adhoc_task($task, true);
+    }
+
+    /**
+     * Resolve subscribers in bounded pages; repeated fan-out is idempotent.
+     *
+     * @param int $postid
+     */
+    public static function enqueue_post(int $postid): void {
+        global $DB;
+        $post = $DB->get_record('spatialforum_posts', ['id' => $postid, 'deleted' => 0]);
+        if (!$post || $post->timecreated < time() - self::RETENTION) {
+            return;
+        }
+        $cm = get_coursemodule_from_instance('spatialforum', $post->spatialforumid);
+        if (!$cm) {
+            return;
+        }
+        $lastid = 0;
+        do {
+            $subscriptions = $DB->get_records_select(
+                'spatialforum_subscriptions',
+                'spatialforumid = :forumid AND id > :lastid',
+                ['forumid' => $post->spatialforumid, 'lastid' => $lastid],
+                'id ASC',
+                '*',
+                0,
+                250
+            );
+            foreach ($subscriptions as $sub) {
+                $lastid = (int) $sub->id;
+                if ((int) $sub->userid === (int) $post->userid || $post->id <= $sub->firstpostid) {
+                    continue;
+                }
+                $lock = self::lock($post->spatialforumid, $sub->userid);
+                if (!$lock) {
+                    throw new \moodle_exception('notificationbusy', 'mod_spatialforum');
+                }
+                try {
+                    $sub = $DB->get_record('spatialforum_subscriptions', ['id' => $sub->id]);
+                    $user = $sub ? $DB->get_record('user', ['id' => $sub->userid]) : false;
+                    if (
+                        !$sub || !$user || !self::eligible($cm, $user)
+                        || !group_access::for_activity($post->spatialforumid, $user->id)->can_view($post)
+                    ) {
+                        continue;
+                    }
+                    $where = ['postid' => $post->id, 'userid' => $user->id];
+                    if (!$DB->record_exists('spatialforum_deliveries', $where)) {
+                        $DB->insert_record('spatialforum_deliveries', (object) ($where + [
+                            'spatialforumid' => $post->spatialforumid, 'mode' => $sub->mode,
+                            'due' => self::due((int) $sub->mode, $user, (int) $post->timecreated),
+                            'status' => self::PENDING, 'attempts' => 0, 'messageid' => 0,
+                            'timecreated' => time(), 'timemodified' => time(),
+                        ]));
+                    }
+                } finally {
+                    $lock->release();
+                }
+            }
+        } while (count($subscriptions) === 250);
+    }
+
+    /**
+     * Next daily cutoff is 17:00 in the recipient's timezone, including DST.
+     *
+     * @param int $mode
+     * @param \stdClass $user
+     * @param int $when
+     * @return int
+     */
+    public static function due(int $mode, \stdClass $user, int $when): int {
+        if ($mode === self::IMMEDIATE) {
+            return $when;
+        }
+        $date = new \DateTimeImmutable('@' . $when);
+        $date = $date->setTimezone(\core_date::get_user_timezone_object($user));
+        $hour = get_config('mod_spatialforum', 'digesthour');
+        $hour = $hour === false ? 17 : min(23, max(0, (int) $hour));
+        $cutoff = $date->setTime($hour, 0, 0);
+        if ($cutoff->getTimestamp() <= $when) {
+            $cutoff = $cutoff->modify('+1 day');
+        }
+        return $cutoff->getTimestamp();
+    }
+
+    /**
+     * Process at most 1000 due rows and 100 messages. Further work stays queued.
+     *
+     * @param int|null $now
+     * @return array
+     */
+    public static function dispatch(?int $now = null): array {
+        global $DB;
+        $now = $now ?? time();
+        $result = ['accepted' => 0, 'skipped' => 0, 'failed' => 0, 'uncertain' => 0];
+        $DB->delete_records_select('spatialforum_deliveries', 'timecreated < ?', [$now - self::RETENTION]);
+        $rows = $DB->get_records_select(
+            'spatialforum_deliveries',
+            'status = ? AND due <= ?',
+            [self::PENDING, $now],
+            'due ASC, id ASC',
+            '*',
+            0,
+            1000
+        );
+        $buckets = [];
+        foreach ($rows as $row) {
+            $key = $row->mode == self::IMMEDIATE ? 'post:' . $row->id
+                : implode(':', [$row->userid, $row->spatialforumid, $row->due]);
+            // Digests have bounded content; later rows are picked up by the next task run.
+            if (count($buckets[$key] ?? []) < 100) {
+                $buckets[$key][] = $row;
+            }
+        }
+        $messages = 0;
+        foreach ($buckets as $batch) {
+            if ($messages >= 100) {
+                break;
+            }
+            $first = reset($batch);
+            $lock = self::lock($first->spatialforumid, $first->userid);
+            if (!$lock) {
+                continue;
+            }
+            try {
+                $cm = get_coursemodule_from_instance('spatialforum', $first->spatialforumid);
+                $user = $DB->get_record('user', ['id' => $first->userid]);
+                $sub = $DB->get_record('spatialforum_subscriptions', [
+                    'spatialforumid' => $first->spatialforumid, 'userid' => $first->userid,
+                ]);
+                $policy = $cm && $user && self::eligible($cm, $user)
+                    ? group_access::for_activity($cm->instance, $user->id) : null;
+                if ($sub && (int) $sub->mode !== (int) $first->mode) {
+                    continue;
+                }
+                $posts = [];
+                $ids = [];
+                foreach ($batch as $queued) {
+                    $row = $DB->get_record('spatialforum_deliveries', ['id' => $queued->id, 'status' => self::PENDING]);
+                    if (!$row || $row->due > $now) {
+                        continue;
+                    }
+                    if ($sub && (int) $row->mode !== (int) $sub->mode) {
+                        continue;
+                    }
+                    $post = $DB->get_record('spatialforum_posts', ['id' => $row->postid,
+                        'spatialforumid' => $row->spatialforumid, 'deleted' => 0]);
+                    if (!$sub || !$policy || !$post || !$policy->can_view($post) || $post->id <= $sub->firstpostid) {
+                        $DB->delete_records('spatialforum_deliveries', ['id' => $row->id]);
+                        $result['skipped']++;
+                        continue;
+                    }
+                    $posts[] = $post;
+                    $ids[] = $row->id;
+                }
+                if (!$ids) {
+                    continue;
+                }
+                // A crash/exception after this point is ambiguous, never silently auto-retried.
+                [$in, $params] = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
+                $DB->set_field_select('spatialforum_deliveries', 'status', self::UNCERTAIN, "id $in", $params);
+                $DB->set_field_select('spatialforum_deliveries', 'timemodified', $now, "id $in", $params);
+                try {
+                    $id = static::send($cm, $user, $posts, (int) $sub->mode);
+                } catch (\Throwable $e) {
+                    $result['uncertain'] += count($ids);
+                    debugging(
+                        'Spatialforum delivery is uncertain; inspect the scheduled task log and delivery report.',
+                        DEBUG_DEVELOPER
+                    );
+                    throw $e;
+                }
+                $messages++;
+                foreach ($ids as $rowid) {
+                    $row = $DB->get_record('spatialforum_deliveries', ['id' => $rowid], '*', MUST_EXIST);
+                    $row->attempts++;
+                    $row->timemodified = $now;
+                    $row->messageid = $id ?: 0;
+                    $row->status = $id ? self::ACCEPTED : ($row->attempts >= 5 ? self::FAILED : self::PENDING);
+                    if (!$id) {
+                        $row->due = $now + min(DAYSECS, 60 * (2 ** $row->attempts));
+                    }
+                    $DB->update_record('spatialforum_deliveries', $row);
+                }
+                $result[$id ? 'accepted' : 'failed'] += count($ids);
+            } finally {
+                $lock->release();
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Send only a safe excerpt of each author's own content, with authenticated links to media.
+     *
+     * @param \stdClass $cm
+     * @param \stdClass $user
+     * @param array $posts
+     * @param int $mode
+     * @return int|false
+     */
+    protected static function send(\stdClass $cm, \stdClass $user, array $posts, int $mode) {
+        global $DB;
+        $activity = $DB->get_record('spatialforum', ['id' => $cm->instance], '*', MUST_EXIST);
+        $context = \context_module::instance($cm->id);
+        $name = format_string($activity->name, true, ['context' => $context, 'filter' => false]);
+        $strings = get_string_manager();
+        $subject = $strings->get_string(
+            $mode === self::DAILY ? 'digestsubject' : 'postnotificationsubject',
+            'mod_spatialforum',
+            (object) ['forum' => html_to_text($name), 'count' => count($posts)],
+            $user->lang
+        );
+        $text = [];
+        $html = '';
+        foreach ($posts as $post) {
+            $author = $DB->get_record('user', ['id' => $post->userid]);
+            $label = $post->subject . ' — ' . ($author ? fullname($author) : get_string('unknownuser', 'mod_spatialforum'));
+            $excerpt = \core_text::substr(excerpts::source($post, $context), 0, 500);
+            $url = new \moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id, 'postid' => $post->id]);
+            $text[] = $label . "\n" . $excerpt . "\n" . $url->out(false);
+            $html .= \html_writer::tag('h3', s($label)) . \html_writer::tag('p', s($excerpt))
+                . \html_writer::link($url, $strings->get_string('opennotifiedpost', 'mod_spatialforum', null, $user->lang));
+        }
+        $settingsurl = new \moodle_url('/mod/spatialforum/subscription.php', ['id' => $cm->id]);
+        $footer = $strings->get_string('notificationpreferences', 'mod_spatialforum', null, $user->lang);
+        $message = new \core\message\message();
+        $message->component = 'mod_spatialforum';
+        $message->name = $mode === self::DAILY ? 'digests' : 'posts';
+        $message->userfrom = \core_user::get_noreply_user();
+        $message->userto = $user;
+        $message->courseid = $cm->course;
+        $message->subject = $subject;
+        $message->fullmessage = implode("\n\n", $text) . "\n\n" . $footer . ': ' . $settingsurl->out(false);
+        $message->fullmessageformat = FORMAT_PLAIN;
+        $message->fullmessagehtml = $html . \html_writer::tag('p', \html_writer::link($settingsurl, $footer));
+        $message->smallmessage = $subject;
+        $message->notification = 1;
+        $message->contexturl = (new \moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id]))->out(false);
+        $message->contexturlname = html_to_text($name);
+        return message_send($message);
+    }
+
+    /**
+     * Serialise subscription changes, fan-out and delivery for one participant/activity.
+     *
+     * @param int $forumid
+     * @param int $userid
+     * @return \core\lock\lock|false
+     */
+    private static function lock(int $forumid, int $userid) {
+        return \core\lock\lock_config::get_lock_factory('mod_spatialforum')->get_lock('notify:' . $forumid . ':' . $userid, 10);
+    }
+}

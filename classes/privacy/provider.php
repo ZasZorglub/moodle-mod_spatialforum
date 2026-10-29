@@ -70,6 +70,26 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             'originpostid' => 'privacy:metadata:spatialforum_tracks:originpostid',
             'name' => 'privacy:metadata:spatialforum_tracks:name',
         ], 'privacy:metadata:spatialforum_tracks');
+        $collection->add_database_table('spatialforum_subscriptions', [
+            'userid' => 'privacy:metadata:spatialforum_subscriptions:userid',
+            'mode' => 'privacy:metadata:spatialforum_subscriptions:mode',
+            'firstpostid' => 'privacy:metadata:spatialforum_subscriptions:firstpostid',
+            'timecreated' => 'privacy:metadata:spatialforum_subscriptions:timecreated',
+            'timemodified' => 'privacy:metadata:spatialforum_subscriptions:timemodified',
+        ], 'privacy:metadata:spatialforum_subscriptions');
+        $collection->add_database_table('spatialforum_deliveries', [
+            'userid' => 'privacy:metadata:spatialforum_deliveries:userid',
+            'postid' => 'privacy:metadata:spatialforum_deliveries:postid',
+            'mode' => 'privacy:metadata:spatialforum_deliveries:mode',
+            'due' => 'privacy:metadata:spatialforum_deliveries:due',
+            'status' => 'privacy:metadata:spatialforum_deliveries:status',
+            'attempts' => 'privacy:metadata:spatialforum_deliveries:attempts',
+            'messageid' => 'privacy:metadata:spatialforum_deliveries:messageid',
+            'timecreated' => 'privacy:metadata:spatialforum_deliveries:timecreated',
+            'timemodified' => 'privacy:metadata:spatialforum_deliveries:timemodified',
+        ], 'privacy:metadata:spatialforum_deliveries');
+        $collection->link_subsystem('core_message', 'privacy:metadata:messages');
+        $collection->link_subsystem('core', 'privacy:metadata:tasks');
         $collection->link_subsystem('core_files', 'privacy:metadata:files');
         return $collection;
     }
@@ -93,13 +113,19 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
                                 WHERE rp.spatialforumid = sf.id AND r.userid = :readuserid)
                     OR EXISTS (SELECT 1 FROM {spatialforum_likes} l
                                  JOIN {spatialforum_posts} lp ON lp.id = l.postid
-                                WHERE lp.spatialforumid = sf.id AND l.userid = :likeuserid)";
+                                WHERE lp.spatialforumid = sf.id AND l.userid = :likeuserid)
+                    OR EXISTS (SELECT 1 FROM {spatialforum_subscriptions} s
+                                WHERE s.spatialforumid = sf.id AND s.userid = :subuserid)
+                    OR EXISTS (SELECT 1 FROM {spatialforum_deliveries} d
+                                WHERE d.spatialforumid = sf.id AND d.userid = :deliveryuserid)";
         $contextlist->add_from_sql($sql, [
             'contextlevel' => CONTEXT_MODULE,
             'modname' => 'spatialforum',
             'postuserid' => $userid,
             'readuserid' => $userid,
             'likeuserid' => $userid,
+            'subuserid' => $userid,
+            'deliveryuserid' => $userid,
         ]);
         return $contextlist;
     }
@@ -117,6 +143,13 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
         $cm = get_coursemodule_from_id('spatialforum', $context->instanceid);
         if (!$cm) {
             return;
+        }
+        foreach (['spatialforum_subscriptions', 'spatialforum_deliveries'] as $table) {
+            $userlist->add_from_sql(
+                'userid',
+                "SELECT userid FROM {{$table}} WHERE spatialforumid = :forumid",
+                ['forumid' => $cm->instance]
+            );
         }
         $userlist->add_from_sql(
             'userid',
@@ -180,6 +213,12 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
                 ['forumid' => $cm->instance, 'userid' => $userid]
             );
             $data = (object) [
+                'subscriptions' => array_values($DB->get_records('spatialforum_subscriptions', [
+                    'spatialforumid' => $cm->instance, 'userid' => $userid,
+                ])),
+                'deliveries' => array_values($DB->get_records('spatialforum_deliveries', [
+                    'spatialforumid' => $cm->instance, 'userid' => $userid,
+                ])),
                 'likes' => array_values($likes),
                 'posts' => array_values($posts),
                 'readstate' => array_values($reads),
@@ -215,6 +254,8 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
         if (!$cm) {
             return;
         }
+        $DB->delete_records('spatialforum_subscriptions', ['spatialforumid' => $cm->instance]);
+        $DB->delete_records('spatialforum_deliveries', ['spatialforumid' => $cm->instance]);
         $postids = $DB->get_fieldset_select('spatialforum_posts', 'id', 'spatialforumid = ?', [$cm->instance]);
         if ($postids) {
             $DB->delete_records_list('spatialforum_likes', 'postid', $postids);
@@ -272,6 +313,8 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
         if (!$cm) {
             return;
         }
+        $DB->delete_records('spatialforum_subscriptions', ['spatialforumid' => $cm->instance, 'userid' => $userid]);
+        $DB->delete_records('spatialforum_deliveries', ['spatialforumid' => $cm->instance, 'userid' => $userid]);
         $postids = $DB->get_fieldset_select(
             'spatialforum_posts',
             'id',
@@ -288,6 +331,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             $DB->delete_records_list('spatialforum_likes', 'id', $likeids);
         }
         if ($postids) {
+            $DB->delete_records_list('spatialforum_deliveries', 'postid', $postids);
             $tracks = self::authored_tracks($cm->instance, $userid);
             foreach ($tracks as $track) {
                 $DB->set_field(

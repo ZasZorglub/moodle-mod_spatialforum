@@ -77,6 +77,7 @@ if ($action === 'toggletrack') {
         echo $OUTPUT->footer();
         exit;
     }
+    $DB->delete_records('spatialforum_deliveries', ['postid' => $post->id]);
     \mod_spatialforum\local\media::delete($post->id, $context);
     $post->deleted = 1;
     $post->message = '';

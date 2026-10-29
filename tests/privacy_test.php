@@ -73,4 +73,74 @@ final class privacy_test extends \core_privacy\tests\provider_testcase {
         $this->assertStringContainsString('qa.png', $data->posts[0]->message);
         $this->assertCount(1, (array) $writer->get_files([get_string('posts', 'mod_spatialforum'), (string) $post->id]));
     }
+
+    /**
+     * Subscription-only users are discoverable, exported and erased along with queued deliveries.
+     */
+    public function test_subscription_metadata_has_a_complete_privacy_lifecycle(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $author = $this->getDataGenerator()->create_user();
+        $subscriber = $this->getDataGenerator()->create_user();
+        foreach ([$author, $subscriber] as $user) {
+            $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        }
+        $this->setUser($subscriber);
+        \mod_spatialforum\local\notifications::set_mode($activity->id, \mod_spatialforum\local\notifications::DAILY);
+        $context = \context_module::instance($activity->cmid);
+        $this->assertContains((int) $context->id, array_map(
+            'intval',
+            provider::get_contexts_for_userid($subscriber->id)->get_contextids()
+        ));
+        $users = new \core_privacy\local\request\userlist($context, 'mod_spatialforum');
+        provider::get_users_in_context($users);
+        $this->assertContains((int) $subscriber->id, array_map('intval', $users->get_userids()));
+        $this->setUser($author);
+        $postid = forum::create_post($activity, $activity->roottrackid, $author->id, 'Private email QA', 'QA body', FORMAT_HTML);
+        \mod_spatialforum\local\notifications::enqueue_post($postid);
+        $this->export_context_data_for_user($subscriber->id, $context, 'mod_spatialforum');
+        $data = \core_privacy\local\request\writer::with_context($context)->get_data([]);
+        $this->assertCount(1, $data->subscriptions);
+        $this->assertCount(1, $data->deliveries);
+        $this->assertEquals($postid, $data->deliveries[0]->postid);
+        provider::delete_data_for_user(new \core_privacy\local\request\approved_contextlist(
+            $subscriber,
+            'mod_spatialforum',
+            [$context->id]
+        ));
+        $this->assertFalse($DB->record_exists('spatialforum_subscriptions', ['userid' => $subscriber->id]));
+        $this->assertFalse($DB->record_exists('spatialforum_deliveries', ['userid' => $subscriber->id]));
+        $this->assertSame('QA body', $DB->get_field('spatialforum_posts', 'message', ['id' => $postid]));
+    }
+
+    /**
+     * Author erasure cancels notifications to other recipients before removing source content.
+     */
+    public function test_erasing_author_cancels_queued_post_notifications(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $author = $this->getDataGenerator()->create_user();
+        $subscriber = $this->getDataGenerator()->create_user();
+        foreach ([$author, $subscriber] as $user) {
+            $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        }
+        $this->setUser($subscriber);
+        \mod_spatialforum\local\notifications::set_mode($activity->id, \mod_spatialforum\local\notifications::IMMEDIATE);
+        $this->setUser($author);
+        $id = forum::create_post($activity, $activity->roottrackid, $author->id, 'Erase me', 'QA body', FORMAT_HTML);
+        \mod_spatialforum\local\notifications::enqueue_post($id);
+        provider::delete_data_for_user(new \core_privacy\local\request\approved_contextlist(
+            $author,
+            'mod_spatialforum',
+            [\context_module::instance($activity->cmid)->id]
+        ));
+        $this->assertSame(0, $DB->count_records('spatialforum_deliveries'));
+        $this->assertSame(1, $DB->count_records('spatialforum_subscriptions'));
+    }
 }

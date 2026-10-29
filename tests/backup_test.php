@@ -190,4 +190,31 @@ final class backup_test extends \restore_date_testcase {
         $this->assertEquals($newcourseid, $newgroup->courseid);
         $this->assertSame('QA private group', $newgroup->name);
     }
+
+    /**
+     * Restored activities require fresh opt-in and never replay delivery queues.
+     */
+    public function test_restore_does_not_copy_notification_preferences_or_queues(): void {
+        global $DB;
+        [$course, $activity] = $this->create_course_and_module('spatialforum');
+        $subscriber = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($subscriber->id, $course->id, 'student');
+        $this->setUser($subscriber);
+        \mod_spatialforum\local\notifications::set_mode($activity->id, \mod_spatialforum\local\notifications::DAILY);
+        $this->setAdminUser();
+        $postid = forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'QA restored without mail',
+            'Content',
+            FORMAT_HTML
+        );
+        \mod_spatialforum\local\notifications::enqueue_post($postid);
+        $newcourseid = $this->backup_and_restore($course);
+        $new = $DB->get_record('spatialforum', ['course' => $newcourseid], '*', MUST_EXIST);
+        $this->assertSame(0, $DB->count_records('spatialforum_subscriptions', ['spatialforumid' => $new->id]));
+        $this->assertSame(0, $DB->count_records('spatialforum_deliveries', ['spatialforumid' => $new->id]));
+        $this->assertSame(1, $DB->count_records('spatialforum_posts', ['spatialforumid' => $new->id]));
+    }
 }

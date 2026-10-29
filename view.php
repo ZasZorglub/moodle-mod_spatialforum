@@ -56,6 +56,9 @@ $PAGE->requires->js_call_amd('mod_spatialforum/excerpts', 'init');
 
 spatialforum_view($activity, $course, $cm, $context);
 $data = forum::export_view_data($activity, $cm, $track, $context, true);
+$data['subscriptionurl'] = !isguestuser() && !empty($USER->id)
+    ? (new moodle_url('/mod/spatialforum/subscription.php', ['id' => $cm->id]))->out(false) : '';
+
 $viewmode = optional_param('sfview', '', PARAM_ALPHA);
 $data['initialview'] = in_array($viewmode, ['map', 'list'], true) ? $viewmode : '';
 $openpostid = optional_param('postid', 0, PARAM_INT);

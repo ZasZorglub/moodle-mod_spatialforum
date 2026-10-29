@@ -35,6 +35,7 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
      * @return backup_nested_element
      */
     protected function define_structure(): backup_nested_element {
+        // Notification preferences and delivery queues are not copied: restored activities require fresh opt-in.
         $userinfo = $this->get_setting_value('userinfo');
 
         $spatialforum = new backup_nested_element('spatialforum', ['id'], [

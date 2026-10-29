@@ -31,7 +31,7 @@ Confirmed scope: manual whole-activity grade/feedback, online App reading/replie
 
 ## Current implementation status
 
-S1 has an alpha implementation in `0.7.0-dev` with local verification recorded in [tests/GROUPS-070.md](../tests/GROUPS-070.md). Real-browser teacher/learner review and release evidence remain open. S2–S5 are not implemented. The three product choices are confirmed; they no longer block those later slices.
+S1 has an alpha implementation in `0.7.0-dev` with local verification recorded in [tests/GROUPS-070.md](../tests/GROUPS-070.md). Real-browser teacher/learner review and release evidence remain open. S2 now has an alpha implementation in `0.8.0-dev`; see [tests/NOTIFICATIONS-080.md](../tests/NOTIFICATIONS-080.md). S3–S5 are not implemented. The three product choices are confirmed; they no longer block those later slices.
 
 ## Delivery order and completion evidence
 
@@ -111,4 +111,4 @@ Inspected current plugin source at the baseline above, plus the local Moodle `MO
 
 ## This planning cycle's evidence
 
-Passed: repository/clean baseline inspected; absent integrations checked in source/schema; official API documentation and local core implementations inspected. Updated after S1: product choices are confirmed, group implementation and local tests are recorded in GROUPS-070.md. Open: S1 manual/release evidence and all S2–S5 implementation/test/deployment. Previous candidate test results are historical context, not tests of these proposed features. The initial planning commit edited documentation only. The later S1 change adds schema/runtime behaviour as documented in GROUPS-070.md; no test-server or Marketplace deployment has been performed.
+Passed: repository/clean baseline inspected; absent integrations checked in source/schema; official API documentation and local core implementations inspected. Updated after S1: product choices are confirmed, group implementation and local tests are recorded in GROUPS-070.md. Open: S1 manual/release evidence and S2 release evidence and all S3–S5 implementation/test/deployment. Previous candidate test results are historical context, not tests of these proposed features. The initial planning commit edited documentation only. The later S1 change adds schema/runtime behaviour as documented in GROUPS-070.md; no test-server or Marketplace deployment has been performed.

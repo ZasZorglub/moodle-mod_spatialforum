@@ -1,0 +1,48 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+
+namespace mod_spatialforum\form;
+
+/**
+ * Each participant controls only their own activity subscription.
+ */
+class subscription_form extends \moodleform {
+    /**
+     * Present opt-in modes, or unsubscribe only when course access has been lost.
+     */
+    public function definition(): void {
+        $mform = $this->_form;
+        $mform->addElement('hidden', 'id', $this->_customdata['cmid']);
+        $mform->setType('id', PARAM_INT);
+        $options = [0 => get_string('subscriptionoff', 'mod_spatialforum')];
+        if ($this->_customdata['eligible']) {
+            $options += [1 => get_string('subscriptionimmediate', 'mod_spatialforum'),
+                2 => get_string('subscriptiondaily', 'mod_spatialforum')];
+        }
+        $mform->addElement('select', 'mode', get_string('subscriptionmode', 'mod_spatialforum'), $options);
+        $mform->setType('mode', PARAM_INT);
+        $this->add_action_buttons(true, get_string('savechanges'));
+    }
+}
