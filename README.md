@@ -79,6 +79,8 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 
 ## Current MVP limits
 
+The [feature expansion plan](docs/FEATURE-EXPANSION.md) defines the proposed delivery order and acceptance criteria for the five omissions below. It is a plan, not shipped functionality.
+
 - No subscriptions, notifications or digests
 - No separate attachment list, groups, grading or activity completion based on posting
 - No Moodle App/mobile service implementation
