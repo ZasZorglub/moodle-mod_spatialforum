@@ -4,13 +4,21 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 ## Compatibility and release status
 
-- Development build: **0.8.1-dev** (alpha); not approved or published on Moodle Marketplace.
+- Development build: **0.9.0-dev** (alpha); not approved or published on Moodle Marketplace.
 - Declared installation minimum: Moodle LMS 5.0 (`requires = 2025041400`). This is a minimum-version gate, not proof that every later version has been tested.
 - The previous release was tested on Moodle LMS 5.2.2+, PHP 8.3 and MariaDB 11.4. Current release results and database coverage are recorded in [docs/RELEASE-CANDIDATE.md](docs/RELEASE-CANDIDATE.md).
 - Moodle Workplace compatibility has not been verified and is not claimed for this release.
 - No additional plugins, external service accounts or paid service subscriptions are required. Administrator installation requires no Node.js or Composer commands.
 
 For setup and use, see [the user guide](https://github.com/ZasZorglub/moodle-mod_spatialforum-support/blob/main/USER-GUIDE.md). For support and issue reporting, see [the support policy](SUPPORT.md).
+
+## 0.9.0 whole-activity grading
+
+Editing teachers can enable points or a course/site scale in the normal activity **Grade** settings. New and upgraded activities default to None. **Assess participants** opens a paginated, group-filtered roster and one manual score/private-feedback form per active eligible participant. In both separate and visible groups, this plugin requires a shared group within the configured grouping unless the grader has access-all-groups. Learners use **Your grade and feedback** to see their permitted own result. Grades and feedback never appear in conversation cards.
+
+Moodle Gradebook is the only grade/feedback store. Zero is distinct from unset/cleared; feedback without a score is supported. Save rechecks permissions, enrolment, groups, locks/overrides and the form revision. Maintenance callbacks preserve manual grades. Gradebook locks, overrides, calculations, adjustments and externally formatted feedback are protected; manage those cases in Gradebook. Hidden item/user results and disabled course-grade visibility withhold both score and feedback here. Core Gradebook has its own course permissions; the plugin does not narrow access separately granted there.
+
+Changing grading type/maximum is blocked while scores or feedback exist. Core backup/restore preserves authorised user grades, scale mappings, visibility, locks and overrides; backups without users retain grading configuration without participant assessments. The core Gradebook privacy provider owns grade/history export and erasure. No plugin-specific grade email is introduced; core Moodle messaging settings remain in control. See [grading verification](tests/GRADING-090.md).
 
 ## 0.8.1 administrator communication setup
 
@@ -90,6 +98,7 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 - Activity completion on view
 - No/separate/visible groups and groupings, with a shared server-side audience policy
 - Opt-in activity notifications: each new post or daily digest through Moodle
+- Manual whole-activity points/scales and private participant feedback in Moodle Gradebook
 - Course backup and restore
 - Privacy API metadata, export and deletion
 - English language pack; Danish translation retained separately in source for AMOS
@@ -97,16 +106,16 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 
 ## Current MVP limits
 
-The [feature expansion plan](docs/FEATURE-EXPANSION.md) defines the proposed delivery order and acceptance criteria for the five omissions below. It is a plan, not shipped functionality.
+The [feature expansion plan](docs/FEATURE-EXPANSION.md) records implemented development slices and the remaining import/App work.
 
-- No separate attachment list, grading or activity completion based on posting
+- No separate attachment list, per-post ratings or activity completion based on posting
 - No Moodle App/mobile service implementation
 - No import or synchronization with the standard Moodle forum activity
 - 3D is a progressive visual layer; core navigation remains conventional links for accessibility
 
 ## Security and operations
 
-- Version `0.8.1-dev` upgrades earlier versions to `2026102902`. Existing activities keep their content and require explicit audience review before learners can use group mode. Activities without groups continue normally. Only a user with manage-activities and access-all-groups can confirm the audience for all legacy posts. Cancel if different conversations require different audiences; this first review workflow assigns one audience to the entire legacy activity. New replies inherit their stored parent audience. See [tests/GROUPS-070.md](tests/GROUPS-070.md).
+- Version `0.9.0-dev` upgrades earlier versions to `2026102903`. Existing activities keep their content and require explicit audience review before learners can use group mode. Activities without groups continue normally. Only a user with manage-activities and access-all-groups can confirm the audience for all legacy posts. Cancel if different conversations require different audiences; this first review workflow assigns one audience to the entire legacy activity. New replies inherit their stored parent audience. See [tests/GROUPS-070.md](tests/GROUPS-070.md).
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.

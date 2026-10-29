@@ -36,6 +36,8 @@ function spatialforum_supports($feature) {
         FEATURE_SHOW_DESCRIPTION => true,
         FEATURE_COMPLETION_TRACKS_VIEWS => true,
         FEATURE_BACKUP_MOODLE2 => true,
+        FEATURE_GRADE_HAS_GRADE => true,
+        FEATURE_GRADE_OUTCOMES => false,
         FEATURE_MOD_PURPOSE => MOD_PURPOSE_COMMUNICATION,
         default => null,
     };
@@ -51,6 +53,8 @@ function spatialforum_supports($feature) {
 function spatialforum_add_instance(stdClass $data, $mform = null): int {
     global $DB;
 
+    $data->grade = $data->grade ?? 0;
+    \mod_spatialforum\local\grading::validate_definition($data);
     $transaction = $DB->start_delegated_transaction();
     $data->timemodified = time();
     $data->roottrackid = 0;
@@ -70,6 +74,9 @@ function spatialforum_add_instance(stdClass $data, $mform = null): int {
     $data->id = $id;
     $data->roottrackid = $DB->insert_record('spatialforum_tracks', $track);
     $DB->update_record('spatialforum', $data);
+    if (spatialforum_grade_item_update($data) !== GRADE_UPDATE_OK) {
+        $transaction->rollback(new moodle_exception('gradesavefailed', 'mod_spatialforum'));
+    }
     $transaction->allow_commit();
 
     return $id;
@@ -86,6 +93,10 @@ function spatialforum_update_instance(stdClass $data, $mform = null): bool {
     global $DB;
 
     $existing = $DB->get_record('spatialforum', ['id' => $data->instance], '*', MUST_EXIST);
+    $data->course = $existing->course;
+    $data->grade = $data->grade ?? $existing->grade;
+    \mod_spatialforum\local\grading::validate_definition($data, $existing);
+    $transaction = $DB->start_delegated_transaction();
     $data->id = $data->instance;
     $data->timemodified = time();
     $DB->update_record('spatialforum', $data);
@@ -95,6 +106,10 @@ function spatialforum_update_instance(stdClass $data, $mform = null): bool {
         $roottrack->timemodified = time();
         $DB->update_record('spatialforum_tracks', $roottrack);
     }
+    if (spatialforum_grade_item_update($data) !== GRADE_UPDATE_OK) {
+        $transaction->rollback(new moodle_exception('gradesavefailed', 'mod_spatialforum'));
+    }
+    $transaction->allow_commit();
     return true;
 }
 
@@ -107,7 +122,7 @@ function spatialforum_update_instance(stdClass $data, $mform = null): bool {
 function spatialforum_delete_instance(int $id): bool {
     global $DB;
 
-    if (!$DB->record_exists('spatialforum', ['id' => $id])) {
+    if (!$activity = $DB->get_record('spatialforum', ['id' => $id])) {
         return false;
     }
     if ($cm = get_coursemodule_from_instance('spatialforum', $id)) {
@@ -124,6 +139,9 @@ function spatialforum_delete_instance(int $id): bool {
     $DB->delete_records('spatialforum_posts', ['spatialforumid' => $id]);
     $DB->delete_records('spatialforum_tracks', ['spatialforumid' => $id]);
     $DB->delete_records('spatialforum', ['id' => $id]);
+    if (spatialforum_grade_item_delete($activity) !== GRADE_UPDATE_OK) {
+        $transaction->rollback(new moodle_exception('gradesavefailed', 'mod_spatialforum'));
+    }
     $transaction->allow_commit();
     return true;
 }
@@ -185,4 +203,69 @@ function spatialforum_view(stdClass $spatialforum, stdClass $course, $cm, contex
 
     $completion = new completion_info($course);
     $completion->set_module_viewed($cm);
+}
+
+/**
+ * Create/update grade-item metadata; null grades never regenerate manual results.
+ * @param stdClass $activity
+ * @param mixed $grades Optional explicit Grade API data
+ * @return int
+ */
+function spatialforum_grade_item_update($activity, $grades = null): int {
+    global $CFG;
+    require_once($CFG->libdir . '/gradelib.php');
+    $details = ['itemname' => $activity->name];
+    if (isset($activity->cmidnumber)) {
+        $details['idnumber'] = $activity->cmidnumber;
+    }
+    if (($activity->grade ?? 0) > 0) {
+        $details += ['gradetype' => GRADE_TYPE_VALUE, 'grademin' => 0, 'grademax' => $activity->grade, 'scaleid' => 0];
+    } else if (($activity->grade ?? 0) < 0) {
+        $details += ['gradetype' => GRADE_TYPE_SCALE, 'scaleid' => -(int) $activity->grade];
+    } else {
+        $details['gradetype'] = GRADE_TYPE_NONE;
+    }
+    return grade_update('mod/spatialforum', $activity->course, 'mod', 'spatialforum', $activity->id, 0, $grades, $details);
+}
+
+/**
+ * Gradebook maintenance updates metadata only, preserving manual scores and feedback.
+ * @param stdClass $activity
+ * @param int $userid
+ * @param bool $nullifnone
+ */
+function spatialforum_update_grades($activity, $userid = 0, $nullifnone = true): void {
+    spatialforum_grade_item_update($activity);
+}
+
+/**
+ * Delete the activity grade item through the Grade API.
+ * @param stdClass $activity
+ * @return int
+ */
+function spatialforum_grade_item_delete($activity): int {
+    global $CFG;
+    require_once($CFG->libdir . '/gradelib.php');
+    return grade_update('mod/spatialforum', $activity->course, 'mod', 'spatialforum', $activity->id, 0, null, ['deleted' => 1]);
+}
+
+/**
+ * Whether this activity uses the named scale.
+ * @param int $instanceid
+ * @param int $scaleid
+ * @return bool
+ */
+function spatialforum_scale_used($instanceid, $scaleid): bool {
+    global $DB;
+    return $DB->record_exists('spatialforum', ['id' => $instanceid, 'grade' => -(int) $scaleid]);
+}
+
+/**
+ * Prevent removal of a scale referenced by any activity.
+ * @param int $scaleid
+ * @return bool
+ */
+function spatialforum_scale_used_anywhere($scaleid): bool {
+    global $DB;
+    return $DB->record_exists('spatialforum', ['grade' => -(int) $scaleid]);
 }

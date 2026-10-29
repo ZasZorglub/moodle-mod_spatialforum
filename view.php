@@ -58,6 +58,14 @@ spatialforum_view($activity, $course, $cm, $context);
 $data = forum::export_view_data($activity, $cm, $track, $context, true);
 $data['subscriptionurl'] = !isguestuser() && !empty($USER->id)
     ? (new moodle_url('/mod/spatialforum/subscription.php', ['id' => $cm->id]))->out(false) : '';
+$data['assessmenturl'] = '';
+if (!empty($activity->grade) && !isguestuser()) {
+    $grader = has_capability('mod/spatialforum:grade', $context);
+    if ($grader || has_capability('mod/spatialforum:receivegrade', $context)) {
+        $data['assessmenturl'] = (new moodle_url('/mod/spatialforum/grade.php', ['id' => $cm->id]))->out(false);
+        $data['assessmentlabel'] = get_string($grader ? 'assessparticipants' : 'owngrade', 'mod_spatialforum');
+    }
+}
 
 $viewmode = optional_param('sfview', '', PARAM_ALPHA);
 $data['initialview'] = in_array($viewmode, ['map', 'list'], true) ? $viewmode : '';

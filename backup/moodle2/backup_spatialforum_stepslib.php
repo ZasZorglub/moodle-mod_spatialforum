@@ -40,7 +40,7 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
 
         $spatialforum = new backup_nested_element('spatialforum', ['id'], [
             'name', 'intro', 'introformat', 'roottrackid', 'groupready', 'maxdepth',
-            'enablecolors', 'enablelikes', 'locked', 'timemodified',
+            'enablecolors', 'enablelikes', 'locked', 'grade', 'timemodified',
         ]);
         $tracks = new backup_nested_element('tracks');
         $track = new backup_nested_element('track', ['id'], [
@@ -88,6 +88,7 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
 
         $post->annotate_ids('user', 'userid');
         $post->annotate_ids('group', 'groupid');
+        $spatialforum->annotate_ids('scale', 'grade');
         $read->annotate_ids('user', 'userid');
         $like->annotate_ids('user', 'userid');
         $spatialforum->annotate_files('mod_spatialforum', 'intro', null);

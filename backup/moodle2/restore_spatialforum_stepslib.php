@@ -75,6 +75,14 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $record->roottrackid = 0;
         $record->groupready = $record->groupready ?? 0;
         $record->enablelikes = $record->enablelikes ?? 1;
+        $record->grade = $record->grade ?? 0;
+        if ($record->grade < 0) {
+            $scaleid = $this->get_mappingid('scale', abs($record->grade));
+            if (!$scaleid) {
+                throw new restore_step_exception('invalidgradedefinition', 'mod_spatialforum');
+            }
+            $record->grade = -$scaleid;
+        }
         $record->timemodified = $this->apply_date_offset($record->timemodified);
 
         $newid = $DB->insert_record('spatialforum', $record);

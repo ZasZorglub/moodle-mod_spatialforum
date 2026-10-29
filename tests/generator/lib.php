@@ -33,7 +33,8 @@ class mod_spatialforum_generator extends testing_module_generator {
      * Create a spatial forum activity and its root track.
      */
     public function create_instance($record = null, ?array $options = null) {
-        $record = (object) ((array) $record + ['maxdepth' => 8, 'enablecolors' => 1, 'enablelikes' => 1, 'locked' => 0]);
+        $defaults = ['grade' => 0, 'maxdepth' => 8, 'enablecolors' => 1, 'enablelikes' => 1, 'locked' => 0];
+        $record = (object) ((array) $record + $defaults);
         return parent::create_instance($record, (array) $options);
     }
 }

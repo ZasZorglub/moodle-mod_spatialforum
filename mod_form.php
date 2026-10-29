@@ -65,7 +65,27 @@ class mod_spatialforum_mod_form extends moodleform_mod {
         $mform->addElement('advcheckbox', 'locked', get_string('lockforum', 'mod_spatialforum'));
         $mform->setDefault('locked', 0);
 
+        $this->standard_grading_coursemodule_elements();
+        $mform->setDefault('grade', 0);
         $this->standard_coursemodule_elements();
         $this->add_action_buttons();
+    }
+
+    /**
+     * Reject unsafe scale changes before persisting activity settings.
+     * @param array $data
+     * @param array $files
+     * @return array
+     */
+    public function validation($data, $files): array {
+        global $DB;
+        $errors = parent::validation($data, $files);
+        $existing = !empty($this->_instance) ? $DB->get_record('spatialforum', ['id' => $this->_instance]) : null;
+        try {
+            \mod_spatialforum\local\grading::validate_definition((object) $data, $existing ?: null);
+        } catch (moodle_exception $e) {
+            $errors['grade'] = $e->getMessage();
+        }
+        return $errors;
     }
 }

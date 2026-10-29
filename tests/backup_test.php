@@ -42,6 +42,104 @@ require_once($CFG->libdir . '/phpunit/classes/restore_date_testcase.php');
 #[CoversClass(\backup_spatialforum_activity_structure_step::class)]
 #[CoversClass(\restore_spatialforum_activity_structure_step::class)]
 final class backup_test extends \restore_date_testcase {
+    /**
+     * Core activity-grade backup preserves a manual score, feedback and hidden-result policy.
+     */
+    public function test_restore_preserves_manual_gradebook_results(): void {
+        global $DB;
+        [$course, $activity] = $this->create_course_and_module('spatialforum', ['grade' => 100]);
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $state = \mod_spatialforum\local\grading::assessment($activity->id, $user->id);
+        \mod_spatialforum\local\grading::save($activity->id, $user->id, '77.5', 'Restored private feedback', $state['token']);
+        $originalitem = \mod_spatialforum\local\grading::item($activity);
+        $originalitem->update_final_grade($user->id, 88, 'gradebook', 'Gradebook override on restore', FORMAT_PLAIN);
+        $originalgrade = \grade_grade::fetch(['itemid' => $originalitem->id, 'userid' => $user->id]);
+        $originalgrade->set_locked(1);
+        $originalitem->set_hidden(1);
+        $newcourseid = $this->backup_and_restore($course);
+        $new = $DB->get_record('spatialforum', ['course' => $newcourseid], '*', MUST_EXIST);
+        $item = \mod_spatialforum\local\grading::item($new);
+        $this->assertEquals(100, $new->grade);
+        $this->assertTrue((bool) $item->is_hidden());
+        $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $user->id]);
+        $this->assertEquals(77.5, $grade->rawgrade);
+        $this->assertEquals(88, $grade->finalgrade);
+        $this->assertSame('Gradebook override on restore', $grade->feedback);
+        $this->assertTrue($grade->is_locked());
+        $this->assertTrue($grade->is_overridden());
+    }
+
+    /**
+     * Backups excluding user data keep configuration without copying participant results.
+     */
+    public function test_restore_without_users_does_not_copy_private_assessments(): void {
+        global $DB, $USER, $CFG;
+        [$course, $activity] = $this->create_course_and_module('spatialforum', ['grade' => 100]);
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $state = \mod_spatialforum\local\grading::assessment($activity->id, $user->id);
+        \mod_spatialforum\local\grading::save($activity->id, $user->id, '65', 'Do not copy without users', $state['token']);
+        $CFG->backup_file_logger_level = \backup::LOG_NONE;
+        $bc = new \backup_controller(
+            \backup::TYPE_1COURSE,
+            $course->id,
+            \backup::FORMAT_MOODLE,
+            \backup::INTERACTIVE_NO,
+            \backup::MODE_GENERAL,
+            $USER->id
+        );
+        $bc->get_plan()->get_setting('users')->set_value(0);
+        $bc->execute_plan();
+        $file = $bc->get_results()['backup_destination'];
+        $destination = $CFG->dataroot . '/temp/backup/sf-grade-no-users';
+        $file->extract_to_pathname(get_file_packer('application/vnd.moodle.backup'), $destination);
+        $bc->destroy();
+        $newcourseid = \restore_dbops::create_new_course($course->fullname, $course->shortname . '_no_users', $course->category);
+        $rc = new \restore_controller(
+            'sf-grade-no-users',
+            $newcourseid,
+            \backup::INTERACTIVE_NO,
+            \backup::MODE_GENERAL,
+            $USER->id,
+            \backup::TARGET_NEW_COURSE
+        );
+        $this->assertTrue($rc->execute_precheck());
+        $rc->execute_plan();
+        $rc->destroy();
+        $new = $DB->get_record('spatialforum', ['course' => $newcourseid], '*', MUST_EXIST);
+        $item = \mod_spatialforum\local\grading::item($new);
+        $this->assertEquals(100, $new->grade);
+        $this->assertFalse($DB->record_exists_select(
+            'grade_grades',
+            'itemid = ? AND (rawgrade IS NOT NULL OR finalgrade IS NOT NULL OR feedback IS NOT NULL)',
+            [$item->id]
+        ));
+    }
+
+    /**
+     * Negative scale IDs are remapped together with the grade item and one-based scale value.
+     */
+    public function test_restore_remaps_grading_scale(): void {
+        global $DB;
+        [$course, $activity] = $this->create_course_and_module('spatialforum');
+        $scale = $this->getDataGenerator()->create_scale(['courseid' => $course->id, 'scale' => 'Beginning,Developing,Secure']);
+        \spatialforum_update_instance((object) ['instance' => $activity->id, 'name' => $activity->name, 'grade' => -$scale->id]);
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
+        $state = \mod_spatialforum\local\grading::assessment($activity->id, $user->id);
+        \mod_spatialforum\local\grading::save($activity->id, $user->id, '2', 'Scale restore', $state['token']);
+        $newcourseid = $this->backup_and_restore($course);
+        $new = $DB->get_record('spatialforum', ['course' => $newcourseid], '*', MUST_EXIST);
+        $item = \mod_spatialforum\local\grading::item($new);
+        $this->assertLessThan(0, $new->grade);
+        $this->assertNotEquals(-$scale->id, $new->grade);
+        $this->assertEquals(-$new->grade, $item->scaleid);
+        $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $user->id]);
+        $this->assertEquals(2, $grade->rawgrade);
+        $this->assertSame('Scale restore', $grade->feedback);
+    }
+
     public function test_restore_remaps_post_links_and_embedded_media_files(): void {
         global $DB, $CFG;
         [$course, $activity] = $this->create_course_and_module('spatialforum');

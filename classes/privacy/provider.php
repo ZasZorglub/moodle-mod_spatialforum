@@ -91,6 +91,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
         $collection->link_subsystem('core_message', 'privacy:metadata:messages');
         $collection->link_subsystem('core', 'privacy:metadata:tasks');
         $collection->link_subsystem('core_files', 'privacy:metadata:files');
+        $collection->link_subsystem('core_grades', 'privacy:metadata:grades');
         return $collection;
     }
 

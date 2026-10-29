@@ -207,5 +207,13 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         // Communication configuration uses plugin config; register the new test-message provider.
         upgrade_mod_savepoint(true, 2026102902, 'spatialforum');
     }
+    if ($oldversion < 2026102903) {
+        $table = new xmldb_table('spatialforum');
+        $field = new xmldb_field('grade', XMLDB_TYPE_NUMBER, '15, 5', null, XMLDB_NOTNULL, null, '0', 'locked');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_mod_savepoint(true, 2026102903, 'spatialforum');
+    }
     return true;
 }

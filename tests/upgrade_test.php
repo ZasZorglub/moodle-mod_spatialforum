@@ -40,6 +40,36 @@ require_once($CFG->dirroot . '/mod/spatialforum/db/upgrade.php');
  */
 #[CoversFunction('xmldb_spatialforum_upgrade')]
 final class upgrade_test extends \advanced_testcase {
+    /**
+     * Existing activities opt out of grading on schema upgrade and repeat upgrades preserve settings.
+     */
+    public function test_upgrade_adds_ungraded_default_without_creating_grade_items(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $dbman = $DB->get_manager();
+        $table = new \xmldb_table('spatialforum');
+        $field = new \xmldb_field('grade', XMLDB_TYPE_NUMBER, '15, 5', null, XMLDB_NOTNULL, null, '0', 'locked');
+        $dbman->drop_field($table, $field);
+        try {
+            set_config('version', 2026102902, 'mod_spatialforum');
+            $this->assertTrue(\xmldb_spatialforum_upgrade(2026102902));
+            $this->assertEquals(0, $DB->get_field('spatialforum', 'grade', ['id' => $activity->id]));
+            $identity = ['itemmodule' => 'spatialforum', 'iteminstance' => $activity->id];
+            $this->assertFalse($DB->record_exists('grade_items', $identity));
+            $DB->set_field('spatialforum', 'grade', 100, ['id' => $activity->id]);
+            set_config('version', 2026102902, 'mod_spatialforum');
+            \xmldb_spatialforum_upgrade(2026102902);
+            $this->assertEquals(100, $DB->get_field('spatialforum', 'grade', ['id' => $activity->id]));
+        } finally {
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+    }
+
     public function test_upgrade_repairs_names_from_previously_erased_authors(): void {
         global $DB;
         $this->resetAfterTest();
