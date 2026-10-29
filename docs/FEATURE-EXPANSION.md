@@ -8,7 +8,7 @@ Source baseline: `2d83ccfe0397e61bc207fa40cff9a96fc3892ca6`, branch `feat/replie
 
 Keep the complete branching discussion understandable when reading, replying, receiving notifications or changing device. Preserve the in-place threaded web map, hierarchical List, linked selective quotations and Moodle-managed post media. Test content and UI verification use English.
 
-Observed source evidence:
+Observed source evidence at the pre-implementation baseline:
 
 | Area | Current evidence | Consequence |
 | --- | --- | --- |
@@ -28,6 +28,10 @@ Observed source evidence:
 | Standard-forum import | Preview and copy into a new activity in the same course; preserve the source. | Merging needs collision/recovery policies; ongoing synchronisation needs ownership and update/deletion reconciliation. | Confirmed by user on 29 October 2026. |
 
 Confirmed scope: manual whole-activity grade/feedback, online App reading/replies and preview/copy to a new activity. Implement and verify the slices in order. The detailed behaviours below are implementation proposals subject to evidence and the preserved product contract.
+
+## Current implementation status
+
+S1 has an alpha implementation in `0.7.0-dev` with local verification recorded in [tests/GROUPS-070.md](../tests/GROUPS-070.md). Real-browser teacher/learner review and release evidence remain open. S2–S5 are not implemented. The three product choices are confirmed; they no longer block those later slices.
 
 ## Delivery order and completion evidence
 
@@ -107,4 +111,4 @@ Inspected current plugin source at the baseline above, plus the local Moodle `MO
 
 ## This planning cycle's evidence
 
-Passed: repository/clean baseline inspected; absent integrations checked in source/schema; official API documentation and local core implementations inspected. Open: the three product decisions, group migration prototype and every new runtime implementation/test/deployment. Previous candidate test results are historical context, not tests of these proposed features. This change edits documentation only and does not change plugin version, schema or deployment.
+Passed: repository/clean baseline inspected; absent integrations checked in source/schema; official API documentation and local core implementations inspected. Updated after S1: product choices are confirmed, group implementation and local tests are recorded in GROUPS-070.md. Open: S1 manual/release evidence and all S2–S5 implementation/test/deployment. Previous candidate test results are historical context, not tests of these proposed features. The initial planning commit edited documentation only. The later S1 change adds schema/runtime behaviour as documented in GROUPS-070.md; no test-server or Marketplace deployment has been performed.
