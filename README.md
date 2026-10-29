@@ -4,7 +4,7 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 ## Compatibility and release status
 
-- Release candidate: **0.6.1-rc.1**; not yet approved or published on Moodle Marketplace.
+- Development build: **0.7.0-dev** (alpha); not approved or published on Moodle Marketplace.
 - Declared installation minimum: Moodle LMS 5.0 (`requires = 2025041400`). This is a minimum-version gate, not proof that every later version has been tested.
 - The previous release was tested on Moodle LMS 5.2.2+, PHP 8.3 and MariaDB 11.4. Current release results and database coverage are recorded in [docs/RELEASE-CANDIDATE.md](docs/RELEASE-CANDIDATE.md).
 - Moodle Workplace compatibility has not been verified and is not claimed for this release.
@@ -30,7 +30,7 @@ When text is selected inside a post, **Reply to selection** becomes green, high-
 
 The activity uses Moodle's introduction once and a compact toolbar. Reading-route emphasis preserves text contrast. New posts have their own heading and Create post action. Ordinary replies start with the message editor and a compact, expandable original; passage quoting and whole-parent quoting are optional disclosures. Removing a quote restores logical keyboard focus. The Marketplace package ships English labels. The Danish translation is retained in the source repository for later AMOS submission. See `tests/UX-050.md` for acceptance and verification boundaries.
 
-Build the dependency-free AMD wrappers with `node scripts/build-amd.mjs`. This release changes no database schema or permission rules.
+Build the dependency-free AMD wrappers with `node scripts/build-amd.mjs`. The group-support development build adds post audiences and a legacy-audience review gate. See [group verification](tests/GROUPS-070.md) before upgrading.
 
 ## 0.4.0 selective replies
 
@@ -72,6 +72,7 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 - Track locking and moderator post removal
 - Moodle capabilities for view, reply, branching and moderation
 - Activity completion on view
+- No/separate/visible groups and groupings, with a shared server-side audience policy
 - Course backup and restore
 - Privacy API metadata, export and deletion
 - English language pack; Danish translation retained separately in source for AMOS
@@ -82,14 +83,14 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 The [feature expansion plan](docs/FEATURE-EXPANSION.md) defines the proposed delivery order and acceptance criteria for the five omissions below. It is a plan, not shipped functionality.
 
 - No subscriptions, notifications or digests
-- No separate attachment list, groups, grading or activity completion based on posting
+- No separate attachment list, grading or activity completion based on posting
 - No Moodle App/mobile service implementation
 - No import or synchronization with the standard Moodle forum activity
 - 3D is a progressive visual layer; core navigation remains conventional links for accessibility
 
 ## Security and operations
 
-- Version `0.6.1-rc.1` upgrades earlier versions to `2026102800`. Run the normal Moodle upgrade; do not uninstall the activity to update it. Existing likes, published quotes and read timestamps are preserved. Child-track names from previously privacy-erased authors are anonymised.
+- Version `0.7.0-dev` upgrades earlier versions to `2026102900`. Existing activities keep their content and require explicit audience review before learners can use group mode. Activities without groups continue normally. Only a user with manage-activities and access-all-groups can confirm the audience for all legacy posts. Cancel if different conversations require different audiences; this first review workflow assigns one audience to the entire legacy activity. New replies inherit their stored parent audience. See [tests/GROUPS-070.md](tests/GROUPS-070.md).
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.

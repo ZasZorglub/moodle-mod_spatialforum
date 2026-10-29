@@ -66,11 +66,13 @@ class forum {
         context_module $context,
         int $cmid,
         ?array $posts = null,
-        ?array $users = null
+        ?array $users = null,
+        ?group_access $access = null
     ): array {
         global $DB;
 
-        if (!empty($post->deleted)) {
+        $access = $access ?? group_access::for_activity($post->spatialforumid);
+        if (!empty($post->deleted) || !$access->can_view($post)) {
             return ['available' => false];
         }
         $user = $users !== null ? ($users[$post->userid] ?? null) : $DB->get_record('user', ['id' => $post->userid]);
@@ -82,7 +84,7 @@ class forum {
             'subject' => format_string($post->subject),
             'author' => $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum'),
             'time' => userdate($post->timecreated),
-            'message' => excerpts::render($post, $context, $cmid, $posts, $users),
+            'message' => excerpts::render($post, $context, $cmid, $posts, $users, $access),
             'url' => $url->out(false),
         ];
     }
@@ -113,6 +115,7 @@ class forum {
     public static function set_reaction(stdClass $activity, stdClass $post, int $userid, int $reaction): void {
         global $DB;
 
+        group_access::for_activity($activity->id, $userid)->require_post($post, true);
         if (!in_array($reaction, [-1, 0, 1], true)) {
             throw new \moodle_exception('invalidaction', 'mod_spatialforum');
         }
@@ -165,6 +168,11 @@ class forum {
     ): int {
         global $DB;
 
+        if ($originpostid) {
+            $origin = $DB->get_record('spatialforum_posts', ['id' => $originpostid,
+                'spatialforumid' => $activity->id], '*', MUST_EXIST);
+            group_access::for_activity($activity->id)->require_post($origin, true);
+        }
         if (trim($name) === '' || \core_text::strlen(trim($name)) > 255) {
             throw new \moodle_exception('invalidtrackname', 'mod_spatialforum');
         }
@@ -266,10 +274,26 @@ class forum {
         int $messageformat,
         int $replytoid = 0,
         bool $showparent = false,
-        string $excerptdraft = '[]'
+        string $excerptdraft = '[]',
+        ?int $groupid = null
     ): int {
         global $DB;
 
+        $access = group_access::for_activity($activity->id, $userid);
+        $track = $DB->get_record('spatialforum_tracks', ['id' => $trackid,
+            'spatialforumid' => $activity->id], '*', MUST_EXIST);
+        $parentid = $replytoid ?: $track->originpostid;
+        if ($parentid) {
+            $parent = $DB->get_record('spatialforum_posts', ['id' => $parentid,
+                'spatialforumid' => $activity->id], '*', MUST_EXIST);
+            $access->require_post($parent, true);
+            $groupid = (int) ($parent->groupid ?? -1);
+        } else {
+            $groupid = $groupid ?? $access->selected_group();
+        }
+        if (!$access->can_write($groupid)) {
+            throw new \moodle_exception('groupaccessdenied', 'mod_spatialforum');
+        }
         if (trim($subject) === '' || \core_text::strlen(trim($subject)) > 255) {
             throw new \moodle_exception('invalidsubject', 'mod_spatialforum');
         }
@@ -284,6 +308,7 @@ class forum {
         return $DB->insert_record('spatialforum_posts', (object) [
             'spatialforumid' => $activity->id,
             'trackid' => $trackid,
+            'groupid' => $groupid,
             'replytoid' => $replytoid,
             'showparent' => $replytoid && $showparent ? 1 : 0,
             'replyparts' => $replyparts,
@@ -365,6 +390,12 @@ class forum {
             return;
         }
         $postids = array_unique(array_map('intval', $postids));
+        $policies = [];
+        foreach ($DB->get_records_list('spatialforum_posts', 'id', $postids) as $post) {
+            $policies[$post->spatialforumid] ??= group_access::for_activity($post->spatialforumid, $userid);
+            $policies[$post->spatialforumid]->require_post($post);
+        }
+
         $factory = \core\lock\lock_config::get_lock_factory('mod_spatialforum');
         $lock = $factory->get_lock('read:' . $userid, 10);
         if (!$lock) {
@@ -398,20 +429,23 @@ class forum {
      * @param int $userid
      * @return array
      */
-    public static function get_unread_postids(int $forumid, int $userid): array {
+    public static function get_unread_postids(int $forumid, int $userid, ?group_access $access = null): array {
         global $DB;
 
+        $access = $access ?? group_access::for_activity($forumid, $userid);
+        [$groupsql, $groupparams] = $access->sql();
         $sql = "SELECT p.id
                   FROM {spatialforum_posts} p
              LEFT JOIN {spatialforum_read} r ON r.postid = p.id AND r.userid = :userid
                  WHERE p.spatialforumid = :forumid
                    AND p.userid <> :userid2
                    AND p.deleted = 0
-                   AND r.id IS NULL";
+                   AND r.id IS NULL AND $groupsql";
         return $DB->get_fieldset_sql($sql, [
             'userid' => $userid,
             'forumid' => $forumid,
             'userid2' => $userid,
+            ...$groupparams,
         ]);
     }
 
@@ -434,17 +468,38 @@ class forum {
     ): array {
         global $DB, $USER;
 
+        $access = new group_access($activity, $cm);
+        $access->require_track($currenttrack);
         $path = self::get_path($currenttrack->id, $activity->id);
         $tree = self::get_tree($activity->id, $activity->roottrackid);
-        $posts = $DB->get_records(
-            'spatialforum_posts',
-            $wholemap ? ['spatialforumid' => $activity->id] : ['trackid' => $currenttrack->id],
-            'timecreated ASC, id ASC'
+        [$groupsql, $groupparams] = $access->sql();
+        $params = ['sfforumid' => $activity->id, ...$groupparams];
+        $renderposts = $DB->get_records_sql(
+            "SELECT p.* FROM {spatialforum_posts} p
+              WHERE p.spatialforumid = :sfforumid AND $groupsql ORDER BY p.timecreated ASC, p.id ASC",
+            $params
         );
-        // Quotes and parent previews share these records; never query per rendered post.
-        $renderposts = $wholemap ? $posts : $DB->get_records('spatialforum_posts', ['spatialforumid' => $activity->id]);
+        $posts = $wholemap ? $renderposts : array_filter(
+            $renderposts,
+            static fn($item) => (int) $item->trackid === (int) $currenttrack->id
+        );
         $maptracks = $DB->get_records('spatialforum_tracks', ['spatialforumid' => $activity->id]);
         $maptracks[$currenttrack->id] = $currenttrack;
+        $posts = array_filter($posts, $access->can_view(...));
+        $renderposts = array_filter($renderposts, $access->can_view(...));
+        $visibletracks = [(int) $activity->roottrackid => true];
+        foreach ($maptracks as $id => $item) {
+            if (isset($renderposts[$item->originpostid])) {
+                $visibletracks[$id] = true;
+            }
+        }
+        if (!$access->uses_groups()) {
+            $visibletracks = array_fill_keys(array_keys($maptracks), true);
+        }
+        $maptracks = array_intersect_key($maptracks, $visibletracks);
+        $tree = array_filter($tree, static fn($item) => isset($visibletracks[$item->id]));
+        $path = array_filter($path, static fn($item) => isset($visibletracks[$item->id]));
+
         $depths = [];
         foreach ($tree as $item) {
             $depths[$item->id] = $item->depth + 1;
@@ -452,8 +507,9 @@ class forum {
         $childtracks = $DB->get_records('spatialforum_tracks', [
             'parenttrackid' => $currenttrack->id,
         ], 'timecreated ASC');
+        $childtracks = array_intersect_key($childtracks, $visibletracks);
         $cantrackread = !isguestuser() && !empty($USER->id);
-        $unreadids = $cantrackread ? array_flip(self::get_unread_postids($activity->id, $USER->id)) : [];
+        $unreadids = $cantrackread ? array_flip(self::get_unread_postids($activity->id, $USER->id, $access)) : [];
         $pathids = array_flip(array_column($path, 'id'));
         $canreply = has_capability('mod/spatialforum:reply', $context)
             && empty($activity->locked) && empty($currenttrack->locked);
@@ -474,15 +530,15 @@ class forum {
                         SUM(CASE WHEN l.reaction = -1 THEN 1 ELSE 0 END) AS dislikes
                    FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
-                  WHERE $scope AND p.deleted = 0
+                  WHERE $scope AND p.deleted = 0 AND $groupsql
                GROUP BY l.postid",
-                ['scopeid' => $scopeid]
+                ['scopeid' => $scopeid, ...$groupparams]
             );
             $userlikes = $DB->get_records_sql(
                 "SELECT l.postid, l.id, l.reaction FROM {spatialforum_likes} l
                    JOIN {spatialforum_posts} p ON p.id = l.postid
-                  WHERE $scope AND l.userid = :userid",
-                ['scopeid' => $scopeid, 'userid' => $USER->id]
+                  WHERE $scope AND l.userid = :userid AND $groupsql",
+                ['scopeid' => $scopeid, 'userid' => $USER->id, ...$groupparams]
             );
         }
 
@@ -502,18 +558,19 @@ class forum {
             $postcanreply = $posttrack && !$activity->locked && !$posttrack->locked
                 && $postdepth < $activity->maxdepth
                 && has_capability('mod/spatialforum:reply', $context)
-                && has_capability('mod/spatialforum:startbranch', $context);
+                && has_capability('mod/spatialforum:startbranch', $context)
+                && $access->can_write((int) ($post->groupid ?? -1));
             $replycontext = [];
             if (!$post->deleted && $post->replytoid && $post->showparent) {
                 $parent = $renderposts[$post->replytoid] ?? null;
-                $replycontext[] = $parent ? self::export_reply_context($parent, $context, $cm->id, $renderposts, $users)
+                $replycontext[] = $parent ? self::export_reply_context($parent, $context, $cm->id, $renderposts, $users, $access)
                     : ['available' => false];
             }
             $user = $users[$post->userid] ?? null;
             $fullname = $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum');
             $message = $post->deleted
                 ? get_string('deletedpost', 'mod_spatialforum')
-                : excerpts::render($post, $context, $cm->id, $renderposts, $users);
+                : excerpts::render($post, $context, $cm->id, $renderposts, $users, $access);
             $reaction = (int) ($userlikes[$post->id]->reaction ?? 0);
             $postdata[] = [
                 ...self::post_times($post),
@@ -534,7 +591,7 @@ class forum {
                 'unread' => isset($unreadids[$post->id]),
                 'replycontext' => $replycontext,
                 'showlikes' => $showlikes && !$post->deleted,
-                'canlike' => $canlike && !$post->deleted,
+                'canlike' => $canlike && !$post->deleted && $access->can_write((int) ($post->groupid ?? -1)),
                 'likecount' => $likecounts[$post->id]->total ?? 0,
                 'dislikecount' => $likecounts[$post->id]->dislikes ?? 0,
                 'liked' => $reaction === 1,
@@ -557,8 +614,14 @@ class forum {
                     'trackid' => $post->trackid,
                     'originpostid' => $post->id,
                 ]))->out(false),
-                'candelete' => $canmoderate && !$post->deleted,
-                'canmoderate' => $canmoderate && (bool) $posttrack,
+                'candelete' => $canmoderate && !$post->deleted && $access->can_write((int) ($post->groupid ?? -1)),
+                'canmoderate' => $canmoderate && (bool) $posttrack
+                    && $access->can_write((int) ($post->groupid ?? -1)),
+                'canlocktrack' => $canmoderate && (bool) $posttrack
+                    && $access->can_write((int) ($post->groupid ?? -1))
+                    && ((int) $posttrack->id !== (int) $activity->roottrackid
+                        || has_capability('moodle/site:accessallgroups', $context)
+                        || !groups_get_activity_groupmode($cm)),
                 'tracklocked' => !empty($posttrack->locked),
                 'moderatelabel' => get_string(!empty($posttrack->locked) ? 'unlocktrack' : 'locktrack', 'mod_spatialforum'),
                 'moderateurl' => (new moodle_url('/mod/spatialforum/action.php', [
@@ -602,11 +665,13 @@ class forum {
             ];
         }
 
-        $childcounts = $DB->get_records_sql('SELECT trackid, COUNT(1) AS total FROM {spatialforum_posts}
-            WHERE spatialforumid = ? GROUP BY trackid', [$activity->id]);
+        $childcounts = [];
+        foreach ($renderposts as $item) {
+            $childcounts[$item->trackid] = ($childcounts[$item->trackid] ?? 0) + 1;
+        }
         $childdata = [];
         foreach ($childtracks as $child) {
-            $childpostcount = $childcounts[$child->id]->total ?? 0;
+            $childpostcount = $childcounts[$child->id] ?? 0;
             $childdata[] = [
                 'name' => format_string($child->name),
                 'colour' => self::normalise_colour($child->colour),
@@ -661,7 +726,8 @@ class forum {
             'haschildren' => !empty($childdata),
             'tree' => $treedata,
             'canreply' => has_capability('mod/spatialforum:reply', $context)
-                && !$activity->locked && !$newposttrack->locked,
+                && !$activity->locked && !$newposttrack->locked
+                && $access->can_write($access->selected_group()),
             'newposturl' => (new moodle_url('/mod/spatialforum/post.php', [
                 'id' => $cm->id,
                 'action' => 'reply',

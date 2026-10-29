@@ -40,6 +40,8 @@ class post_form extends \moodleform {
      */
     public function definition(): void {
         $mform = $this->_form;
+        $mform->addElement('hidden', 'group', $this->_customdata['groupid'] ?? 0);
+        $mform->setType('group', PARAM_INT);
         $customdata = $this->_customdata;
         $isbranch = $customdata['action'] === 'branch';
 

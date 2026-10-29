@@ -64,6 +64,13 @@ if ($originpostid) {
         'deleted' => 0,
     ], '*', MUST_EXIST);
 }
+$access = new \mod_spatialforum\local\group_access($activity, $cm);
+$access->require_track($track);
+if (!empty($origin)) {
+    $access->require_post($origin, true);
+} else if (!$access->can_write($access->selected_group())) {
+    throw new moodle_exception('groupaccessdenied', 'mod_spatialforum');
+}
 $createstrack = $action === 'branch' || $originpostid !== 0;
 if ($createstrack) {
     require_capability('mod/spatialforum:startbranch', $context);
@@ -95,6 +102,7 @@ $PAGE->set_heading(format_string($course->fullname));
 
 $form = new post_form(null, [
     'cmid' => $cm->id,
+    'groupid' => $access->selected_group(),
     'action' => $action,
     'trackid' => $track->id,
     'originpostid' => $originpostid,

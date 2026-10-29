@@ -38,7 +38,8 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
         $userinfo = $this->get_setting_value('userinfo');
 
         $spatialforum = new backup_nested_element('spatialforum', ['id'], [
-            'name', 'intro', 'introformat', 'roottrackid', 'maxdepth', 'enablecolors', 'enablelikes', 'locked', 'timemodified',
+            'name', 'intro', 'introformat', 'roottrackid', 'groupready', 'maxdepth',
+            'enablecolors', 'enablelikes', 'locked', 'timemodified',
         ]);
         $tracks = new backup_nested_element('tracks');
         $track = new backup_nested_element('track', ['id'], [
@@ -46,7 +47,8 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
         ]);
         $posts = new backup_nested_element('posts');
         $post = new backup_nested_element('post', ['id'], [
-            'trackid', 'replytoid', 'showparent', 'replyparts', 'userid', 'subject', 'message', 'messageformat', 'deleted',
+            'groupid', 'trackid', 'replytoid', 'showparent', 'replyparts', 'userid',
+            'subject', 'message', 'messageformat', 'deleted',
             'timecreated', 'timemodified',
         ]);
         $reads = new backup_nested_element('reads');
@@ -84,6 +86,7 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
         }
 
         $post->annotate_ids('user', 'userid');
+        $post->annotate_ids('group', 'groupid');
         $read->annotate_ids('user', 'userid');
         $like->annotate_ids('user', 'userid');
         $spatialforum->annotate_files('mod_spatialforum', 'intro', null);

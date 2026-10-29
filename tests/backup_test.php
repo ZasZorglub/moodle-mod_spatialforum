@@ -162,4 +162,32 @@ final class backup_test extends \restore_date_testcase {
             $newcm->id
         ));
     }
+
+    /**
+     * Private conversation audiences follow remapped course groups on restore.
+     */
+    public function test_restore_remaps_group_audiences(): void {
+        global $DB;
+        [$course, $activity] = $this->create_course_and_module('spatialforum');
+        $group = $this->getDataGenerator()->create_group(['courseid' => $course->id, 'name' => 'QA private group']);
+        forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'Grouped backup',
+            'Content',
+            FORMAT_HTML,
+            0,
+            false,
+            '[]',
+            $group->id
+        );
+        $newcourseid = $this->backup_and_restore($course);
+        $new = $DB->get_record('spatialforum', ['course' => $newcourseid], '*', MUST_EXIST);
+        $post = $DB->get_record('spatialforum_posts', ['spatialforumid' => $new->id], '*', MUST_EXIST);
+        $newgroup = $DB->get_record('groups', ['id' => $post->groupid], '*', MUST_EXIST);
+        $this->assertNotEquals($group->id, $newgroup->id);
+        $this->assertEquals($newcourseid, $newgroup->courseid);
+        $this->assertSame('QA private group', $newgroup->name);
+    }
 }

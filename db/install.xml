@@ -8,7 +8,7 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 -->
-<XMLDB PATH="mod/spatialforum/db" VERSION="2026102504" COMMENT="XMLDB file for mod_spatialforum"
+<XMLDB PATH="mod/spatialforum/db" VERSION="2026102900" COMMENT="XMLDB file for mod_spatialforum"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
@@ -19,6 +19,7 @@
         <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true"/>
         <FIELD NAME="intro" TYPE="text" NOTNULL="false"/>
         <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="groupready" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1"/>
         <FIELD NAME="roottrackid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="maxdepth" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="8"/>
         <FIELD NAME="enablecolors" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1"/>
@@ -56,6 +57,7 @@
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="spatialforumid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="groupid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="-1"/>
         <FIELD NAME="trackid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="replytoid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="showparent" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
@@ -75,6 +77,7 @@
         <KEY NAME="user" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
+        <INDEX NAME="forumgroup" UNIQUE="false" FIELDS="spatialforumid, groupid"/>
         <INDEX NAME="tracktime" UNIQUE="false" FIELDS="trackid, timecreated"/>
         <INDEX NAME="replyto" UNIQUE="false" FIELDS="replytoid"/>
       </INDEXES>

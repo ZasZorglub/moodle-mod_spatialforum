@@ -71,6 +71,16 @@ if ($data['initialview'] !== '') {
 }
 
 echo $OUTPUT->header();
+$groupaccess = new \mod_spatialforum\local\group_access($activity, $cm);
+if ($groupaccess->pending()) {
+    echo $OUTPUT->notification(get_string('groupmigrationrequired', 'mod_spatialforum'), 'warning');
+    echo html_writer::link(
+        new moodle_url('/mod/spatialforum/groups.php', ['id' => $cm->id]),
+        get_string('reviewgroupaudience', 'mod_spatialforum')
+    );
+}
+groups_print_activity_menu($cm, new moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id]));
+
 // Moodle's activity header already renders the module introduction.
 echo $OUTPUT->render_from_template('mod_spatialforum/main', $data);
 echo $OUTPUT->footer();

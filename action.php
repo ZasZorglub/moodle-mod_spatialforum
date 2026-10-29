@@ -48,6 +48,7 @@ if ($action === 'toggletrack') {
         'id' => $trackid,
         'spatialforumid' => $activity->id,
     ], '*', MUST_EXIST);
+    \mod_spatialforum\local\group_access::for_activity($activity->id)->require_track($track, true);
     $track->locked = empty($track->locked) ? 1 : 0;
     $track->timemodified = time();
     $DB->update_record('spatialforum_tracks', $track);
@@ -58,6 +59,7 @@ if ($action === 'toggletrack') {
         'id' => $postid,
         'spatialforumid' => $activity->id,
     ], '*', MUST_EXIST);
+    \mod_spatialforum\local\group_access::for_activity($activity->id)->require_post($post, true);
     if (!optional_param('confirmed', 0, PARAM_BOOL)) {
         $PAGE->set_url('/mod/spatialforum/action.php', ['id' => $cm->id, 'action' => 'deletepost', 'postid' => $post->id]);
         $PAGE->set_title(get_string('delete'));

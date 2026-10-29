@@ -31,6 +31,8 @@
 function spatialforum_supports($feature) {
     return match ($feature) {
         FEATURE_MOD_INTRO => true,
+        FEATURE_GROUPS => true,
+        FEATURE_GROUPINGS => true,
         FEATURE_SHOW_DESCRIPTION => true,
         FEATURE_COMPLETION_TRACKS_VIEWS => true,
         FEATURE_BACKUP_MOODLE2 => true,
@@ -52,6 +54,7 @@ function spatialforum_add_instance(stdClass $data, $mform = null): int {
     $transaction = $DB->start_delegated_transaction();
     $data->timemodified = time();
     $data->roottrackid = 0;
+    $data->groupready = 1;
     $id = $DB->insert_record('spatialforum', $data);
 
     $track = (object) [
@@ -146,6 +149,10 @@ function spatialforum_pluginfile($course, $cm, $context, $filearea, $args, $forc
         'id' => $postid, 'spatialforumid' => $cm->instance, 'deleted' => 0,
         ])
     ) {
+        return false;
+    }
+    $post = $DB->get_record('spatialforum_posts', ['id' => $postid], '*', MUST_EXIST);
+    if (!\mod_spatialforum\local\group_access::for_activity($cm->instance)->can_view($post)) {
         return false;
     }
     $filename = array_pop($args);

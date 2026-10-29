@@ -56,6 +56,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             'userid' => 'privacy:metadata:spatialforum_posts:userid',
             'subject' => 'privacy:metadata:spatialforum_posts:subject',
             'message' => 'privacy:metadata:spatialforum_posts:message',
+            'groupid' => 'privacy:metadata:spatialforum_posts:groupid',
             'showparent' => 'privacy:metadata:spatialforum_posts:showparent',
             'replyparts' => 'privacy:metadata:spatialforum_posts:replyparts',
             'timecreated' => 'privacy:metadata:spatialforum_posts:timecreated',
@@ -163,7 +164,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
                     'userid' => $userid,
                 ],
                 'timecreated ASC',
-                'id,trackid,replytoid,showparent,replyparts,subject,message,messageformat,timecreated,timemodified'
+                'id,groupid,trackid,replytoid,showparent,replyparts,subject,message,messageformat,timecreated,timemodified'
             );
             $reads = $DB->get_records_sql(
                 'SELECT r.*

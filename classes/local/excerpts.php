@@ -69,6 +69,7 @@ class excerpts {
         ) {
             throw new \moodle_exception('invalidexcerpt', 'mod_spatialforum');
         }
+        group_access::for_activity($origin->spatialforumid)->require_post($origin, true);
         $source = self::source($origin, $context);
         $parts = [];
         foreach ($items as $item) {
@@ -100,16 +101,19 @@ class excerpts {
         \context $context,
         int $cmid,
         ?array $posts = null,
-        ?array $users = null
+        ?array $users = null,
+        ?group_access $access = null
     ): string {
         global $DB;
+        $access = $access ?? group_access::for_activity($post->spatialforumid);
+        $access->require_post($post);
         $html = '';
         $parts = json_decode($post->replyparts ?? '[]', true) ?: [];
         if ($parts) {
             $origin = $posts !== null ? ($posts[$post->replytoid] ?? false)
                 : $DB->get_record('spatialforum_posts', ['id' => $post->replytoid,
                     'spatialforumid' => $post->spatialforumid, 'deleted' => 0]);
-            if ($origin && ($origin->deleted || $origin->spatialforumid != $post->spatialforumid)) {
+            if ($origin && ($origin->deleted || $origin->spatialforumid != $post->spatialforumid || !$access->can_view($origin))) {
                 $origin = false;
             }
             $source = $origin ? self::source($origin, $context) : '';

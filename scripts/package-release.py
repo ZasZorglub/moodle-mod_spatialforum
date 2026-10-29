@@ -17,6 +17,8 @@ parser.add_argument('--output', type=Path, required=True)
 args = parser.parse_args()
 version = (root / 'version.php').read_text()
 release = re.search(r"\$plugin->release = '([^']+)'", version).group(1)
+build = re.search(r'\$plugin->version = (\d+)', version).group(1)
+timestamp = (int(build[:4]), int(build[4:6]), int(build[6:8]), 0, 0, 0)
 files = subprocess.check_output(
     ['git', 'ls-files', '--cached', '-z'], cwd=root
 ).decode().split('\0')
@@ -41,11 +43,11 @@ with zipfile.ZipFile(args.output, 'w', compression=zipfile.ZIP_DEFLATED) as arch
             if str(parent) != '.':
                 directories.add('spatialforum/' + parent.as_posix() + '/')
     for name in sorted(directories):
-        info = zipfile.ZipInfo(name, date_time=(2026, 10, 28, 0, 0, 0))
+        info = zipfile.ZipInfo(name, date_time=timestamp)
         info.external_attr = (0o40755 << 16) | 0x10
         archive.writestr(info, b'')
     for name in files:
-        info = zipfile.ZipInfo('spatialforum/' + name, date_time=(2026, 10, 28, 0, 0, 0))
+        info = zipfile.ZipInfo('spatialforum/' + name, date_time=timestamp)
         info.compress_type = zipfile.ZIP_DEFLATED
         info.external_attr = 0o100644 << 16
         archive.writestr(info, (root / name).read_bytes())

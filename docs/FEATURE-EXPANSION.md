@@ -4,7 +4,7 @@ Prepared 29 October 2026. **Implementation plan; these features are not implemen
 
 ## Baseline and product intent
 
-Source baseline: `2d83ccfe0397e61bc207fa40cff9a96fc3892ca6`, branch `feat/replies-likes-navigation`, release `0.6.1-rc.1` / `2026102800`. The working tree was clean when inspected. The user's request is to address all five omissions; the exact first-version choices below are pending answers, not approved requirements.
+Source baseline: `2d83ccfe0397e61bc207fa40cff9a96fc3892ca6`, branch `feat/replies-likes-navigation`, release `0.6.1-rc.1` / `2026102800`. The working tree was clean when inspected. The user's request is to address all five omissions; the first-version choices below were confirmed by the user on 29 October 2026.
 
 Keep the complete branching discussion understandable when reading, replying, receiving notifications or changing device. Preserve the in-place threaded web map, hierarchical List, linked selective quotations and Moodle-managed post media. Test content and UI verification use English.
 
@@ -23,11 +23,11 @@ Observed source evidence:
 
 | Decision | Recommended first version | Alternatives and impact | Status |
 | --- | --- | --- | --- |
-| Assessment | One teacher-assigned grade and feedback per participant for the whole activity. | Individual-post ratings require aggregation/rating permissions and an additional assessment workflow; both significantly expand this slice. | Awaiting user answer. |
-| App connectivity | Online reading and replying inside the Moodle App. | Offline reading/writing adds local content retention, outbox synchronisation, stale permissions and conflict handling. | Awaiting user answer. |
-| Standard-forum import | Preview and copy into a new activity in the same course; preserve the source. | Merging needs collision/recovery policies; ongoing synchronisation needs ownership and update/deletion reconciliation. | Awaiting user answer. |
+| Assessment | One teacher-assigned grade and feedback per participant for the whole activity. | Individual-post ratings require aggregation/rating permissions and an additional assessment workflow; both significantly expand this slice. | Confirmed by user on 29 October 2026. |
+| App connectivity | Online reading and replying inside the Moodle App. | Offline reading/writing adds local content retention, outbox synchronisation, stale permissions and conflict handling. | Confirmed by user on 29 October 2026. |
+| Standard-forum import | Preview and copy into a new activity in the same course; preserve the source. | Merging needs collision/recovery policies; ongoing synchronisation needs ownership and update/deletion reconciliation. | Confirmed by user on 29 October 2026. |
 
-These recommendations are proposals, not silent acceptance. Group implementation planning can continue independently. Do not implement the affected assessment, offline-storage or import-mutation behaviour until its decision is resolved.
+Confirmed scope: manual whole-activity grade/feedback, online App reading/replies and preview/copy to a new activity. Implement and verify the slices in order. The detailed behaviours below are implementation proposals subject to evidence and the preserved product contract.
 
 ## Delivery order and completion evidence
 

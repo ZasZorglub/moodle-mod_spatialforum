@@ -218,4 +218,72 @@ final class upgrade_test extends \advanced_testcase {
         $this->assertEquals($before, $after);
         $this->assertTrue(xmldb_spatialforum_upgrade((int) get_config('mod_spatialforum', 'version')));
     }
+
+    /**
+     * Old shared posts survive upgrade and need explicit review before grouped use.
+     */
+    public function test_group_upgrade_preserves_content_and_requires_review(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        $id = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            get_admin()->id,
+            'Legacy shared post',
+            'Original content',
+            FORMAT_HTML
+        );
+        $dbman = $DB->get_manager();
+        $posts = new \xmldb_table('spatialforum_posts');
+        $activitytable = new \xmldb_table('spatialforum');
+        $groupfield = new \xmldb_field(
+            'groupid',
+            XMLDB_TYPE_INTEGER,
+            '10',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            '-1',
+            'spatialforumid'
+        );
+        $readyfield = new \xmldb_field(
+            'groupready',
+            XMLDB_TYPE_INTEGER,
+            '1',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            '1',
+            'introformat'
+        );
+        $index = new \xmldb_index('forumgroup', XMLDB_INDEX_NOTUNIQUE, ['spatialforumid', 'groupid']);
+        try {
+            $dbman->drop_index($posts, $index);
+            $dbman->drop_field($posts, $groupfield);
+            $dbman->drop_field($activitytable, $readyfield);
+            set_config('version', 2026102800, 'mod_spatialforum');
+            $this->assertTrue(xmldb_spatialforum_upgrade(2026102800));
+            $this->assertEquals(0, $DB->get_field('spatialforum', 'groupready', ['id' => $activity->id]));
+            $post = $DB->get_record('spatialforum_posts', ['id' => $id], '*', MUST_EXIST);
+            $this->assertSame('Original content', $post->message);
+            $this->assertEquals(-1, $post->groupid);
+            $DB->set_field('spatialforum', 'groupready', 1, ['id' => $activity->id]);
+            set_config('version', 2026102800, 'mod_spatialforum');
+            xmldb_spatialforum_upgrade(2026102800);
+            $this->assertEquals(1, $DB->get_field('spatialforum', 'groupready', ['id' => $activity->id]));
+        } finally {
+            if (!$dbman->field_exists($posts, $groupfield)) {
+                $dbman->add_field($posts, $groupfield);
+            }
+            if (!$dbman->field_exists($activitytable, $readyfield)) {
+                $dbman->add_field($activitytable, $readyfield);
+            }
+            if (!$dbman->index_exists($posts, $index)) {
+                $dbman->add_index($posts, $index);
+            }
+        }
+    }
 }
