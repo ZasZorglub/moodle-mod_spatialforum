@@ -102,6 +102,9 @@ class group_access {
      * @return bool
      */
     public function can_view(\stdClass $post): bool {
+        if (!empty($this->activity->importstate)) {
+            return false;
+        }
         if ((int) $post->spatialforumid !== (int) $this->activity->id) {
             return false;
         }
@@ -122,6 +125,9 @@ class group_access {
      * @return bool
      */
     public function can_write(int $groupid): bool {
+        if (!empty($this->activity->importstate)) {
+            return false;
+        }
         if ($this->pending()) {
             return false;
         }
@@ -166,6 +172,9 @@ class group_access {
      */
     public function require_track(\stdClass $track, bool $write = false): void {
         global $DB;
+        if (!empty($this->activity->importstate)) {
+            throw new \moodle_exception('importinprogress', 'mod_spatialforum');
+        }
         if ((int) $track->spatialforumid !== (int) $this->activity->id) {
             throw new \moodle_exception('groupaccessdenied', 'mod_spatialforum');
         }
@@ -203,6 +212,9 @@ class group_access {
      */
     public function sql(string $alias = 'p'): array {
         global $DB;
+        if (!empty($this->activity->importstate)) {
+            return ['1=0', []];
+        }
         if ($this->mode === NOGROUPS || ($this->pending() && $this->all)) {
             return ['1=1', []];
         }

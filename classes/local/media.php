@@ -160,4 +160,45 @@ class media {
     public static function delete(int $postid, \context $context): void {
         get_file_storage()->delete_area_files($context->id, 'mod_spatialforum', 'post', $postid);
     }
+
+    /**
+     * Display copied forum attachments without changing the source message's text format.
+     * @param \stdClass $post
+     * @param \context $context
+     * @return string
+     */
+    public static function imported_attachments(\stdClass $post, \context $context): string {
+        if (empty($post->importedattachments)) {
+            return '';
+        }
+        $html = '';
+        foreach (get_file_storage()->get_area_files($context->id, 'mod_spatialforum', 'post', $post->id, 'id', false) as $file) {
+            if (!str_starts_with($file->get_filepath(), '/imported-attachments/')) {
+                continue;
+            }
+            $url = \moodle_url::make_pluginfile_url(
+                $context->id,
+                'mod_spatialforum',
+                'post',
+                $post->id,
+                $file->get_filepath(),
+                $file->get_filename()
+            );
+            $extension = strtolower(pathinfo($file->get_filename(), PATHINFO_EXTENSION));
+            $label = $file->get_filename();
+            if (in_array($extension, ['png', 'jpg', 'jpeg'], true)) {
+                $content = \html_writer::empty_tag('img', ['src' => $url, 'alt' => $label, 'class' => 'img-fluid']);
+            } else if (in_array($extension, ['mp3', 'mp4'], true)) {
+                $content = \html_writer::tag(
+                    $extension === 'mp3' ? 'audio' : 'video',
+                    \html_writer::link($url, s($label)),
+                    ['src' => $url, 'controls' => 'controls', 'style' => 'max-width:100%']
+                );
+            } else {
+                $content = \html_writer::link($url, s($label));
+            }
+            $html .= \html_writer::tag('div', $content, ['class' => 'spatialforum-imported-attachment']);
+        }
+        return $html;
+    }
 }

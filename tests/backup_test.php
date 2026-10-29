@@ -148,6 +148,8 @@ final class backup_test extends \restore_date_testcase {
         $cm = get_coursemodule_from_instance('spatialforum', $activity->id);
         $context = \context_module::instance($cm->id);
         $postid = forum::create_post($activity, $activity->roottrackid, $user->id, 'QA media backup', 'QA', FORMAT_HTML);
+        $DB->set_field('spatialforum_posts', 'discussionname', 'Original discussion title', ['id' => $postid]);
+        $DB->set_field('spatialforum_posts', 'importedattachments', 1, ['id' => $postid]);
         foreach (['qa.png', 'qa.mp3', 'qa.mp4'] as $filename) {
             get_file_storage()->create_file_from_string([
                 'contextid' => $context->id, 'component' => 'mod_spatialforum', 'filearea' => 'post',
@@ -166,6 +168,9 @@ final class backup_test extends \restore_date_testcase {
         $newcm = get_coursemodule_from_instance('spatialforum', $new->id);
         $newcontext = \context_module::instance($newcm->id);
         $post = $DB->get_record('spatialforum_posts', ['spatialforumid' => $new->id], '*', MUST_EXIST);
+        $this->assertSame('Original discussion title', $post->discussionname);
+        $this->assertEquals(1, $post->importedattachments);
+        $this->assertEquals(0, $new->importstate);
         $this->assertStringNotContainsString('$@SPATIALFORUM', $post->message);
         $this->assertStringContainsString('view.php?id=' . $newcm->id, $post->message);
         $decoded = html_entity_decode($post->message, ENT_QUOTES | ENT_HTML5);

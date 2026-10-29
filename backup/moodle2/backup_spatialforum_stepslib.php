@@ -35,6 +35,10 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
      * @return backup_nested_element
      */
     protected function define_structure(): backup_nested_element {
+        global $DB;
+        if ($DB->get_field('spatialforum', 'importstate', ['id' => $this->get_task()->get_activityid()])) {
+            throw new moodle_exception('importinprogress', 'mod_spatialforum');
+        }
         // Notification preferences and delivery queues are not copied: restored activities require fresh opt-in.
         $userinfo = $this->get_setting_value('userinfo');
 
@@ -48,7 +52,7 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
         ]);
         $posts = new backup_nested_element('posts');
         $post = new backup_nested_element('post', ['id'], [
-            'groupid', 'trackid', 'replytoid', 'showparent', 'replyparts', 'userid',
+            'groupid', 'trackid', 'replytoid', 'showparent', 'replyparts', 'importedattachments', 'discussionname', 'userid',
             'subject', 'message', 'messageformat', 'deleted',
             'timecreated', 'timemodified',
         ]);

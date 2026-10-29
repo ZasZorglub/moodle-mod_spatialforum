@@ -1,0 +1,36 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * One resumable standard-forum copy page.
+ * @package mod_spatialforum
+ * @copyright 2026 Anders Christian Sloth
+ * @license https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace mod_spatialforum\task;
+
+/**
+ * Authorisation and source integrity are checked inside every execution.
+ */
+class import_forum extends \core\task\adhoc_task {
+    /**
+     * Execute one page; the domain API queues its continuation only after success.
+     */
+    public function execute(): void {
+        \mod_spatialforum\local\forum_import::execute((int) $this->get_custom_data()->importid);
+    }
+}

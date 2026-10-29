@@ -12,6 +12,12 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 For setup and use, see [the user guide](https://github.com/ZasZorglub/moodle-mod_spatialforum-support/blob/main/USER-GUIDE.md). For support and issue reporting, see [the support policy](SUPPORT.md).
 
+## 0.10.0 standard-forum import
+
+Teachers with course activity-management/import permissions can use **Import a standard forum** in the course navigation. Preview reports the source counts, supported media, exclusions and blockers before explicit confirmation. Supported source types are General and Each person posts one discussion. The importer creates a new hidden activity, preserves discussion titles, post subjects, authors, dates, parent relationships, group scope and supported files, and remaps links inside the source. The source remains unchanged.
+
+Moodle cron copies and rewrites up to 100 posts per task. Incomplete copies cannot be read, edited or backed up. Review the completed hidden copy before publishing through normal Moodle settings. Changed sources, private/timed material, unsupported files, invalid trees and broader read permissions block import. Failed jobs can resume the same unchanged snapshot or discard only the incomplete target. No subscriptions, historical notifications, reads, ratings, grades or completion are imported. This is a one-time copy, not ongoing synchronisation. See [import verification and limits](tests/IMPORT-0100.md).
+
 ## 0.9.0 whole-activity grading
 
 Editing teachers can enable points or a course/site scale in the normal activity **Grade** settings. New and upgraded activities default to None. **Assess participants** opens a paginated, group-filtered roster and one manual score/private-feedback form per active eligible participant. In both separate and visible groups, this plugin requires a shared group within the configured grouping unless the grader has access-all-groups. Learners use **Your grade and feedback** to see their permitted own result. Grades and feedback never appear in conversation cards.
@@ -106,11 +112,11 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 
 ## Current MVP limits
 
-The [feature expansion plan](docs/FEATURE-EXPANSION.md) records implemented development slices and the remaining import/App work.
+The [feature expansion plan](docs/FEATURE-EXPANSION.md) records implemented development slices and the remaining App work.
 
 - No separate attachment list, per-post ratings or activity completion based on posting
 - No Moodle App/mobile service implementation
-- No import or synchronization with the standard Moodle forum activity
+- No ongoing synchronisation with the standard Moodle forum activity; import supports the restricted subset described above
 - 3D is a progressive visual layer; core navigation remains conventional links for accessibility
 
 ## Security and operations

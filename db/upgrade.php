@@ -215,5 +215,64 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         }
         upgrade_mod_savepoint(true, 2026102903, 'spatialforum');
     }
+    if ($oldversion < 2026102904) {
+        $posttable = new xmldb_table('spatialforum_posts');
+        $attachmentfield = new xmldb_field(
+            'importedattachments',
+            XMLDB_TYPE_INTEGER,
+            '1',
+            null,
+            XMLDB_NOTNULL,
+            null,
+            '0',
+            'replyparts'
+        );
+        if (!$dbman->field_exists($posttable, $attachmentfield)) {
+            $dbman->add_field($posttable, $attachmentfield);
+        }
+        $titlefield = new xmldb_field('discussionname', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'subject');
+        if (!$dbman->field_exists($posttable, $titlefield)) {
+            $dbman->add_field($posttable, $titlefield);
+        }
+        $field = new xmldb_field('importstate', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'grade');
+        $activitytable = new xmldb_table('spatialforum');
+        if (!$dbman->field_exists($activitytable, $field)) {
+            $dbman->add_field($activitytable, $field);
+        }
+        $table = new xmldb_table('spatialforum_imports');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $integers = [
+            'sourcecmid', 'courseid', 'targetid', 'userid', 'totalposts', 'copiedposts', 'timecreated', 'timemodified',
+        ];
+        foreach ($integers as $name) {
+            $table->add_field($name, XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        }
+        foreach (['requestkey', 'fingerprint'] as $name) {
+            $table->add_field($name, XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+        }
+        $table->add_field('status', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('errorcode', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('target', XMLDB_KEY_FOREIGN_UNIQUE, ['targetid'], 'spatialforum', ['id']);
+        $table->add_index('requestkey', XMLDB_INDEX_UNIQUE, ['requestkey']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        $table = new xmldb_table('spatialforum_import_map');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        foreach (['importid', 'sourcepostid', 'sourceparentid', 'discussionid', 'targetpostid'] as $name) {
+            $table->add_field($name, XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        }
+        $table->add_field('depth', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('rewritten', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('import', XMLDB_KEY_FOREIGN, ['importid'], 'spatialforum_imports', ['id']);
+        $table->add_index('sourcepost', XMLDB_INDEX_UNIQUE, ['importid', 'sourcepostid']);
+        $table->add_index('targetpost', XMLDB_INDEX_NOTUNIQUE, ['targetpostid']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        upgrade_mod_savepoint(true, 2026102904, 'spatialforum');
+    }
     return true;
 }

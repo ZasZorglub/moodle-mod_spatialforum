@@ -108,6 +108,12 @@ class excerpts {
         $access = $access ?? group_access::for_activity($post->spatialforumid);
         $access->require_post($post);
         $html = '';
+        if (!empty($post->discussionname) && $post->discussionname !== $post->subject) {
+            $html .= \html_writer::div(
+                s(get_string('importdiscussion', 'mod_spatialforum', $post->discussionname)),
+                'spatialforum-import-discussion'
+            );
+        }
         $parts = json_decode($post->replyparts ?? '[]', true) ?: [];
         if ($parts) {
             $origin = $posts !== null ? ($posts[$post->replytoid] ?? false)
@@ -141,6 +147,7 @@ class excerpts {
                 $html .= \html_writer::div(nl2br(s($part['comment'] ?? '')), 'spatialforum-excerpt-comment');
             }
         }
-        return $html . format_text(media::message($post, $context), $post->messageformat, ['context' => $context]);
+        return $html . format_text(media::message($post, $context), $post->messageformat, ['context' => $context])
+            . media::imported_attachments($post, $context);
     }
 }

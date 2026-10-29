@@ -26,6 +26,12 @@
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = [
+    'mod/spatialforum:import' => [
+        'riskbitmask' => RISK_PERSONAL,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => ['editingteacher' => CAP_ALLOW, 'manager' => CAP_ALLOW],
+    ],
     'mod/spatialforum:grade' => [
         'riskbitmask' => RISK_PERSONAL,
         'captype' => 'write',

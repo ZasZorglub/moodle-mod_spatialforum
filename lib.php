@@ -93,6 +93,9 @@ function spatialforum_update_instance(stdClass $data, $mform = null): bool {
     global $DB;
 
     $existing = $DB->get_record('spatialforum', ['id' => $data->instance], '*', MUST_EXIST);
+    if (!empty($existing->importstate)) {
+        throw new moodle_exception('importinprogress', 'mod_spatialforum');
+    }
     $data->course = $existing->course;
     $data->grade = $data->grade ?? $existing->grade;
     \mod_spatialforum\local\grading::validate_definition($data, $existing);
@@ -130,6 +133,10 @@ function spatialforum_delete_instance(int $id): bool {
     }
     $transaction = $DB->start_delegated_transaction();
     $postids = $DB->get_fieldset_select('spatialforum_posts', 'id', 'spatialforumid = :id', ['id' => $id]);
+    if ($job = $DB->get_record('spatialforum_imports', ['targetid' => $id])) {
+        $DB->delete_records('spatialforum_import_map', ['importid' => $job->id]);
+        $DB->delete_records('spatialforum_imports', ['id' => $job->id]);
+    }
     if ($postids) {
         $DB->delete_records_list('spatialforum_likes', 'postid', $postids);
         $DB->delete_records_list('spatialforum_read', 'postid', $postids);
@@ -268,4 +275,22 @@ function spatialforum_scale_used($instanceid, $scaleid): bool {
 function spatialforum_scale_used_anywhere($scaleid): bool {
     global $DB;
     return $DB->record_exists('spatialforum', ['grade' => -(int) $scaleid]);
+}
+
+/**
+ * Provide an entry point before any spatial forum has been created in the course.
+ * @param navigation_node $navigation
+ * @param stdClass $course
+ * @param context_course $context
+ */
+function spatialforum_extend_navigation_course($navigation, $course, $context): void {
+    if (has_capability('mod/spatialforum:import', $context) && has_capability('moodle/course:manageactivities', $context)) {
+        $navigation->add(
+            get_string('importforum', 'mod_spatialforum'),
+            new moodle_url('/mod/spatialforum/import.php', ['courseid' => $course->id]),
+            navigation_node::TYPE_SETTING,
+            null,
+            'spatialforumimport'
+        );
+    }
 }

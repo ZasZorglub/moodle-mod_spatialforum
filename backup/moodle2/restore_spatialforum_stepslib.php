@@ -76,6 +76,8 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $record->groupready = $record->groupready ?? 0;
         $record->enablelikes = $record->enablelikes ?? 1;
         $record->grade = $record->grade ?? 0;
+        // A restored copy is independent of an excluded processing job.
+        $record->importstate = 0;
         if ($record->grade < 0) {
             $scaleid = $this->get_mappingid('scale', abs($record->grade));
             if (!$scaleid) {
@@ -132,6 +134,8 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $record->replytoid = $this->get_mappingid('spatialforum_post', $record->replytoid, 0);
         $record->showparent = $record->showparent ?? 1;
         $record->replyparts = $record->replyparts ?? null;
+        $record->importedattachments = $record->importedattachments ?? 0;
+        $record->discussionname = $record->discussionname ?? null;
         $record->groupid = (int) ($record->groupid ?? -1);
         if ($record->groupid > 0) {
             $record->groupid = (int) $this->get_mappingid('group', $record->groupid, -2);

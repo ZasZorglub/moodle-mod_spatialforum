@@ -55,6 +55,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
         $collection->add_database_table('spatialforum_posts', [
             'userid' => 'privacy:metadata:spatialforum_posts:userid',
             'subject' => 'privacy:metadata:spatialforum_posts:subject',
+            'discussionname' => 'privacy:metadata:spatialforum_posts:discussionname',
             'message' => 'privacy:metadata:spatialforum_posts:message',
             'groupid' => 'privacy:metadata:spatialforum_posts:groupid',
             'showparent' => 'privacy:metadata:spatialforum_posts:showparent',
@@ -92,6 +93,15 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
         $collection->link_subsystem('core', 'privacy:metadata:tasks');
         $collection->link_subsystem('core_files', 'privacy:metadata:files');
         $collection->link_subsystem('core_grades', 'privacy:metadata:grades');
+        $collection->add_database_table('spatialforum_imports', [
+            'userid' => 'privacy:metadata:imports:userid', 'sourcecmid' => 'privacy:metadata:imports:sourcecmid',
+            'targetid' => 'privacy:metadata:imports:targetid', 'requestkey' => 'privacy:metadata:imports:requestkey',
+            'status' => 'privacy:metadata:imports:status', 'timecreated' => 'privacy:metadata:imports:timecreated',
+        ], 'privacy:metadata:imports');
+        $collection->add_database_table('spatialforum_import_map', [
+            'sourcepostid' => 'privacy:metadata:importmap:sourcepostid',
+            'targetpostid' => 'privacy:metadata:importmap:targetpostid',
+        ], 'privacy:metadata:importmap');
         return $collection;
     }
 
@@ -101,7 +111,42 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
 
      */
     public static function get_contexts_for_userid(int $userid): contextlist {
+        global $DB;
         $contextlist = new contextlist();
+        $contextlist->add_from_sql(
+            'SELECT ctx.id FROM {context} ctx
+            JOIN {course_modules} cm ON cm.id = ctx.instanceid AND ctx.contextlevel = :level
+            JOIN {modules} m ON m.id = cm.module AND m.name = :modname
+            JOIN {spatialforum_imports} i ON i.targetid = cm.instance
+            WHERE i.userid = :owner OR EXISTS (SELECT 1 FROM {forum_posts} p
+                JOIN {forum_discussions} d ON d.id = p.discussion
+                JOIN {course_modules} scm ON scm.instance = d.forum
+                JOIN {modules} sm ON sm.id = scm.module AND sm.name = :smod
+                JOIN {spatialforum_imports} si ON si.sourcecmid = scm.id AND si.targetid = cm.instance
+                WHERE p.userid = :author)',
+            ['level' => CONTEXT_MODULE, 'modname' => 'spatialforum', 'smod' => 'forum',
+            'owner' => $userid,
+            'author' => $userid]
+        );
+        $sourcecontexts = $DB->get_fieldset_sql(
+            'SELECT DISTINCT targetcm.id
+               FROM {course_modules} targetcm
+               JOIN {modules} targetm ON targetm.id = targetcm.module AND targetm.name = :targetmod
+               JOIN {spatialforum_imports} i ON i.targetid = targetcm.instance
+               JOIN {course_modules} sourcecm ON sourcecm.id = i.sourcecmid
+               JOIN {modules} sourcem ON sourcem.id = sourcecm.module AND sourcem.name = :sourcemod
+               JOIN {forum_discussions} d ON d.forum = sourcecm.instance
+               JOIN {forum_posts} p ON p.discussion = d.id
+              WHERE p.userid = :userid',
+            ['targetmod' => 'spatialforum', 'sourcemod' => 'forum', 'userid' => $userid]
+        );
+        foreach ($sourcecontexts as $cmid) {
+            $contextlist->add_from_sql(
+                'SELECT ctx.id FROM {context} ctx JOIN {course_modules} cm ON cm.id = ctx.instanceid
+                  WHERE ctx.contextlevel = :level AND cm.id = :cmid',
+                ['level' => CONTEXT_MODULE, 'cmid' => $cmid]
+            );
+        }
         $sql = "SELECT ctx.id
                   FROM {context} ctx
                   JOIN {course_modules} cm ON cm.id = ctx.instanceid AND ctx.contextlevel = :contextlevel
@@ -145,6 +190,14 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
         if (!$cm) {
             return;
         }
+        $userlist->add_from_sql(
+            'userid',
+            'SELECT userid FROM {spatialforum_imports} WHERE targetid = :targetid',
+            ['targetid' => $cm->instance]
+        );
+        $userlist->add_from_sql('userid', 'SELECT p.userid FROM {forum_posts} p
+            JOIN {spatialforum_import_map} im ON im.sourcepostid = p.id
+            JOIN {spatialforum_imports} i ON i.id = im.importid WHERE i.targetid = :targetid', ['targetid' => $cm->instance]);
         foreach (['spatialforum_subscriptions', 'spatialforum_deliveries'] as $table) {
             $userlist->add_from_sql(
                 'userid',
@@ -198,7 +251,8 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
                     'userid' => $userid,
                 ],
                 'timecreated ASC',
-                'id,groupid,trackid,replytoid,showparent,replyparts,subject,message,messageformat,timecreated,timemodified'
+                'id,groupid,trackid,replytoid,showparent,replyparts,subject,discussionname,' .
+                    'message,messageformat,timecreated,timemodified'
             );
             $reads = $DB->get_records_sql(
                 'SELECT r.*
@@ -214,6 +268,15 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
                 ['forumid' => $cm->instance, 'userid' => $userid]
             );
             $data = (object) [
+                'imports' => array_values($DB->get_records(
+                    'spatialforum_imports',
+                    ['targetid' => $cm->instance, 'userid' => $userid]
+                )),
+                'importmaps' => array_values($DB->get_records_sql('SELECT im.* FROM {spatialforum_import_map} im
+                    JOIN {spatialforum_imports} i ON i.id = im.importid
+                    LEFT JOIN {forum_posts} sp ON sp.id = im.sourcepostid
+                    LEFT JOIN {spatialforum_posts} tp ON tp.id = im.targetpostid
+                    WHERE i.targetid = ? AND (sp.userid = ? OR tp.userid = ?)', [$cm->instance, $userid, $userid])),
                 'subscriptions' => array_values($DB->get_records('spatialforum_subscriptions', [
                     'spatialforumid' => $cm->instance, 'userid' => $userid,
                 ])),
@@ -256,6 +319,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             return;
         }
         $DB->delete_records('spatialforum_subscriptions', ['spatialforumid' => $cm->instance]);
+        \mod_spatialforum\local\forum_import::erase_user_data($cm->instance);
         $DB->delete_records('spatialforum_deliveries', ['spatialforumid' => $cm->instance]);
         $postids = $DB->get_fieldset_select('spatialforum_posts', 'id', 'spatialforumid = ?', [$cm->instance]);
         if ($postids) {
@@ -315,6 +379,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             return;
         }
         $DB->delete_records('spatialforum_subscriptions', ['spatialforumid' => $cm->instance, 'userid' => $userid]);
+        \mod_spatialforum\local\forum_import::erase_user_data($cm->instance, $userid);
         $DB->delete_records('spatialforum_deliveries', ['spatialforumid' => $cm->instance, 'userid' => $userid]);
         $postids = $DB->get_fieldset_select(
             'spatialforum_posts',
@@ -347,7 +412,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             }
             [$insql, $params] = $DB->get_in_or_equal($postids, SQL_PARAMS_NAMED);
             $DB->execute("UPDATE {spatialforum_posts}
-                            SET userid = 0, subject = '', message = '', replyparts = NULL, deleted = 1
+                            SET userid = 0, subject = '', discussionname = NULL, message = '', replyparts = NULL, deleted = 1
                           WHERE id {$insql}", $params);
         }
         $readids = $DB->get_fieldset_sql(
