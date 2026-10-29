@@ -168,6 +168,9 @@ class forum {
     ): int {
         global $DB;
 
+        if (!$originpostid && group_access::for_activity($activity->id)->uses_groups()) {
+            throw new \moodle_exception('groupaccessdenied', 'mod_spatialforum');
+        }
         if ($originpostid) {
             $origin = $DB->get_record('spatialforum_posts', ['id' => $originpostid,
                 'spatialforumid' => $activity->id], '*', MUST_EXIST);
@@ -291,7 +294,7 @@ class forum {
         } else {
             $groupid = $groupid ?? $access->selected_group();
         }
-        if (!$access->can_write($groupid)) {
+        if (!($parentid ? $access->can_write($groupid) : $access->can_start($groupid))) {
             throw new \moodle_exception('groupaccessdenied', 'mod_spatialforum');
         }
         if (trim($subject) === '' || \core_text::strlen(trim($subject)) > 255) {
@@ -727,7 +730,7 @@ class forum {
             'tree' => $treedata,
             'canreply' => has_capability('mod/spatialforum:reply', $context)
                 && !$activity->locked && !$newposttrack->locked
-                && $access->can_write($access->selected_group()),
+                && $access->can_start($access->selected_group()),
             'newposturl' => (new moodle_url('/mod/spatialforum/post.php', [
                 'id' => $cm->id,
                 'action' => 'reply',

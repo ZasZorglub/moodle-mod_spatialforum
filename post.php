@@ -68,7 +68,7 @@ $access = new \mod_spatialforum\local\group_access($activity, $cm);
 $access->require_track($track);
 if (!empty($origin)) {
     $access->require_post($origin, true);
-} else if (!$access->can_write($access->selected_group())) {
+} else if (!$access->can_start($access->selected_group())) {
     throw new moodle_exception('groupaccessdenied', 'mod_spatialforum');
 }
 $createstrack = $action === 'branch' || $originpostid !== 0;

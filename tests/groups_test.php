@@ -302,4 +302,71 @@ final class groups_test extends \advanced_testcase {
         $this->assertStringNotContainsString('B content', $html);
         $this->assertFalse(forum::export_reply_context($pb, $context, $cm->id)['available']);
     }
+
+    /**
+     * Match Moodle forum: shared replies work in visible groups but shared starts require staff.
+     */
+    public function test_shared_reply_policy_depends_on_group_mode(): void {
+        global $DB;
+        [, $activity, $cm, , $root, , , $alice, , , , $shared] = $this->fixture(VISIBLEGROUPS);
+        $this->setUser($alice);
+        $policy = new group_access($activity, $cm);
+        $this->assertTrue($policy->can_write(-1));
+        $this->assertFalse($policy->can_start(-1));
+        $id = forum::create_post($activity, $root->id, $alice->id, 'Shared reply', 'Reply', FORMAT_HTML, $shared);
+        $this->assertEquals(-1, $DB->get_field('spatialforum_posts', 'groupid', ['id' => $id]));
+        $this->denied(fn() => forum::create_post(
+            $activity,
+            $root->id,
+            $alice->id,
+            'Shared start',
+            'Content',
+            FORMAT_HTML,
+            0,
+            false,
+            '[]',
+            -1
+        ));
+        $DB->set_field('course_modules', 'groupmode', SEPARATEGROUPS, ['id' => $cm->id]);
+        $this->denied(fn() => forum::create_post(
+            $activity,
+            $root->id,
+            $alice->id,
+            'Forbidden shared reply',
+            'Reply',
+            FORMAT_HTML,
+            $shared
+        ));
+    }
+
+    /**
+     * Existing unlinked tracks remain readable when the activity has no group mode.
+     */
+    public function test_no_groups_preserves_legacy_unlinked_tracks(): void {
+        global $DB;
+        [, $activity, $cm, $context, $root] = $this->fixture(NOGROUPS);
+        $id = forum::create_track($activity, $root, 0, 'Legacy unlinked track');
+        $track = $DB->get_record('spatialforum_tracks', ['id' => $id], '*', MUST_EXIST);
+        $data = forum::export_view_data($activity, $cm, $track, $context);
+        $this->assertSame('Legacy unlinked track', $data['trackname']);
+    }
+
+    /**
+     * Group review cannot certify unresolved legacy branches containing posts.
+     */
+    public function test_legacy_review_rejects_unresolved_conversation_structure(): void {
+        global $DB;
+        [, $activity, $cm, , $root] = $this->fixture(NOGROUPS);
+        $id = forum::create_track($activity, $root, 0, 'Legacy unlinked track');
+        forum::create_post($activity, $id, get_admin()->id, 'Legacy content', 'Keep this content', FORMAT_HTML);
+        $DB->set_field('spatialforum', 'groupready', 0, ['id' => $activity->id]);
+        try {
+            group_access::review_legacy($activity->id, -1, true);
+            $this->fail('An unresolved branch was certified');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('groupreviewstructure', $e->errorcode);
+        }
+        $this->assertEquals(0, $DB->get_field('spatialforum', 'groupready', ['id' => $activity->id]));
+        $this->assertSame('Keep this content', $DB->get_field('spatialforum_posts', 'message', ['trackid' => $id]));
+    }
 }

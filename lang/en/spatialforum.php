@@ -74,6 +74,7 @@ $string['groupmigrationrequired'] = 'Existing conversations need an explicit aud
 $string['groupreviewbusy'] = 'An audience review is already running. Please try again.';
 $string['groupreviewcomplete'] = 'The audience of existing conversations has been recorded.';
 $string['groupreviewexplanation'] = 'This activity contains {$a} existing posts. The selected audience will apply to all existing posts and replies. Choosing All participants explicitly shares these conversations with everyone who can access the activity. No posts are deleted or copied. Cancel if different conversations need different audiences.';
+$string['groupreviewstructure'] = 'An existing branch with posts has no valid origin link. Repair its conversation links before enabling group mode; no audience has been changed.';
 $string['includeparent'] = 'Include the previous post as a quote';
 $string['includeparent_help'] = 'Select this to display the post you are replying to as a clearly marked quote in your reply. The reply relationship is kept even without a quote. The quote follows changes to or deletion of the original.';
 $string['inreplyto'] = 'In reply to';

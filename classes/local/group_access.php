@@ -129,10 +129,21 @@ class group_access {
             return true;
         }
         if ($groupid === -1) {
-            return $this->all;
+            return $this->all || $this->mode === VISIBLEGROUPS;
         }
         return in_array($groupid, $this->visible, true)
             && ($this->all || in_array($groupid, $this->own, true));
+    }
+
+    /**
+     * Starting a shared conversation requires access-all-groups, unlike a visible shared reply.
+     *
+     * @param int $groupid
+     * @return bool
+     */
+    public function can_start(int $groupid): bool {
+        return $this->can_write($groupid)
+            && ($this->mode === NOGROUPS || $groupid !== -1 || $this->all);
     }
 
     /**
@@ -157,6 +168,9 @@ class group_access {
         global $DB;
         if ((int) $track->spatialforumid !== (int) $this->activity->id) {
             throw new \moodle_exception('groupaccessdenied', 'mod_spatialforum');
+        }
+        if ($this->mode === NOGROUPS) {
+            return;
         }
         if ((int) $track->id === (int) $this->activity->roottrackid) {
             if (($write && $this->mode !== NOGROUPS && !$this->all) || ($this->pending() && !$this->all)) {
@@ -222,6 +236,19 @@ class group_access {
             throw new \moodle_exception('groupreviewbusy', 'mod_spatialforum');
         }
         try {
+            if (
+                !$DB->get_field('spatialforum', 'groupready', ['id' => $forumid])
+                && $DB->record_exists_sql(
+                    "SELECT t.id FROM {spatialforum_tracks} t
+                    WHERE t.spatialforumid = :forumid AND t.id <> :rootid
+                      AND NOT EXISTS (SELECT p.id FROM {spatialforum_posts} p
+                                       WHERE p.id = t.originpostid AND p.spatialforumid = t.spatialforumid)
+                      AND EXISTS (SELECT p2.id FROM {spatialforum_posts} p2 WHERE p2.trackid = t.id)",
+                    ['forumid' => $forumid, 'rootid' => $activity->roottrackid]
+                )
+            ) {
+                throw new \moodle_exception('groupreviewstructure', 'mod_spatialforum');
+            }
             $transaction = $DB->start_delegated_transaction();
             if (!$DB->get_field('spatialforum', 'groupready', ['id' => $forumid])) {
                 $DB->set_field('spatialforum_posts', 'groupid', $groupid, ['spatialforumid' => $forumid]);

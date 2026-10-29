@@ -74,6 +74,7 @@ $string['groupmigrationrequired'] = 'Eksisterende samtalers målgruppe skal genn
 $string['groupreviewbusy'] = 'Målgruppen bliver allerede gennemgået. Prøv igen.';
 $string['groupreviewcomplete'] = 'Målgruppen for de eksisterende samtaler er gemt.';
 $string['groupreviewexplanation'] = 'Aktiviteten indeholder {$a} eksisterende indlæg. Den valgte målgruppe gælder alle eksisterende indlæg og svar. Alle deltagere deler udtrykkeligt samtalerne med alle, der har adgang til aktiviteten. Ingen indlæg slettes eller kopieres. Annuller, hvis forskellige samtaler kræver forskellige målgrupper.';
+$string['groupreviewstructure'] = 'En eksisterende gren med indlæg mangler et gyldigt link til sit udgangspunkt. Ret samtalens links, før gruppetilstand aktiveres. Ingen målgruppe er ændret.';
 $string['includeparent'] = 'Medtag det foregående indlæg som citat';
 $string['includeparent_help'] = 'Vælg dette for at vise det indlæg, du svarer på, som et tydeligt markeret citat i dit svar. Forbindelsen til indlægget bevares også uden citat. Citatet følger ændringer og sletning af originalen.';
 $string['inreplyto'] = 'Svar på indlæg';
