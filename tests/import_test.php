@@ -237,7 +237,7 @@ final class import_test extends \advanced_testcase {
      * Mid-copy source change fails closed; discard removes only the incomplete target.
      */
     public function test_source_change_after_confirmation_requires_discard(): void {
-        global $DB;
+        global $DB, $CFG;
         [, $source, $cm, , , $reply] = $this->fixture();
         $preview = forum_import::preview($cm->id);
         $jobid = forum_import::confirm($cm->id, $preview['fingerprint'], 'Changed source copy', true);
@@ -251,8 +251,12 @@ final class import_test extends \advanced_testcase {
         }
         $this->assertEquals(forum_import::FAILED, forum_import::job($jobid)->status);
         $this->assertEquals(1, $DB->get_field('spatialforum', 'importstate', ['id' => $targetid]));
+        $recyclebinsettings = $CFG->forced_plugin_settings['tool_recyclebin'] ?? [];
         forum_import::recover($jobid, true);
         $this->assertFalse($DB->record_exists('spatialforum', ['id' => $targetid]));
+        $this->assertFalse($DB->record_exists('spatialforum_imports', ['id' => $jobid]));
+        $this->assertFalse($DB->record_exists('spatialforum_import_map', ['importid' => $jobid]));
+        $this->assertSame($recyclebinsettings, $CFG->forced_plugin_settings['tool_recyclebin']);
         $this->assertTrue($DB->record_exists('forum', ['id' => $source->id]));
         forum_import::execute($jobid);
     }

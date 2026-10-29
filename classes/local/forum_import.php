@@ -545,8 +545,10 @@ class forum_import {
                 $forced = $CFG->forced_plugin_settings['tool_recyclebin'] ?? [];
                 $CFG->forced_plugin_settings['tool_recyclebin']['coursebinenable'] = 0;
                 try {
-                    if (class_exists('\\core_courseformat\\formatactions')) {
-                        \core_courseformat\formatactions::cm($cm->course)->delete($cm->id);
+                    $actions = \core_courseformat\formatactions::cm($cm->course);
+                    // The actions class predates its delete method, which was added in Moodle 5.2.
+                    if (method_exists($actions, 'delete')) {
+                        $actions->delete($cm->id);
                     } else {
                         course_delete_module($cm->id);
                     }

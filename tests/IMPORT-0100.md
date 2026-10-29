@@ -21,7 +21,7 @@ Evidence folder: `../rapporter/samtalespor-0.10.0-import-2026-10-29/` relative t
 
 Browser: teacher selected source and target name, preview showed 1 discussion / 3 posts / depth 3; unchecked confirmation was rejected; checked confirmation created a hidden target. Actual Moodle CLI task runner completed copy and rewrite continuations. Progress showed 3/3 and still hidden; review opened the three-level map and original-author posts in place.
 
-Automated checks and final exact-head CI results are recorded below after execution.
+Local baseline verification passed 123 tests / 598 assertions on Moodle 5.2 with PostgreSQL. GitHub run [40926460908](https://github.com/ZasZorglub/moodle-mod_spatialforum/actions/runs/40926460908) for `ae8513e` passed Moodle 5.2 on both databases but failed both Moodle 5.0 jobs: `cmactions::delete()` was unavailable when discarding a partial import. The compatibility fix checks the actual method and falls back to `course_delete_module()` on Moodle 5.0. The existing regression now also checks removal of job/maps and restoration of request-local recycle-bin configuration. Final CI must pass the complete 5.0/5.2 × MariaDB/PostgreSQL matrix before this fix is reported as verified.
 
 ## Limits
 
