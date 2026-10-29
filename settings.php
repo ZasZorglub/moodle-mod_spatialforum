@@ -26,21 +26,26 @@
 defined('MOODLE_INTERNAL') || die();
 
 $ADMIN->add('modsettings', new admin_externalpage(
+    'spatialforumcommunication',
+    get_string('communicationtitle', 'mod_spatialforum'),
+    new moodle_url('/mod/spatialforum/communication.php')
+));
+
+$ADMIN->add('modsettings', new admin_externalpage(
     'spatialforumdeliveries',
     get_string('notificationdeliveries', 'mod_spatialforum'),
     new moodle_url('/mod/spatialforum/delivery.php')
 ));
 
 if ($ADMIN->fulltree) {
-    $hours = array_combine(range(0, 23), range(0, 23));
-    $settings->add(new admin_setting_configselect(
-        'mod_spatialforum/digesthour',
-        get_string('digesthour', 'mod_spatialforum'),
-        get_string('digesthour_desc', 'mod_spatialforum'),
-        17,
-        $hours
+    $settings->add(new admin_setting_heading(
+        'mod_spatialforum/communicationheading',
+        get_string('communicationtitle', 'mod_spatialforum'),
+        html_writer::link(
+            new moodle_url('/mod/spatialforum/communication.php'),
+            get_string('communicationconfigure', 'mod_spatialforum')
+        )
     ));
-
     $settings->add(new admin_setting_configmultiselect(
         'mod_spatialforum/allowedtypes',
         get_string('allowedmediatypes', 'mod_spatialforum'),

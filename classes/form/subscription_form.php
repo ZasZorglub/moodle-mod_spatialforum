@@ -38,8 +38,12 @@ class subscription_form extends \moodleform {
         $mform->setType('id', PARAM_INT);
         $options = [0 => get_string('subscriptionoff', 'mod_spatialforum')];
         if ($this->_customdata['eligible']) {
-            $options += [1 => get_string('subscriptionimmediate', 'mod_spatialforum'),
-                2 => get_string('subscriptiondaily', 'mod_spatialforum')];
+            $settings = \mod_spatialforum\local\communication::settings();
+            foreach ([1 => 'subscriptionimmediate', 2 => 'subscriptiondaily'] as $mode => $label) {
+                $text = get_string($label, 'mod_spatialforum');
+                $enabled = $settings[$mode === 1 ? 'immediateenabled' : 'dailyenabled'];
+                $options[$mode] = $enabled ? $text : get_string('communicationpaused', 'mod_spatialforum', $text);
+            }
         }
         $mform->addElement('select', 'mode', get_string('subscriptionmode', 'mod_spatialforum'), $options);
         $mform->setType('mode', PARAM_INT);

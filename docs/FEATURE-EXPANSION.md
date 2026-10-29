@@ -31,7 +31,7 @@ Confirmed scope: manual whole-activity grade/feedback, online App reading/replie
 
 ## Current implementation status
 
-S1 has an alpha implementation in `0.7.0-dev` with local verification recorded in [tests/GROUPS-070.md](../tests/GROUPS-070.md). Real-browser teacher/learner review and release evidence remain open. S2 now has an alpha implementation in `0.8.0-dev`; see [tests/NOTIFICATIONS-080.md](../tests/NOTIFICATIONS-080.md). S3–S5 are not implemented. The three product choices are confirmed; they no longer block those later slices.
+S1 has an alpha implementation in `0.7.0-dev` with local verification recorded in [tests/GROUPS-070.md](../tests/GROUPS-070.md). Real-browser teacher/learner review and release evidence remain open. S2 has an alpha implementation in `0.8.0-dev`; see [tests/NOTIFICATIONS-080.md](../tests/NOTIFICATIONS-080.md). Administrator control of message types, schedules and plain-text templates is added in `0.8.1-dev`; see [tests/COMMUNICATION-081.md](../tests/COMMUNICATION-081.md). S3–S5 are not implemented. The three product choices are confirmed; they no longer block those later slices.
 
 ## Delivery order and completion evidence
 

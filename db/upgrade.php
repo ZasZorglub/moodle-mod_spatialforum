@@ -203,5 +203,9 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         }
         upgrade_mod_savepoint(true, 2026102901, 'spatialforum');
     }
+    if ($oldversion < 2026102902) {
+        // Communication configuration uses plugin config; register the new test-message provider.
+        upgrade_mod_savepoint(true, 2026102902, 'spatialforum');
+    }
     return true;
 }

@@ -26,6 +26,10 @@
 defined('MOODLE_INTERNAL') || die();
 
 $messageproviders = [
+    'communicationtests' => ['capability' => 'moodle/site:config', 'defaults' => [
+        'popup' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
+        'email' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
+    ]],
     'posts' => ['defaults' => [
         'popup' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
         'email' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,

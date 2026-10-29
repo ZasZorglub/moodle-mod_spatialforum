@@ -173,7 +173,7 @@ class notifications {
                     $sub = $DB->get_record('spatialforum_subscriptions', ['id' => $sub->id]);
                     $user = $sub ? $DB->get_record('user', ['id' => $sub->userid]) : false;
                     if (
-                        !$sub || !$user || !self::eligible($cm, $user)
+                        !$sub || !$user || !communication::allows($post, (int) $sub->mode) || !self::eligible($cm, $user)
                         || !group_access::for_activity($post->spatialforumid, $user->id)->can_view($post)
                     ) {
                         continue;
@@ -195,7 +195,7 @@ class notifications {
     }
 
     /**
-     * Next daily cutoff is 17:00 in the recipient's timezone, including DST.
+     * Configured publication delay or daily cutoff, including DST.
      *
      * @param int $mode
      * @param \stdClass $user
@@ -203,14 +203,15 @@ class notifications {
      * @return int
      */
     public static function due(int $mode, \stdClass $user, int $when): int {
+        $settings = communication::settings();
         if ($mode === self::IMMEDIATE) {
-            return $when;
+            return $when + (int) $settings['delayminutes'] * MINSECS;
         }
         $date = new \DateTimeImmutable('@' . $when);
-        $date = $date->setTimezone(\core_date::get_user_timezone_object($user));
-        $hour = get_config('mod_spatialforum', 'digesthour');
-        $hour = $hour === false ? 17 : min(23, max(0, (int) $hour));
-        $cutoff = $date->setTime($hour, 0, 0);
+        $timezone = $settings['digesttimezone'] === 'site' ? \core_date::get_server_timezone_object()
+            : \core_date::get_user_timezone_object($user);
+        $date = $date->setTimezone($timezone);
+        $cutoff = $date->setTime((int) $settings['digesthour'], (int) $settings['digestminute'], 0);
         if ($cutoff->getTimestamp() <= $when) {
             $cutoff = $cutoff->modify('+1 day');
         }
@@ -279,9 +280,17 @@ class notifications {
                     }
                     $post = $DB->get_record('spatialforum_posts', ['id' => $row->postid,
                         'spatialforumid' => $row->spatialforumid, 'deleted' => 0]);
-                    if (!$sub || !$policy || !$post || !$policy->can_view($post) || $post->id <= $sub->firstpostid) {
+                    if (
+                        !$sub || !$policy || !$post || !communication::allows($post, (int) $sub->mode)
+                            || !$policy->can_view($post) || $post->id <= $sub->firstpostid
+                    ) {
                         $DB->delete_records('spatialforum_deliveries', ['id' => $row->id]);
                         $result['skipped']++;
+                        continue;
+                    }
+                    $currentdue = self::due((int) $row->mode, $user, (int) $post->timecreated);
+                    if ($currentdue > $now) {
+                        $DB->set_field('spatialforum_deliveries', 'due', $currentdue, ['id' => $row->id]);
                         continue;
                     }
                     $posts[] = $post;
@@ -334,45 +343,84 @@ class notifications {
      * @return int|false
      */
     protected static function send(\stdClass $cm, \stdClass $user, array $posts, int $mode) {
-        global $DB;
+        global $DB, $SITE;
         $activity = $DB->get_record('spatialforum', ['id' => $cm->instance], '*', MUST_EXIST);
         $context = \context_module::instance($cm->id);
         $name = format_string($activity->name, true, ['context' => $context, 'filter' => false]);
-        $strings = get_string_manager();
-        $subject = $strings->get_string(
-            $mode === self::DAILY ? 'digestsubject' : 'postnotificationsubject',
-            'mod_spatialforum',
-            (object) ['forum' => html_to_text($name), 'count' => count($posts)],
-            $user->lang
-        );
-        $text = [];
-        $html = '';
+        $items = [];
         foreach ($posts as $post) {
             $author = $DB->get_record('user', ['id' => $post->userid]);
-            $label = $post->subject . ' — ' . ($author ? fullname($author) : get_string('unknownuser', 'mod_spatialforum'));
-            $excerpt = \core_text::substr(excerpts::source($post, $context), 0, 500);
             $url = new \moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id, 'postid' => $post->id]);
-            $text[] = $label . "\n" . $excerpt . "\n" . $url->out(false);
-            $html .= \html_writer::tag('h3', s($label)) . \html_writer::tag('p', s($excerpt))
-                . \html_writer::link($url, $strings->get_string('opennotifiedpost', 'mod_spatialforum', null, $user->lang));
+            $items[] = ['subject' => $post->subject,
+                'author' => $author ? fullname($author) : get_string('unknownuser', 'mod_spatialforum'),
+                'excerpt' => \core_text::substr(excerpts::source($post, $context), 0, 500), 'posturl' => $url->out(false)];
         }
         $settingsurl = new \moodle_url('/mod/spatialforum/subscription.php', ['id' => $cm->id]);
-        $footer = $strings->get_string('notificationpreferences', 'mod_spatialforum', null, $user->lang);
+        $course = $DB->get_record('course', ['id' => $cm->course], 'id,fullname', MUST_EXIST);
+        $rendered = communication::render(communication::settings($user->lang), $mode, [
+            'site' => html_to_text($SITE->fullname), 'course' => html_to_text($course->fullname),
+            'activity' => html_to_text($name), 'recipient' => fullname($user),
+        ], $items, $settingsurl->out(false), $user->lang);
         $message = new \core\message\message();
         $message->component = 'mod_spatialforum';
         $message->name = $mode === self::DAILY ? 'digests' : 'posts';
         $message->userfrom = \core_user::get_noreply_user();
         $message->userto = $user;
         $message->courseid = $cm->course;
-        $message->subject = $subject;
-        $message->fullmessage = implode("\n\n", $text) . "\n\n" . $footer . ': ' . $settingsurl->out(false);
+        $message->subject = $rendered['subject'];
+        $message->fullmessage = $rendered['text'];
         $message->fullmessageformat = FORMAT_PLAIN;
-        $message->fullmessagehtml = $html . \html_writer::tag('p', \html_writer::link($settingsurl, $footer));
-        $message->smallmessage = $subject;
+        $message->fullmessagehtml = $rendered['html'];
+        $message->smallmessage = $rendered['subject'];
         $message->notification = 1;
         $message->contexturl = (new \moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id]))->out(false);
         $message->contexturlname = html_to_text($name);
         return message_send($message);
+    }
+
+    /**
+     * Reconcile one bounded page after a site policy change, using the latest saved policy.
+     * Retry backoff is never shortened; accepted/failed/uncertain deliveries are untouched.
+     * @param int $lastid
+     * @return int|null Next page cursor or null when finished
+     */
+    public static function reconcile(int $lastid = 0): ?int {
+        global $DB;
+        $rows = $DB->get_records_select(
+            'spatialforum_deliveries',
+            'status = ? AND id > ?',
+            [self::PENDING, $lastid],
+            'id ASC',
+            '*',
+            0,
+            250
+        );
+        foreach ($rows as $queued) {
+            $lastid = (int) $queued->id;
+            $lock = self::lock($queued->spatialforumid, $queued->userid);
+            if (!$lock) {
+                throw new \moodle_exception('notificationbusy', 'mod_spatialforum');
+            }
+            try {
+                $row = $DB->get_record('spatialforum_deliveries', ['id' => $queued->id, 'status' => self::PENDING]);
+                if (!$row) {
+                    continue;
+                }
+                $post = $DB->get_record('spatialforum_posts', ['id' => $row->postid, 'deleted' => 0]);
+                $user = $DB->get_record('user', ['id' => $row->userid]);
+                if (!$post || !$user || !communication::allows($post, (int) $row->mode)) {
+                    $DB->delete_records('spatialforum_deliveries', ['id' => $row->id]);
+                    continue;
+                }
+                $due = self::due((int) $row->mode, $user, (int) $post->timecreated);
+                $row->due = $row->attempts ? max($due, $row->due) : $due;
+                $row->timemodified = time();
+                $DB->update_record('spatialforum_deliveries', $row);
+            } finally {
+                $lock->release();
+            }
+        }
+        return count($rows) === 250 ? $lastid : null;
     }
 
     /**
