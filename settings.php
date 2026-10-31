@@ -63,6 +63,12 @@ if ($ADMIN->fulltree) {
         20971520,
         get_max_upload_sizes($CFG->maxbytes)
     ));
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_spatialforum/enablegrading',
+        get_string('enablegrading', 'mod_spatialforum'),
+        get_string('enablegrading_desc', 'mod_spatialforum'),
+        0
+    ));
     $filecounts = [1, 3, 5, 10, 20];
     $settings->add(new admin_setting_configselect(
         'mod_spatialforum/maxfiles',

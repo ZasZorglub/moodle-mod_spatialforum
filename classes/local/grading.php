@@ -28,6 +28,13 @@ namespace mod_spatialforum\local;
  */
 class grading {
     /**
+     * Grading requires explicit site administrator opt-in.
+     * @return bool
+     */
+    public static function enabled(): bool {
+        return get_config('mod_spatialforum', 'enablegrading') === '1';
+    }
+    /**
      * Load the Moodle grade classes and one activity.
      * @param int $forumid
      * @return array
@@ -94,6 +101,9 @@ class grading {
      */
     private static function require_view(\stdClass $cm, \context_module $context): void {
         global $USER;
+        if (!self::enabled()) {
+            throw new \moodle_exception('gradingdisabled', 'mod_spatialforum');
+        }
         if (!isloggedin() || isguestuser() || !empty($USER->suspended) || !empty($USER->deleted)) {
             throw new \moodle_exception('gradeaccessdenied', 'mod_spatialforum');
         }

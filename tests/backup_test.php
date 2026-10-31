@@ -47,6 +47,7 @@ final class backup_test extends \restore_date_testcase {
      */
     public function test_restore_preserves_manual_gradebook_results(): void {
         global $DB;
+        set_config('enablegrading', 1, 'mod_spatialforum');
         [$course, $activity] = $this->create_course_and_module('spatialforum', ['grade' => 100]);
         $user = $this->getDataGenerator()->create_user();
         $this->getDataGenerator()->enrol_user($user->id, $course->id, 'student');
@@ -74,6 +75,7 @@ final class backup_test extends \restore_date_testcase {
      * Backups excluding user data keep configuration without copying participant results.
      */
     public function test_restore_without_users_does_not_copy_private_assessments(): void {
+        set_config('enablegrading', 1, 'mod_spatialforum');
         global $DB, $USER, $CFG;
         [$course, $activity] = $this->create_course_and_module('spatialforum', ['grade' => 100]);
         $user = $this->getDataGenerator()->create_user();
@@ -122,6 +124,7 @@ final class backup_test extends \restore_date_testcase {
      */
     public function test_restore_remaps_grading_scale(): void {
         global $DB;
+        set_config('enablegrading', 1, 'mod_spatialforum');
         [$course, $activity] = $this->create_course_and_module('spatialforum');
         $scale = $this->getDataGenerator()->create_scale(['courseid' => $course->id, 'scale' => 'Beginning,Developing,Secure']);
         \spatialforum_update_instance((object) ['instance' => $activity->id, 'name' => $activity->name, 'grade' => -$scale->id]);

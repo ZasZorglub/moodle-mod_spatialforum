@@ -59,7 +59,7 @@ $data = forum::export_view_data($activity, $cm, $track, $context, true);
 $data['subscriptionurl'] = !isguestuser() && !empty($USER->id)
     ? (new moodle_url('/mod/spatialforum/subscription.php', ['id' => $cm->id]))->out(false) : '';
 $data['assessmenturl'] = '';
-if (!empty($activity->grade) && !isguestuser()) {
+if (\mod_spatialforum\local\grading::enabled() && !empty($activity->grade) && !isguestuser()) {
     $grader = has_capability('mod/spatialforum:grade', $context);
     if ($grader || has_capability('mod/spatialforum:receivegrade', $context)) {
         $data['assessmenturl'] = (new moodle_url('/mod/spatialforum/grade.php', ['id' => $cm->id]))->out(false);

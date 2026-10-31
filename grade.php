@@ -36,6 +36,9 @@ $activity = $DB->get_record('spatialforum', ['id' => $cm->instance], '*', MUST_E
 require_course_login($course, false, $cm);
 $context = context_module::instance($cm->id);
 require_capability('mod/spatialforum:view', $context);
+if (!grading::enabled() || empty($activity->grade)) {
+    throw new moodle_exception('gradingdisabled', 'mod_spatialforum');
+}
 $grader = has_capability('mod/spatialforum:grade', $context);
 $PAGE->set_cm($cm, $course);
 $PAGE->set_url('/mod/spatialforum/grade.php', ['id' => $id, 'userid' => $userid, 'page' => $page, 'groupid' => $groupid]);

@@ -34,6 +34,18 @@ defined('MOODLE_INTERNAL') || die();
 #[CoversClass(grading::class)]
 final class grading_test extends \advanced_testcase {
     /**
+     * A configured activity cannot bypass the administrator's opt-in.
+     */
+    public function test_site_opt_in_is_required_before_assessment(): void {
+        [$course, $activity, $teacher, $alice] = $this->fixture();
+        set_config('enablegrading', 0, 'mod_spatialforum');
+        $this->assertFalse(grading::enabled());
+        $this->setUser($teacher);
+        $this->expectException(\moodle_exception::class);
+        $this->expectExceptionMessage(get_string('gradingdisabled', 'mod_spatialforum'));
+        grading::assessment($activity->id, $alice->id);
+    }
+    /**
      * A teacher and two independently enrolled students.
      * @param int $mode
      * @param float $maximum
@@ -42,6 +54,7 @@ final class grading_test extends \advanced_testcase {
     private function fixture(int $mode = NOGROUPS, float $maximum = 100): array {
         global $DB;
         $this->resetAfterTest();
+        set_config('enablegrading', 1, 'mod_spatialforum');
         $this->setAdminUser();
         $gen = $this->getDataGenerator();
         $course = $gen->create_course();

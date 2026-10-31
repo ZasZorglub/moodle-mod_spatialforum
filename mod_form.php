@@ -65,8 +65,10 @@ class mod_spatialforum_mod_form extends moodleform_mod {
         $mform->addElement('advcheckbox', 'locked', get_string('lockforum', 'mod_spatialforum'));
         $mform->setDefault('locked', 0);
 
-        $this->standard_grading_coursemodule_elements();
-        $mform->setDefault('grade', 0);
+        if (\mod_spatialforum\local\grading::enabled()) {
+            $this->standard_grading_coursemodule_elements();
+            $mform->setDefault('grade', 0);
+        }
         $this->standard_coursemodule_elements();
         $this->add_action_buttons();
     }
