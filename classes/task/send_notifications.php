@@ -42,6 +42,7 @@ class send_notifications extends \core\task\scheduled_task {
      * Permission checks run inside each recipient batch immediately before dispatch.
      */
     public function execute(): void {
+        \mod_spatialforum\local\post_lifecycle::purge();
         $result = \mod_spatialforum\local\notifications::dispatch();
         mtrace('Spatialforum deliveries: ' . json_encode($result));
     }

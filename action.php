@@ -53,14 +53,14 @@ if ($action === 'toggletrack') {
     $track->timemodified = time();
     $DB->update_record('spatialforum_tracks', $track);
     $returnurl->param('trackid', $track->id);
-} else if ($action === 'deletepost') {
+} else if (in_array($action, ['deletepost', 'restorepost'], true)) {
     $postid = required_param('postid', PARAM_INT);
     $post = $DB->get_record('spatialforum_posts', [
         'id' => $postid,
         'spatialforumid' => $activity->id,
     ], '*', MUST_EXIST);
     \mod_spatialforum\local\group_access::for_activity($activity->id)->require_post($post, true);
-    if (!optional_param('confirmed', 0, PARAM_BOOL)) {
+    if ($action === 'deletepost' && !optional_param('confirmed', 0, PARAM_BOOL)) {
         $PAGE->set_url('/mod/spatialforum/action.php', ['id' => $cm->id, 'action' => 'deletepost', 'postid' => $post->id]);
         $PAGE->set_title(get_string('delete'));
         $PAGE->set_heading(format_string($course->fullname));
@@ -77,15 +77,10 @@ if ($action === 'toggletrack') {
         echo $OUTPUT->footer();
         exit;
     }
-    $DB->delete_records('spatialforum_deliveries', ['postid' => $post->id]);
-    \mod_spatialforum\local\media::delete($post->id, $context);
-    $post->deleted = 1;
-    $post->message = '';
-    $post->replyparts = null;
-    $post->timemodified = time();
-    $DB->update_record('spatialforum_posts', $post);
-    \mod_spatialforum\completion\custom_completion::refresh($activity->id, (int) $post->userid);
+    \mod_spatialforum\local\post_lifecycle::moderate($cm, $post->id, $action === 'restorepost');
     $returnurl->param('trackid', $post->trackid);
+    $returnurl->param('postid', $post->id);
+    $returnurl->set_anchor('post-' . $post->id);
 } else {
     throw new moodle_exception('invalidaction', 'mod_spatialforum');
 }

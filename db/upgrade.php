@@ -296,5 +296,17 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         }
         upgrade_mod_savepoint(true, 2026103101, 'spatialforum');
     }
+    if ($oldversion < 2026103102) {
+        $table = new xmldb_table('spatialforum_posts');
+        $field = new xmldb_field('deletedat', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'deleted');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $index = new xmldb_index('deletedtime', XMLDB_INDEX_NOTUNIQUE, ['deleted', 'deletedat']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+        upgrade_mod_savepoint(true, 2026103102, 'spatialforum');
+    }
     return true;
 }

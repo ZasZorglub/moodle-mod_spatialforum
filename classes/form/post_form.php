@@ -42,6 +42,12 @@ class post_form extends \moodleform {
         $mform = $this->_form;
         $mform->addElement('hidden', 'submissionkey', $this->_customdata['submissionkey'] ?? bin2hex(random_bytes(32)));
         $mform->setType('submissionkey', PARAM_ALPHANUM);
+        if (!empty($this->_customdata['editing'])) {
+            $mform->addElement('hidden', 'postid', $this->_customdata['postid']);
+            $mform->setType('postid', PARAM_INT);
+            $mform->addElement('hidden', 'revision', $this->_customdata['revision']);
+            $mform->setType('revision', PARAM_ALPHANUM);
+        }
         $mform->addElement('hidden', 'group', $this->_customdata['groupid'] ?? 0);
         $mform->setType('group', PARAM_INT);
         $customdata = $this->_customdata;
@@ -83,7 +89,8 @@ class post_form extends \moodleform {
         }
 
         $submitlabel = $isbranch ? 'createbranch' : (empty($customdata['originpostid']) ? 'createpost' : 'postreply');
-        $this->add_action_buttons(true, get_string($submitlabel, 'mod_spatialforum'));
+        $label = !empty($customdata['editing']) ? get_string('savechanges') : get_string($submitlabel, 'mod_spatialforum');
+        $this->add_action_buttons(true, $label);
     }
 
     /**

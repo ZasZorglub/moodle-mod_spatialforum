@@ -121,6 +121,7 @@
                             {{/showlikes}}
                         </div>
                         {{#canreply}}<a class="btn btn-primary spatialforum-reply" href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
+                        {{#canedit}}<a class="btn btn-link" href="{{editurl}}">{{#str}}editpost, mod_spatialforum{{/str}}</a>{{/canedit}}
                         {{#haschildren}}
                             <div class="spatialforum-children">
                                 <h3>{{#str}}replieshere, mod_spatialforum{{/str}}</h3>
@@ -149,6 +150,16 @@
                                         <button type="submit" class="btn btn-link text-danger">{{#str}}delete{{/str}}</button>
                                     </form>
                                 {{/candelete}}
+                                {{#canrestore}}
+                                    <p>{{#str}}restorewindow, mod_spatialforum{{/str}}</p>
+                                    <form method="post" action="{{moderationurl}}">
+                                        <input type="hidden" name="id" value="{{cmid}}">
+                                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                        <input type="hidden" name="action" value="restorepost">
+                                        <input type="hidden" name="postid" value="{{id}}">
+                                        <button type="submit" class="btn btn-outline-secondary">{{#str}}restorepost, mod_spatialforum{{/str}}</button>
+                                    </form>
+                                {{/canrestore}}
                             </div>
                         {{/canmoderate}}
                     </div>

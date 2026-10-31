@@ -141,7 +141,7 @@ class notifications {
      */
     public static function enqueue_post(int $postid): void {
         global $DB;
-        $post = $DB->get_record('spatialforum_posts', ['id' => $postid, 'deleted' => 0]);
+        $post = $DB->get_record('spatialforum_posts', ['id' => $postid, 'deleted' => 0, 'deletedat' => 0]);
         if (!$post || $post->timecreated < time() - self::RETENTION) {
             return;
         }
@@ -281,7 +281,7 @@ class notifications {
                     $post = $DB->get_record('spatialforum_posts', ['id' => $row->postid,
                         'spatialforumid' => $row->spatialforumid, 'deleted' => 0]);
                     if (
-                        !$sub || !$policy || !$post || !communication::allows($post, (int) $sub->mode)
+                        !$sub || !$policy || !$post || $post->deletedat || !communication::allows($post, (int) $sub->mode)
                             || !$policy->can_view($post) || $post->id <= $sub->firstpostid
                     ) {
                         $DB->delete_records('spatialforum_deliveries', ['id' => $row->id]);

@@ -630,6 +630,12 @@ class forum {
                     'originpostid' => $post->id,
                 ]))->out(false),
                 'candelete' => $canmoderate && !$post->deleted && $access->can_write((int) ($post->groupid ?? -1)),
+                'canrestore' => $canmoderate && post_lifecycle::restorable($post)
+                    && $access->can_write((int) ($post->groupid ?? -1)),
+                'canedit' => !$post->deleted && $post->userid == $USER->id && !isguestuser()
+                    && !$activity->locked && $posttrack && !$posttrack->locked
+                    && has_capability('mod/spatialforum:reply', $context) && $access->can_write((int) $post->groupid),
+                'editurl' => (new moodle_url('/mod/spatialforum/edit.php', ['id' => $cm->id, 'postid' => $post->id]))->out(false),
                 'canmoderate' => $canmoderate && (bool) $posttrack
                     && $access->can_write((int) ($post->groupid ?? -1)),
                 'canlocktrack' => $canmoderate && (bool) $posttrack

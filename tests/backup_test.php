@@ -156,6 +156,8 @@ final class backup_test extends \restore_date_testcase {
         $DB->set_field('spatialforum', 'completiondiscussions', 2, ['id' => $activity->id]);
         $DB->set_field('spatialforum_posts', 'discussionname', 'Original discussion title', ['id' => $postid]);
         $DB->set_field('spatialforum_posts', 'submissionkey', str_repeat('a', 64), ['id' => $postid]);
+        $removedat = time() - DAYSECS;
+        $DB->set_field('spatialforum_posts', 'deletedat', $removedat, ['id' => $postid]);
         $DB->set_field('spatialforum_posts', 'importedattachments', 1, ['id' => $postid]);
         foreach (['qa.png', 'qa.mp3', 'qa.mp4'] as $filename) {
             get_file_storage()->create_file_from_string([
@@ -177,6 +179,7 @@ final class backup_test extends \restore_date_testcase {
         $post = $DB->get_record('spatialforum_posts', ['spatialforumid' => $new->id], '*', MUST_EXIST);
         $this->assertSame('Original discussion title', $post->discussionname);
         $this->assertNull($post->submissionkey);
+        $this->assertEquals($removedat, $post->deletedat);
         $this->assertEquals(1, $post->importedattachments);
         $this->assertEquals(0, $new->importstate);
         $this->assertEquals(5, $new->completionposts);

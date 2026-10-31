@@ -139,6 +139,8 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $record->replyparts = $record->replyparts ?? null;
         $record->importedattachments = $record->importedattachments ?? 0;
         $record->discussionname = $record->discussionname ?? null;
+        // Keep the original retention deadline; restoring a backup must not restart it.
+        $record->deletedat = $record->deletedat ?? 0;
         $record->groupid = (int) ($record->groupid ?? -1);
         if ($record->groupid > 0) {
             $record->groupid = (int) $this->get_mappingid('group', $record->groupid, -2);

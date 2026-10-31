@@ -54,7 +54,7 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
         $posts = new backup_nested_element('posts');
         $post = new backup_nested_element('post', ['id'], [
             'groupid', 'trackid', 'replytoid', 'showparent', 'replyparts', 'importedattachments', 'discussionname', 'userid',
-            'subject', 'message', 'messageformat', 'deleted',
+            'subject', 'message', 'messageformat', 'deleted', 'deletedat',
             'timecreated', 'timemodified',
         ]);
         $reads = new backup_nested_element('reads');

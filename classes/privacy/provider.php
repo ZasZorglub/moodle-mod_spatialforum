@@ -56,6 +56,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             'userid' => 'privacy:metadata:spatialforum_posts:userid',
             'subject' => 'privacy:metadata:spatialforum_posts:subject',
             'submissionkey' => 'privacy:metadata:spatialforum_posts:submissionkey',
+            'deletedat' => 'privacy:metadata:spatialforum_posts:deletedat',
             'discussionname' => 'privacy:metadata:spatialforum_posts:discussionname',
             'message' => 'privacy:metadata:spatialforum_posts:message',
             'groupid' => 'privacy:metadata:spatialforum_posts:groupid',
@@ -252,7 +253,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
                     'userid' => $userid,
                 ],
                 'timecreated ASC',
-                'id,groupid,trackid,replytoid,showparent,replyparts,subject,discussionname,submissionkey,' .
+                'id,groupid,trackid,replytoid,showparent,replyparts,subject,discussionname,submissionkey,deletedat,' .
                     'message,messageformat,timecreated,timemodified'
             );
             $reads = $DB->get_records_sql(
@@ -327,7 +328,9 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             $DB->delete_records_list('spatialforum_likes', 'postid', $postids);
             $DB->delete_records_list('spatialforum_read', 'postid', $postids);
         }
-        $DB->delete_records('spatialforum_posts', ['spatialforumid' => $cm->instance]);
+        foreach ($postids as $postid) {
+            \mod_spatialforum\local\post_lifecycle::erase((int) $postid, $context, true);
+        }
         get_file_storage()->delete_area_files($context->id, 'mod_spatialforum', 'post');
         $DB->set_field_select(
             'spatialforum_tracks',
@@ -409,13 +412,8 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
                 );
             }
             foreach ($postids as $postid) {
-                \mod_spatialforum\local\media::delete((int) $postid, $context);
+                \mod_spatialforum\local\post_lifecycle::erase((int) $postid, $context);
             }
-            [$insql, $params] = $DB->get_in_or_equal($postids, SQL_PARAMS_NAMED);
-            $DB->execute("UPDATE {spatialforum_posts}
-                            SET userid = 0, subject = '', discussionname = NULL, submissionkey = NULL,
-                                message = '', replyparts = NULL, deleted = 1
-                          WHERE id {$insql}", $params);
             \mod_spatialforum\completion\custom_completion::refresh($cm->instance, $userid);
         }
         $readids = $DB->get_fieldset_sql(
