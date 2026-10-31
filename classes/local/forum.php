@@ -636,6 +636,9 @@ class forum {
                     && !$activity->locked && $posttrack && !$posttrack->locked
                     && has_capability('mod/spatialforum:reply', $context) && $access->can_write((int) $post->groupid),
                 'editurl' => (new moodle_url('/mod/spatialforum/edit.php', ['id' => $cm->id, 'postid' => $post->id]))->out(false),
+                'threadsubscriptionurl' => $cantrackread && !$post->deleted
+                    ? (new moodle_url('/mod/spatialforum/subscription.php', ['id' => $cm->id, 'postid' => $post->id]))->out(false)
+                    : '',
                 'canmoderate' => $canmoderate && (bool) $posttrack
                     && $access->can_write((int) ($post->groupid ?? -1)),
                 'canlocktrack' => $canmoderate && (bool) $posttrack

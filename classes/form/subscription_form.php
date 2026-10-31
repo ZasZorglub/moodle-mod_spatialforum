@@ -36,8 +36,14 @@ class subscription_form extends \moodleform {
         $mform = $this->_form;
         $mform->addElement('hidden', 'id', $this->_customdata['cmid']);
         $mform->setType('id', PARAM_INT);
-        $options = [0 => get_string('subscriptionoff', 'mod_spatialforum')];
+        $rootid = $this->_customdata['rootpostid'] ?? 0;
+        $mform->addElement('hidden', 'postid', $rootid);
+        $mform->setType('postid', PARAM_INT);
+        $options = [0 => get_string($rootid ? 'threadmuted' : 'subscriptionoff', 'mod_spatialforum')];
         if ($this->_customdata['eligible']) {
+            if ($rootid) {
+                $options = [-1 => get_string('threadinherit', 'mod_spatialforum')] + $options;
+            }
             $settings = \mod_spatialforum\local\communication::settings();
             foreach ([1 => 'subscriptionimmediate', 2 => 'subscriptiondaily'] as $mode => $label) {
                 $text = get_string($label, 'mod_spatialforum');

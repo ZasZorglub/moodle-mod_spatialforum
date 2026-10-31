@@ -39,7 +39,7 @@ export const init = options => {
     status.setAttribute('role', 'status');
     status.className = 'alert alert-info';
     form.prepend(status);
-    const fields = ['subject', 'branchname', 'showparent', 'submissionkey', 'revision',
+    const fields = ['subject', 'branchname', 'showparent', 'followthread', 'submissionkey', 'revision',
         'message_editor[itemid]', 'message_editor[format]'];
     const field = name => form.querySelector('[name="' + name + '"]');
     const editor = () => Tiny.getInstanceForElement(textarea);

@@ -78,15 +78,31 @@ class notifications {
      *
      * @param int $forumid
      * @param int $mode
+     * @param int $postid Zero for the activity, otherwise a post in the conversation
      */
-    public static function set_mode(int $forumid, int $mode): void {
+    public static function set_mode(int $forumid, int $mode, int $postid = 0): void {
         global $DB, $USER;
-        if (!isloggedin() || isguestuser() || !in_array($mode, [self::OFF, self::IMMEDIATE, self::DAILY], true)) {
+        $modes = $postid ? [thread_subscriptions::INHERIT, self::OFF, self::IMMEDIATE, self::DAILY]
+            : [self::OFF, self::IMMEDIATE, self::DAILY];
+        if (!isloggedin() || isguestuser() || !in_array($mode, $modes, true)) {
             throw new \moodle_exception('invalidsubscription', 'mod_spatialforum');
         }
         $cm = get_coursemodule_from_instance('spatialforum', $forumid, 0, false, MUST_EXIST);
         if ($mode && !self::eligible($cm, $USER)) {
             throw new \moodle_exception('invalidsubscription', 'mod_spatialforum');
+        }
+        $rootid = 0;
+        if ($postid) {
+            $own = $DB->get_record('spatialforum_subscriptions', [
+                'spatialforumid' => $forumid, 'userid' => $USER->id, 'rootpostid' => $postid,
+            ]);
+            if ($mode === self::OFF && $own) {
+                $rootid = $postid;
+            } else {
+                $post = $DB->get_record('spatialforum_posts', ['id' => $postid, 'spatialforumid' => $forumid], '*', MUST_EXIST);
+                group_access::for_activity($forumid)->require_post($post);
+                $rootid = thread_subscriptions::root($post);
+            }
         }
         $lock = self::lock($forumid, $USER->id);
         if (!$lock) {
@@ -94,28 +110,29 @@ class notifications {
         }
         try {
             $transaction = $DB->start_delegated_transaction();
-            $where = ['spatialforumid' => $forumid, 'userid' => $USER->id];
+            $activitywhere = ['spatialforumid' => $forumid, 'userid' => $USER->id];
+            $where = $activitywhere + ['rootpostid' => $rootid];
             $old = $DB->get_record('spatialforum_subscriptions', $where);
-            if ($mode === self::OFF) {
-                $DB->delete_records('spatialforum_subscriptions', $where);
-                $DB->delete_records('spatialforum_deliveries', $where);
+            if ($mode === self::OFF && !$rootid) {
+                $DB->delete_records('spatialforum_subscriptions', $activitywhere);
+                $DB->delete_records('spatialforum_deliveries', $activitywhere);
             } else if (!$old) {
                 $first = (int) $DB->get_field_sql('SELECT MAX(id) FROM {spatialforum_posts} WHERE spatialforumid = ?', [$forumid]);
                 $DB->insert_record('spatialforum_subscriptions', (object) ($where + [
                     'mode' => $mode, 'firstpostid' => $first, 'timecreated' => time(), 'timemodified' => time(),
                 ]));
             } else if ((int) $old->mode !== $mode) {
+                if ((int) $old->mode === self::OFF) {
+                    $old->firstpostid = (int) $DB->get_field_sql(
+                        'SELECT MAX(id) FROM {spatialforum_posts} WHERE spatialforumid = ?',
+                        [$forumid]
+                    );
+                }
                 $old->mode = $mode;
                 $old->timemodified = time();
                 $DB->update_record('spatialforum_subscriptions', $old);
-                $DB->set_field('spatialforum_deliveries', 'mode', $mode, $where + ['status' => self::PENDING]);
-                $DB->set_field(
-                    'spatialforum_deliveries',
-                    'due',
-                    self::due($mode, $USER, time()),
-                    $where + ['status' => self::PENDING]
-                );
             }
+            thread_subscriptions::reschedule($forumid, $USER->id, $rootid);
             $transaction->allow_commit();
         } finally {
             $lock->release();
@@ -149,12 +166,13 @@ class notifications {
         if (!$cm) {
             return;
         }
+        $rootid = thread_subscriptions::root($post);
         $lastid = 0;
         do {
             $subscriptions = $DB->get_records_select(
                 'spatialforum_subscriptions',
-                'spatialforumid = :forumid AND id > :lastid',
-                ['forumid' => $post->spatialforumid, 'lastid' => $lastid],
+                'spatialforumid = :forumid AND id > :lastid AND (rootpostid = 0 OR rootpostid = :rootid)',
+                ['forumid' => $post->spatialforumid, 'lastid' => $lastid, 'rootid' => $rootid],
                 'id ASC',
                 '*',
                 0,
@@ -172,8 +190,10 @@ class notifications {
                 try {
                     $sub = $DB->get_record('spatialforum_subscriptions', ['id' => $sub->id]);
                     $user = $sub ? $DB->get_record('user', ['id' => $sub->userid]) : false;
+                    $sub = $user ? thread_subscriptions::effective($post, $user->id, $rootid) : null;
                     if (
-                        !$sub || !$user || !communication::allows($post, (int) $sub->mode) || !self::eligible($cm, $user)
+                        !$sub || !$user || $post->id <= $sub->firstpostid
+                        || !communication::allows($post, (int) $sub->mode) || !self::eligible($cm, $user)
                         || !group_access::for_activity($post->spatialforumid, $user->id)->can_view($post)
                     ) {
                         continue;
@@ -260,14 +280,8 @@ class notifications {
             try {
                 $cm = get_coursemodule_from_instance('spatialforum', $first->spatialforumid);
                 $user = $DB->get_record('user', ['id' => $first->userid]);
-                $sub = $DB->get_record('spatialforum_subscriptions', [
-                    'spatialforumid' => $first->spatialforumid, 'userid' => $first->userid,
-                ]);
                 $policy = $cm && $user && self::eligible($cm, $user)
                     ? group_access::for_activity($cm->instance, $user->id) : null;
-                if ($sub && (int) $sub->mode !== (int) $first->mode) {
-                    continue;
-                }
                 $posts = [];
                 $ids = [];
                 foreach ($batch as $queued) {
@@ -275,17 +289,24 @@ class notifications {
                     if (!$row || $row->due > $now) {
                         continue;
                     }
-                    if ($sub && (int) $row->mode !== (int) $sub->mode) {
+                    if ((int) $row->mode !== (int) $first->mode) {
                         continue;
                     }
                     $post = $DB->get_record('spatialforum_posts', ['id' => $row->postid,
                         'spatialforumid' => $row->spatialforumid, 'deleted' => 0]);
+                    $sub = $post ? thread_subscriptions::effective($post, $first->userid) : null;
                     if (
                         !$sub || !$policy || !$post || $post->deletedat || !communication::allows($post, (int) $sub->mode)
                             || !$policy->can_view($post) || $post->id <= $sub->firstpostid
                     ) {
                         $DB->delete_records('spatialforum_deliveries', ['id' => $row->id]);
                         $result['skipped']++;
+                        continue;
+                    }
+                    if ((int) $row->mode !== (int) $sub->mode) {
+                        $DB->update_record('spatialforum_deliveries', (object) [
+                            'id' => $row->id, 'mode' => $sub->mode, 'due' => self::due((int) $sub->mode, $user, $now),
+                        ]);
                         continue;
                     }
                     $currentdue = self::due((int) $row->mode, $user, (int) $post->timecreated);
@@ -304,7 +325,7 @@ class notifications {
                 $DB->set_field_select('spatialforum_deliveries', 'status', self::UNCERTAIN, "id $in", $params);
                 $DB->set_field_select('spatialforum_deliveries', 'timemodified', $now, "id $in", $params);
                 try {
-                    $id = static::send($cm, $user, $posts, (int) $sub->mode);
+                    $id = static::send($cm, $user, $posts, (int) $first->mode);
                 } catch (\Throwable $e) {
                     $result['uncertain'] += count($ids);
                     debugging(
@@ -348,7 +369,17 @@ class notifications {
         $context = \context_module::instance($cm->id);
         $name = format_string($activity->name, true, ['context' => $context, 'filter' => false]);
         $items = [];
+        $reasons = [];
         foreach ($posts as $post) {
+            $sub = thread_subscriptions::effective($post, $user->id);
+            if ($sub) {
+                $reasons[$sub->reason] = get_string_manager()->get_string(
+                    'subscriptionreason' . $sub->reason,
+                    'mod_spatialforum',
+                    null,
+                    $user->lang
+                );
+            }
             $author = $DB->get_record('user', ['id' => $post->userid]);
             $url = new \moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id, 'postid' => $post->id]);
             $items[] = ['subject' => $post->subject,
@@ -361,6 +392,9 @@ class notifications {
             'site' => html_to_text($SITE->fullname), 'course' => html_to_text($course->fullname),
             'activity' => html_to_text($name), 'recipient' => fullname($user),
         ], $items, $settingsurl->out(false), $user->lang);
+        $reasontext = implode(' ', $reasons);
+        $rendered['text'] .= "\n\n" . $reasontext;
+        $rendered['html'] .= \html_writer::tag('p', s($reasontext));
         $message = new \core\message\message();
         $message->component = 'mod_spatialforum';
         $message->name = $mode === self::DAILY ? 'digests' : 'posts';

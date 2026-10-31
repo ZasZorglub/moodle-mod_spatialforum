@@ -74,6 +74,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             'name' => 'privacy:metadata:spatialforum_tracks:name',
         ], 'privacy:metadata:spatialforum_tracks');
         $collection->add_database_table('spatialforum_subscriptions', [
+            'rootpostid' => 'privacy:metadata:spatialforum_subscriptions:rootpostid',
             'userid' => 'privacy:metadata:spatialforum_subscriptions:userid',
             'mode' => 'privacy:metadata:spatialforum_subscriptions:mode',
             'firstpostid' => 'privacy:metadata:spatialforum_subscriptions:firstpostid',

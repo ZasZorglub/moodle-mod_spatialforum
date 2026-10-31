@@ -8,7 +8,7 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 -->
-<XMLDB PATH="mod/spatialforum/db" VERSION="2026103102" COMMENT="XMLDB file for mod_spatialforum"
+<XMLDB PATH="mod/spatialforum/db" VERSION="2026103103" COMMENT="XMLDB file for mod_spatialforum"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
@@ -131,6 +131,7 @@
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="spatialforumid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="rootpostid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="mode" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1"/>
         <FIELD NAME="firstpostid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
@@ -142,7 +143,7 @@
         <KEY NAME="user" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
-        <INDEX NAME="forumuser" UNIQUE="true" FIELDS="spatialforumid, userid"/>
+        <INDEX NAME="forumuserroot" UNIQUE="true" FIELDS="spatialforumid, userid, rootpostid"/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="spatialforum_deliveries" COMMENT="Opt-in notification data">

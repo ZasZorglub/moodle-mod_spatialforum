@@ -41,6 +41,66 @@ require_once($CFG->dirroot . '/mod/spatialforum/db/upgrade.php');
 #[CoversFunction('xmldb_spatialforum_upgrade')]
 final class upgrade_test extends \advanced_testcase {
     /**
+     * Existing activity opt-ins become scope zero and can coexist with an independent thread preference.
+     */
+    public function test_upgrade_preserves_activity_subscription_and_expands_unique_scope(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $gen = $this->getDataGenerator();
+        $course = $gen->create_course();
+        $activity = $gen->create_module('spatialforum', ['course' => $course->id]);
+        $user = $gen->create_user();
+        $gen->enrol_user($user->id, $course->id, 'student');
+        $this->setUser($user);
+        $rootid = \mod_spatialforum\local\forum::create_post(
+            $activity,
+            $activity->roottrackid,
+            $user->id,
+            'Legacy conversation',
+            'Legacy text',
+            FORMAT_PLAIN
+        );
+        \mod_spatialforum\local\notifications::set_mode($activity->id, \mod_spatialforum\local\notifications::DAILY);
+        $original = $DB->get_record('spatialforum_subscriptions', [], '*', MUST_EXIST);
+        $dbman = $DB->get_manager();
+        $table = new \xmldb_table('spatialforum_subscriptions');
+        $field = new \xmldb_field('rootpostid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'userid');
+        $index = new \xmldb_index('forumuserroot', XMLDB_INDEX_UNIQUE, ['spatialforumid', 'userid', 'rootpostid']);
+        $oldindex = new \xmldb_index('forumuser', XMLDB_INDEX_UNIQUE, ['spatialforumid', 'userid']);
+        $dbman->drop_index($table, $index);
+        $dbman->drop_field($table, $field);
+        $dbman->add_index($table, $oldindex);
+        try {
+            set_config('version', 2026103102, 'mod_spatialforum');
+            $this->assertTrue(\xmldb_spatialforum_upgrade(2026103102));
+            $saved = $DB->get_record('spatialforum_subscriptions', ['id' => $original->id]);
+            $this->assertEquals(0, $saved->rootpostid);
+            $this->assertEquals($original->mode, $saved->mode);
+            $this->assertEquals($original->firstpostid, $saved->firstpostid);
+            $this->assertTrue($dbman->index_exists($table, $index));
+            $this->assertFalse($dbman->index_exists($table, $oldindex));
+            $copy = clone $saved;
+            unset($copy->id);
+            $copy->rootpostid = $rootid;
+            $DB->insert_record('spatialforum_subscriptions', $copy);
+            set_config('version', 2026103102, 'mod_spatialforum');
+            $this->assertTrue(\xmldb_spatialforum_upgrade(2026103102));
+            $this->assertSame(2, $DB->count_records('spatialforum_subscriptions'));
+        } finally {
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+            if ($dbman->index_exists($table, $oldindex)) {
+                $dbman->drop_index($table, $oldindex);
+            }
+            if (!$dbman->index_exists($table, $index)) {
+                $dbman->add_index($table, $index);
+            }
+        }
+    }
+
+    /**
      * Legacy posts keep their content and multiple empty publication keys after upgrade.
      */
     public function test_upgrade_adds_nullable_unique_publication_keys(): void {

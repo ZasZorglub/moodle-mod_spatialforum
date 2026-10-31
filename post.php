@@ -110,7 +110,18 @@ $PAGE->requires->js_call_amd('mod_spatialforum/drafts', 'init', [[
     'unavailable' => get_string('draftunavailable', 'mod_spatialforum'),
 ]]);
 
+$followdefault = 1;
+$canfollow = \mod_spatialforum\local\notifications::eligible($cm, $USER);
+if (!empty($origin)) {
+    $rootid = \mod_spatialforum\local\thread_subscriptions::root($origin);
+    $threadpref = $DB->get_record('spatialforum_subscriptions', [
+        'spatialforumid' => $activity->id, 'userid' => $USER->id, 'rootpostid' => $rootid,
+    ]);
+    $followdefault = $threadpref && (int) $threadpref->mode === 0 ? 0 : 1;
+}
 $form = new post_form(null, [
+    'allowfollow' => $canfollow,
+    'followdefault' => $followdefault,
     'submissionkey' => optional_param('submissionkey', bin2hex(random_bytes(32)), PARAM_ALPHANUM),
     'cmid' => $cm->id,
     'groupid' => $access->selected_group(),
@@ -132,7 +143,7 @@ if ($form->is_cancelled()) {
     redirect($returnurl);
 } else if ($data = $form->get_data()) {
     require_sesskey();
-    $create = function () use ($activity, $track, $createstrack, $originpostid, $USER, $action, $data, $context, $DB) {
+    $create = function () use ($activity, $track, $createstrack, $originpostid, $USER, $action, $data, $context, $DB, $canfollow) {
         $targettrackid = $track->id;
         $message = $data->message_editor['text'];
         $format = $data->message_editor['format'];
@@ -154,6 +165,12 @@ if ($form->is_cancelled()) {
             $newpostid = forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);
         }
         \mod_spatialforum\local\media::save($newpostid, $data->message_editor, $context);
+        if ($canfollow) {
+            $post = $DB->get_record('spatialforum_posts', ['id' => $newpostid], '*', MUST_EXIST);
+            $sub = \mod_spatialforum\local\thread_subscriptions::effective($post, $USER->id);
+            $mode = empty($data->followthread) ? 0 : ($sub ? (int) $sub->mode : 1);
+            \mod_spatialforum\local\notifications::set_mode($activity->id, $mode, $newpostid);
+        }
         return (int) $newpostid;
     };
     $newpostid = \mod_spatialforum\local\submissions::save($cm, $data->submissionkey, $create);

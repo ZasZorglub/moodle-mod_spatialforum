@@ -89,6 +89,10 @@ class post_form extends \moodleform {
         }
 
         $submitlabel = $isbranch ? 'createbranch' : (empty($customdata['originpostid']) ? 'createpost' : 'postreply');
+        if (!empty($customdata['allowfollow'])) {
+            $mform->addElement('advcheckbox', 'followthread', get_string('followthread', 'mod_spatialforum'));
+            $mform->setDefault('followthread', $customdata['followdefault'] ?? 1);
+        }
         $label = !empty($customdata['editing']) ? get_string('savechanges') : get_string($submitlabel, 'mod_spatialforum');
         $this->add_action_buttons(true, $label);
     }

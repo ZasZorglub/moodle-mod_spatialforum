@@ -122,6 +122,7 @@
                         </div>
                         {{#canreply}}<a class="btn btn-primary spatialforum-reply" href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
                         {{#canedit}}<a class="btn btn-link" href="{{editurl}}">{{#str}}editpost, mod_spatialforum{{/str}}</a>{{/canedit}}
+                        {{#threadsubscriptionurl}}<a class="btn btn-link" href="{{threadsubscriptionurl}}">{{#str}}threadnotifications, mod_spatialforum{{/str}}</a>{{/threadsubscriptionurl}}
                         {{#haschildren}}
                             <div class="spatialforum-children">
                                 <h3>{{#str}}replieshere, mod_spatialforum{{/str}}</h3>

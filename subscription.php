@@ -35,29 +35,45 @@ if (isguestuser()) {
 $id = required_param('id', PARAM_INT);
 $cm = get_coursemodule_from_id('spatialforum', $id, 0, false, MUST_EXIST);
 $eligible = notifications::eligible($cm, $USER);
+$rootid = optional_param('postid', 0, PARAM_INT);
+if ($rootid && $eligible) {
+    $post = $DB->get_record('spatialforum_posts', ['id' => $rootid, 'spatialforumid' => $cm->instance]);
+    $eligible = $post && \mod_spatialforum\local\group_access::for_activity($cm->instance)->can_view($post);
+    if ($eligible) {
+        $rootid = \mod_spatialforum\local\thread_subscriptions::root($post);
+    }
+}
 $context = $eligible ? context_module::instance($cm->id) : context_system::instance();
 if ($eligible) {
     require_course_login(get_course($cm->course), false, $cm);
     $PAGE->set_cm($cm);
 }
 $PAGE->set_context($context);
-$PAGE->set_url('/mod/spatialforum/subscription.php', ['id' => $id]);
+$PAGE->set_url('/mod/spatialforum/subscription.php', ['id' => $id, 'postid' => $rootid]);
 $PAGE->set_title(get_string('notificationpreferences', 'mod_spatialforum'));
 $PAGE->set_heading(get_string('notificationpreferences', 'mod_spatialforum'));
 $returnurl = $eligible ? new moodle_url('/mod/spatialforum/view.php', ['id' => $id]) : new moodle_url('/my/');
-$form = new \mod_spatialforum\form\subscription_form(null, ['cmid' => $id, 'eligible' => $eligible]);
-$subscription = $DB->get_record('spatialforum_subscriptions', ['spatialforumid' => $cm->instance, 'userid' => $USER->id]);
-$form->set_data(['mode' => $eligible ? ($subscription->mode ?? 0) : 0]);
+$form = new \mod_spatialforum\form\subscription_form(null, ['cmid' => $id, 'eligible' => $eligible, 'rootpostid' => $rootid]);
+$subscription = $DB->get_record('spatialforum_subscriptions', [
+    'spatialforumid' => $cm->instance, 'userid' => $USER->id, 'rootpostid' => $rootid,
+]);
+$form->set_data(['mode' => $eligible ? ($subscription->mode ?? ($rootid ? -1 : 0)) : 0]);
 if ($form->is_cancelled()) {
     redirect($returnurl);
 }
 if ($data = $form->get_data()) {
     require_sesskey();
-    notifications::set_mode($cm->instance, (int) $data->mode);
+    notifications::set_mode($cm->instance, (int) $data->mode, $rootid);
     redirect($returnurl, get_string('subscriptionsaved', 'mod_spatialforum'));
 }
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('notificationpreferences', 'mod_spatialforum'));
-echo $OUTPUT->notification(get_string('subscriptionscope', 'mod_spatialforum'), 'info');
+if ($rootid && $eligible) {
+    $root = $DB->get_record('spatialforum_posts', ['id' => $rootid], '*', MUST_EXIST);
+    $url = new moodle_url('/mod/spatialforum/view.php', ['id' => $id, 'postid' => $rootid]);
+    $url->set_anchor('post-' . $rootid);
+    echo html_writer::tag('p', html_writer::link($url, format_string($root->subject)));
+}
+echo $OUTPUT->notification(get_string($rootid ? 'threadsubscriptionscope' : 'subscriptionscope', 'mod_spatialforum'), 'info');
 $form->display();
 echo $OUTPUT->footer();

@@ -308,5 +308,21 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         }
         upgrade_mod_savepoint(true, 2026103102, 'spatialforum');
     }
+    if ($oldversion < 2026103103) {
+        $table = new xmldb_table('spatialforum_subscriptions');
+        $field = new xmldb_field('rootpostid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'userid');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $oldindex = new xmldb_index('forumuser', XMLDB_INDEX_UNIQUE, ['spatialforumid', 'userid']);
+        if ($dbman->index_exists($table, $oldindex)) {
+            $dbman->drop_index($table, $oldindex);
+        }
+        $index = new xmldb_index('forumuserroot', XMLDB_INDEX_UNIQUE, ['spatialforumid', 'userid', 'rootpostid']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+        upgrade_mod_savepoint(true, 2026103103, 'spatialforum');
+    }
     return true;
 }
