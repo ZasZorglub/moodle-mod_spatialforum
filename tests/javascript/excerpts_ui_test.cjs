@@ -72,31 +72,8 @@ for (const built of [false, true]) {
     const live = parseHTML(Mustache.render(main, {cmid: 7, posts: [{id: 1, message: '<p>English QA selection</p>',
         canreply: true, replyurl: '/reply'}], str: () => text => text.split(',')[0]},
     {'mod_spatialforum/reply_context': ''}));
-    const start = live.document.querySelector('[data-excerpt-start]');
-    const message = live.document.querySelector('.spatialforum-post-detail > .spatialforum-message');
-    let hasSelection = true;
-    const liveContext = vm.createContext({document: live.document, window: {getSelection: () => ({
-        rangeCount: 1, isCollapsed: !hasSelection,
-        getRangeAt: () => ({startContainer: message.firstChild, endContainer: message.firstChild,
-            intersectsNode: () => false}), toString: () => 'English QA selection',
-    })}});
-    if (built) {
-        liveContext.define = (name, deps, factory) => factory().init();
-        vm.runInContext(code, liveContext);
-    } else {
-        vm.runInContext(code.replace('export const init', 'const init') + ';init();', liveContext);
-    }
-    live.document.dispatchEvent(new live.window.Event('selectionchange'));
-    assert.equal(start.querySelector('button').disabled, false);
-    assert.equal(start.classList.contains('has-selection'), true);
-    assert.equal(start.querySelector('[name="initialexcerpt"]').value, 'English QA selection');
-    assert.equal(start.querySelector('[role="status"]').textContent, 'selectionready');
-    const siblings = [...message.parentNode.children];
-    assert.ok(siblings.indexOf(start) < siblings.indexOf(message), 'The sticky action precedes long content.');
-    hasSelection = false;
-    live.document.dispatchEvent(new live.window.Event('selectionchange'));
-    assert.equal(start.querySelector('button').disabled, true);
-    assert.equal(start.querySelector('[role="status"]').textContent, 'selectionhint');
+    assert.equal(live.document.querySelector('[data-excerpt-start]'), null, 'Selection reply action is retired');
+
 }
 const css = fs.readFileSync(path.join(plugin, 'styles.css'), 'utf8');
 assert.ok(css.includes('.spatialforum-excerpt-start button:not(:disabled)'));

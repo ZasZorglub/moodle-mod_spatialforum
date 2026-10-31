@@ -34,8 +34,6 @@ $trackid = required_param('trackid', PARAM_INT);
 $originpostid = optional_param('originpostid', 0, PARAM_INT);
 $viewmode = optional_param('sfview', '', PARAM_ALPHA);
 $viewmode = in_array($viewmode, ['map', 'list'], true) ? $viewmode : '';
-$excerptmode = optional_param('startquote', 0, PARAM_BOOL)
-    || optional_param('excerptdraft', '[]', PARAM_RAW) !== '[]';
 
 if (!in_array($action, ['reply', 'branch'], true)) {
     throw new moodle_exception('invalidaction', 'mod_spatialforum');
@@ -99,6 +97,7 @@ $PAGE->set_url('/mod/spatialforum/post.php', [
 ]);
 $PAGE->set_title(get_string($pagelabel, 'mod_spatialforum'));
 $PAGE->set_heading(format_string($course->fullname));
+$PAGE->activityheader->set_description('');
 
 $form = new post_form(null, [
     'cmid' => $cm->id,
@@ -110,21 +109,12 @@ $form = new post_form(null, [
     'origin' => $origin ?? null,
     'context' => $context,
     'sfview' => $viewmode,
-    'excerptmode' => $excerptmode,
 ]);
 
 if ($action === 'reply' && !empty($origin)) {
     $defaults = ['subject' => forum::reply_subject($origin->subject)];
-    if (optional_param('startquote', 0, PARAM_BOOL)) {
-        require_sesskey();
-        $selection = optional_param('initialexcerpt', '', PARAM_RAW);
-        $draft = json_encode([['quote' => $selection, 'comment' => '']], JSON_UNESCAPED_UNICODE);
-        \mod_spatialforum\local\excerpts::prepare($draft, $origin, $context);
-        $defaults['excerptdraft'] = $draft;
-    }
     $form->set_data($defaults);
 }
-$PAGE->requires->js_call_amd('mod_spatialforum/excerpts', 'init');
 
 if ($form->is_cancelled()) {
     redirect($returnurl);
@@ -145,7 +135,7 @@ if ($form->is_cancelled()) {
             $message,
             $format,
             !empty($data->showparent),
-            (string) ($data->excerptdraft ?? '[]')
+            '[]'
         );
         $newpostid = $DB->get_field('spatialforum_posts', 'id', ['trackid' => $targettrackid], MUST_EXIST);
     } else {
@@ -166,7 +156,6 @@ echo $OUTPUT->heading(get_string($pagelabel, 'mod_spatialforum'));
 if (!empty($origin)) {
     $origincontext = forum::export_reply_context($origin, $context, $cm->id);
     $origincontext['compact'] = true;
-    $origincontext['excerptmode'] = $excerptmode;
     echo $OUTPUT->render_from_template(
         'mod_spatialforum/reply_context',
         $origincontext

@@ -68,36 +68,16 @@ class post_form extends \moodleform {
         $mform->addRule('subject', null, 'required', null, 'client');
         $mform->addRule('subject', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
 
-        if (!empty($customdata['originpostid'])) {
-            global $OUTPUT;
-            $mform->addElement('hidden', 'excerptdraft', '[]');
-            $mform->setType('excerptdraft', PARAM_RAW);
-            $composer = $OUTPUT->render_from_template(
-                'mod_spatialforum/excerpt_composer',
-                ['excerptmode' => !empty($customdata['excerptmode'])]
-            );
-            if (!empty($customdata['excerptmode'])) {
-                $mform->addElement('html', $composer);
-            }
-        }
-
-        $messagelabel = !empty($customdata['excerptmode']) ? 'closingcomment' : 'message';
         $options = isset($customdata['context'])
             ? \mod_spatialforum\local\media::editor_options($customdata['context'])
             : ['maxfiles' => 10, 'trusttext' => false];
-        $mform->addElement('editor', 'message_editor', get_string($messagelabel, 'mod_spatialforum'), null, $options);
+        $mform->addElement('editor', 'message_editor', get_string('message', 'mod_spatialforum'), null, $options);
         $mform->setType('message_editor', PARAM_RAW);
         // Server validation recognises media-only posts; generic text-required checks do not.
         if (!empty($customdata['originpostid'])) {
-            if (empty($customdata['excerptmode'])) {
-                $mform->addElement('html', $composer);
-            }
-            $mform->addElement('html', '<details class="spatialforum-quote-options"><summary>' .
-                get_string('quoteoptions', 'mod_spatialforum') . '</summary>');
             $mform->addElement('advcheckbox', 'showparent', get_string('includeparent', 'mod_spatialforum'));
             $mform->addHelpButton('showparent', 'includeparent', 'mod_spatialforum');
             $mform->setDefault('showparent', 0);
-            $mform->addElement('html', '</details>');
         }
 
         $submitlabel = $isbranch ? 'createbranch' : (empty($customdata['originpostid']) ? 'createpost' : 'postreply');
@@ -125,23 +105,7 @@ class post_form extends \moodleform {
             $errors['branchname'] = get_string('maximumchars', '', 255);
         }
         $message = trim((string) ($data['message_editor']['text'] ?? ''));
-        $hascomments = false;
-        if (!empty($this->_customdata['origin'])) {
-            try {
-                $parts = \mod_spatialforum\local\excerpts::prepare(
-                    (string) ($data['excerptdraft'] ?? '[]'),
-                    $this->_customdata['origin'],
-                    $this->_customdata['context']
-                );
-                foreach (json_decode($parts, true) as $part) {
-                    // Quote comments are plain text, so escape markup before checking visible content.
-                    $hascomments = $hascomments || \mod_spatialforum\local\media::has_content(s($part['comment']));
-                }
-            } catch (\moodle_exception $e) {
-                $errors['message_editor'] = get_string('invalidexcerpt', 'mod_spatialforum');
-            }
-        }
-        if (!\mod_spatialforum\local\media::has_content($message) && !$hascomments) {
+        if (!\mod_spatialforum\local\media::has_content($message)) {
             $errors['message_editor'] = get_string('required');
         }
         if (isset($this->_customdata['context'])) {

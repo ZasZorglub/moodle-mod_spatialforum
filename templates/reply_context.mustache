@@ -18,7 +18,7 @@
         <div class="spatialforum-reply-author">{{author}} · <time datetime="{{creatediso}}">{{createdlabel}}</time>
             {{#edited}} · <time datetime="{{editediso}}">{{editedlabel}}</time>{{/edited}}
         </div>
-        {{#compact}}<details class="spatialforum-original" {{#excerptmode}}open{{/excerptmode}}>
+        {{#compact}}<details class="spatialforum-original" open>
             <summary>{{#str}}showoriginal, mod_spatialforum{{/str}}</summary>{{/compact}}
         <div class="spatialforum-message" {{#compact}}tabindex="0"{{/compact}}>{{{message}}}</div>
         {{#compact}}</details>{{/compact}}

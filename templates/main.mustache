@@ -87,19 +87,6 @@
                             </div>
                         </div>
                         {{#tracklocked}}<p class="alert alert-warning">{{#str}}forumlocked, mod_spatialforum{{/str}}</p>{{/tracklocked}}
-                        {{#canreply}}
-                            <form method="post" action="{{replyurl}}" class="spatialforum-excerpt-start" data-excerpt-start
-                                  data-hint="{{#str}}selectionhint, mod_spatialforum{{/str}}"
-                                  data-ready="{{#str}}selectionready, mod_spatialforum{{/str}}">
-                                <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                <input type="hidden" name="startquote" value="1">
-                                <input type="hidden" name="initialexcerpt" value="">
-                                <button type="submit" class="btn btn-outline-secondary" disabled>
-                                    {{#str}}replyselection, mod_spatialforum{{/str}}
-                                </button>
-                                <p class="spatialforum-selection-help" role="status">{{#str}}selectionhint, mod_spatialforum{{/str}}</p>
-                            </form>
-                        {{/canreply}}
                         {{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
                         <div class="spatialforum-message">{{{message}}}</div>
                         {{#unread}}

@@ -61,16 +61,16 @@ final class ux_test extends \advanced_testcase {
 
     public function test_regular_reply_starts_with_message_and_keeps_quotes_optional(): void {
         $html = $this->render_form(19);
-        $this->assertLessThan(strpos($html, 'data-excerpt-composer'), strpos($html, 'id_message_editor'));
-        $this->assertStringContainsString('spatialforum-quote-options', $html);
+        $this->assertLessThan(strpos($html, 'name="showparent"'), strpos($html, 'id_message_editor'));
+        $this->assertStringNotContainsString('spatialforum-quote-options', $html);
         $this->assertStringContainsString('name="sfview"', $html);
         $this->assertStringContainsString('value="list"', $html);
-        $this->assertDoesNotMatchRegularExpression('/data-excerpt-composer\s+open/', $html);
+        $this->assertStringNotContainsString('data-excerpt-composer', $html);
     }
 
     public function test_selection_reply_opens_composer_and_labels_closing_comment(): void {
         $html = $this->render_form(19, true);
-        $this->assertStringContainsString(get_string('closingcomment', 'mod_spatialforum'), $html);
-        $this->assertMatchesRegularExpression('/data-excerpt-composer\s+open/', $html);
+        $this->assertStringContainsString('name="showparent"', $html);
+        $this->assertStringNotContainsString('data-excerpt-composer', $html);
     }
 }
