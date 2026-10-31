@@ -34,14 +34,15 @@ use PHPUnit\Framework\Attributes\CoversClass;
 final class submissions_test extends \advanced_testcase {
     /**
      * An enrolled author and a real activity, independently of other test cases.
+     * @param int $groupmode
      * @return array
      */
-    private function fixture(): array {
+    private function fixture(int $groupmode = NOGROUPS): array {
         $this->resetAfterTest();
         $this->setAdminUser();
         $gen = $this->getDataGenerator();
         $course = $gen->create_course();
-        $activity = $gen->create_module('spatialforum', ['course' => $course->id]);
+        $activity = $gen->create_module('spatialforum', ['course' => $course->id, 'groupmode' => $groupmode]);
         $author = $gen->create_user();
         $gen->enrol_user($author->id, $course->id, 'student');
         $this->setUser($author);
@@ -78,7 +79,7 @@ final class submissions_test extends \advanced_testcase {
      * Keys are scoped to both the actor and activity, rather than trusting raw browser tokens.
      */
     public function test_token_is_scoped_to_author_and_activity(): void {
-        global $USER;
+        global $USER, $PAGE;
         [$course, $activity, , $cm] = $this->fixture();
         $token = str_repeat('a', 64);
         $create = function () use ($activity) {
@@ -89,11 +90,13 @@ final class submissions_test extends \advanced_testcase {
         $other = $this->getDataGenerator()->create_user();
         $this->getDataGenerator()->enrol_user($other->id, $course->id, 'student');
         $this->setUser($other);
+        $PAGE = new \moodle_page();
         $two = submissions::save($cm, $token, $create);
         $this->assertNotEquals($one, $two);
         $this->setAdminUser();
         $second = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
         $this->setUser($other);
+        $PAGE = new \moodle_page();
         $othercm = get_coursemodule_from_instance('spatialforum', $second->id);
         $three = submissions::save($othercm, $token, function () use ($second, $USER) {
             return forum::create_post($second, $second->roottrackid, $USER->id, 'Post', 'Text', FORMAT_PLAIN);
@@ -158,13 +161,10 @@ final class submissions_test extends \advanced_testcase {
      * Replays still require the participant's current group access, not just their earlier access.
      */
     public function test_group_revocation_rejects_replay(): void {
-        [$course, $activity, $author, $cm] = $this->fixture();
+        [$course, $activity, $author, $cm] = $this->fixture(SEPARATEGROUPS);
         $this->setAdminUser();
         $group = $this->getDataGenerator()->create_group(['courseid' => $course->id]);
         groups_add_member($group, $author);
-        set_coursemodule_groupmode($cm->id, SEPARATEGROUPS);
-        rebuild_course_cache($course->id, true);
-        $cm = get_coursemodule_from_instance('spatialforum', $activity->id);
         $this->setUser($author);
         $token = str_repeat('d', 64);
         $create = function () use ($activity, $author, $group) {

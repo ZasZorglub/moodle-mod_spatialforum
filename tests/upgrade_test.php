@@ -69,7 +69,11 @@ final class upgrade_test extends \advanced_testcase {
             set_config('version', 2026103100, 'mod_spatialforum');
             $this->assertTrue(\xmldb_spatialforum_upgrade(2026103100));
             $this->assertTrue($dbman->index_exists($table, $index));
-            $this->assertSame(2, $DB->count_records('spatialforum_posts', ['message' => 'Legacy body', 'submissionkey' => null]));
+            $posts = $DB->get_records('spatialforum_posts', ['submissionkey' => null]);
+            $this->assertCount(2, $posts);
+            foreach ($posts as $post) {
+                $this->assertSame('Legacy body', $post->message);
+            }
             set_config('version', 2026103100, 'mod_spatialforum');
             $this->assertTrue(\xmldb_spatialforum_upgrade(2026103100));
         } finally {

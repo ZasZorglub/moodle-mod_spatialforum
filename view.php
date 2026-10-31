@@ -53,6 +53,10 @@ $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
 $PAGE->requires->js_call_amd('mod_spatialforum/spatialforum', 'init');
 $PAGE->requires->js_call_amd('mod_spatialforum/excerpts', 'init');
+if (!empty($SESSION->spatialforumdraftclear)) {
+    $PAGE->requires->js_call_amd('mod_spatialforum/drafts', 'init', [$SESSION->spatialforumdraftclear]);
+    unset($SESSION->spatialforumdraftclear);
+}
 
 spatialforum_view($activity, $course, $cm, $context);
 $data = forum::export_view_data($activity, $cm, $track, $context, true);

@@ -98,6 +98,17 @@ $PAGE->set_url('/mod/spatialforum/post.php', [
 $PAGE->set_title(get_string($pagelabel, 'mod_spatialforum'));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->activityheader->set_description('');
+$draftscope = implode(':', [$USER->id, $cm->id, $action, $track->id, $originpostid]);
+$PAGE->requires->js_call_amd('mod_spatialforum/drafts', 'init', [[
+    'scope' => $draftscope,
+    'restore' => $_SERVER['REQUEST_METHOD'] === 'GET',
+    'ready' => get_string('draftready', 'mod_spatialforum'),
+    'saved' => get_string('draftsaved', 'mod_spatialforum'),
+    'available' => get_string('draftavailable', 'mod_spatialforum'),
+    'restoreLabel' => get_string('draftrestore', 'mod_spatialforum'),
+    'discardLabel' => get_string('draftdiscard', 'mod_spatialforum'),
+    'unavailable' => get_string('draftunavailable', 'mod_spatialforum'),
+]]);
 
 $form = new post_form(null, [
     'submissionkey' => optional_param('submissionkey', bin2hex(random_bytes(32)), PARAM_ALPHANUM),
@@ -147,6 +158,7 @@ if ($form->is_cancelled()) {
     };
     $newpostid = \mod_spatialforum\local\submissions::save($cm, $data->submissionkey, $create);
     $targettrackid = $DB->get_field('spatialforum_posts', 'trackid', ['id' => $newpostid], MUST_EXIST);
+    $SESSION->spatialforumdraftclear = ['scope' => $draftscope, 'clear' => $data->submissionkey];
     redirect(new moodle_url('/mod/spatialforum/view.php', [
         'id' => $cm->id,
         'trackid' => $targettrackid,
