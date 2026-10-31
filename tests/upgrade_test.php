@@ -41,6 +41,48 @@ require_once($CFG->dirroot . '/mod/spatialforum/db/upgrade.php');
 #[CoversFunction('xmldb_spatialforum_upgrade')]
 final class upgrade_test extends \advanced_testcase {
     /**
+     * Legacy posts keep their content and multiple empty publication keys after upgrade.
+     */
+    public function test_upgrade_adds_nullable_unique_publication_keys(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $activity = $this->getDataGenerator()->create_module('spatialforum', ['course' => $course->id]);
+        foreach (['First', 'Second'] as $subject) {
+            \mod_spatialforum\local\forum::create_post(
+                $activity,
+                $activity->roottrackid,
+                get_admin()->id,
+                $subject,
+                'Legacy body',
+                FORMAT_PLAIN
+            );
+        }
+        $dbman = $DB->get_manager();
+        $table = new \xmldb_table('spatialforum_posts');
+        $index = new \xmldb_index('submissionkey', XMLDB_INDEX_UNIQUE, ['submissionkey']);
+        $field = new \xmldb_field('submissionkey', XMLDB_TYPE_CHAR, '64', null, null, null, null, 'discussionname');
+        $dbman->drop_index($table, $index);
+        $dbman->drop_field($table, $field);
+        try {
+            set_config('version', 2026103100, 'mod_spatialforum');
+            $this->assertTrue(\xmldb_spatialforum_upgrade(2026103100));
+            $this->assertTrue($dbman->index_exists($table, $index));
+            $this->assertSame(2, $DB->count_records('spatialforum_posts', ['message' => 'Legacy body', 'submissionkey' => null]));
+            set_config('version', 2026103100, 'mod_spatialforum');
+            $this->assertTrue(\xmldb_spatialforum_upgrade(2026103100));
+        } finally {
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+            if (!$dbman->index_exists($table, $index)) {
+                $dbman->add_index($table, $index);
+            }
+        }
+    }
+
+    /**
      * Existing activities opt out of grading on schema upgrade and repeat upgrades preserve settings.
      */
     public function test_upgrade_adds_ungraded_default_without_creating_grade_items(): void {

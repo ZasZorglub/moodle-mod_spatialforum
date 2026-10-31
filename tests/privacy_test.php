@@ -134,6 +134,7 @@ final class privacy_test extends \core_privacy\tests\provider_testcase {
         \mod_spatialforum\local\notifications::set_mode($activity->id, \mod_spatialforum\local\notifications::IMMEDIATE);
         $this->setUser($author);
         $id = forum::create_post($activity, $activity->roottrackid, $author->id, 'Erase me', 'QA body', FORMAT_HTML);
+        $DB->set_field('spatialforum_posts', 'submissionkey', str_repeat('a', 64), ['id' => $id]);
         \mod_spatialforum\local\notifications::enqueue_post($id);
         provider::delete_data_for_user(new \core_privacy\local\request\approved_contextlist(
             $author,
@@ -142,5 +143,6 @@ final class privacy_test extends \core_privacy\tests\provider_testcase {
         ));
         $this->assertSame(0, $DB->count_records('spatialforum_deliveries'));
         $this->assertSame(1, $DB->count_records('spatialforum_subscriptions'));
+        $this->assertNull($DB->get_field('spatialforum_posts', 'submissionkey', ['id' => $id]));
     }
 }

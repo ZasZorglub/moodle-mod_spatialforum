@@ -131,6 +131,7 @@ final class audit_fixes_test extends \advanced_testcase {
     public function test_draft_limits_are_enforced_on_server(): void {
         [$course, $activity, $cm, $context] = $this->fixture();
         $options = media::editor_options($context);
+        $this->assertTrue($options['autosave']);
         $bad = $this->draft('qa.php', '<?php echo "QA";');
         $this->assertNotNull(media::validate_draft($bad, $options));
         $draftid = $this->draft('qa.png', str_repeat('x', 12));

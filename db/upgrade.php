@@ -284,5 +284,17 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         }
         upgrade_mod_savepoint(true, 2026103100, 'spatialforum');
     }
+    if ($oldversion < 2026103101) {
+        $table = new xmldb_table('spatialforum_posts');
+        $field = new xmldb_field('submissionkey', XMLDB_TYPE_CHAR, '64', null, null, null, null, 'discussionname');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $index = new xmldb_index('submissionkey', XMLDB_INDEX_UNIQUE, ['submissionkey']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+        upgrade_mod_savepoint(true, 2026103101, 'spatialforum');
+    }
     return true;
 }

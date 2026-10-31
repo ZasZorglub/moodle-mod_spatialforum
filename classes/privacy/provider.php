@@ -55,6 +55,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
         $collection->add_database_table('spatialforum_posts', [
             'userid' => 'privacy:metadata:spatialforum_posts:userid',
             'subject' => 'privacy:metadata:spatialforum_posts:subject',
+            'submissionkey' => 'privacy:metadata:spatialforum_posts:submissionkey',
             'discussionname' => 'privacy:metadata:spatialforum_posts:discussionname',
             'message' => 'privacy:metadata:spatialforum_posts:message',
             'groupid' => 'privacy:metadata:spatialforum_posts:groupid',
@@ -251,7 +252,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
                     'userid' => $userid,
                 ],
                 'timecreated ASC',
-                'id,groupid,trackid,replytoid,showparent,replyparts,subject,discussionname,' .
+                'id,groupid,trackid,replytoid,showparent,replyparts,subject,discussionname,submissionkey,' .
                     'message,messageformat,timecreated,timemodified'
             );
             $reads = $DB->get_records_sql(
@@ -412,7 +413,8 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             }
             [$insql, $params] = $DB->get_in_or_equal($postids, SQL_PARAMS_NAMED);
             $DB->execute("UPDATE {spatialforum_posts}
-                            SET userid = 0, subject = '', discussionname = NULL, message = '', replyparts = NULL, deleted = 1
+                            SET userid = 0, subject = '', discussionname = NULL, submissionkey = NULL,
+                                message = '', replyparts = NULL, deleted = 1
                           WHERE id {$insql}", $params);
             \mod_spatialforum\completion\custom_completion::refresh($cm->instance, $userid);
         }

@@ -48,6 +48,7 @@ class media {
         $types = $configured === false ? self::TYPES : array_intersect(self::TYPES, explode(',', $configured));
         $maxbytes = get_config('mod_spatialforum', 'maxbytes');
         return [
+            'autosave' => true,
             'context' => $context, 'trusttext' => false, 'subdirs' => true,
             'maxfiles' => max(1, (int) (get_config('mod_spatialforum', 'maxfiles') ?: 10)),
             'maxbytes' => get_max_upload_file_size(

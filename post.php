@@ -100,6 +100,7 @@ $PAGE->set_heading(format_string($course->fullname));
 $PAGE->activityheader->set_description('');
 
 $form = new post_form(null, [
+    'submissionkey' => optional_param('submissionkey', bin2hex(random_bytes(32)), PARAM_ALPHANUM),
     'cmid' => $cm->id,
     'groupid' => $access->selected_group(),
     'action' => $action,
@@ -120,29 +121,32 @@ if ($form->is_cancelled()) {
     redirect($returnurl);
 } else if ($data = $form->get_data()) {
     require_sesskey();
-    $transaction = $DB->start_delegated_transaction();
-    $targettrackid = $track->id;
-    $message = $data->message_editor['text'];
-    $format = $data->message_editor['format'];
-    if ($createstrack) {
-        $targettrackid = forum::reply_in_new_track(
-            $activity,
-            $track,
-            $originpostid,
-            $USER->id,
-            $action === 'branch' ? $data->branchname : $data->subject,
-            $data->subject,
-            $message,
-            $format,
-            !empty($data->showparent),
-            '[]'
-        );
-        $newpostid = $DB->get_field('spatialforum_posts', 'id', ['trackid' => $targettrackid], MUST_EXIST);
-    } else {
-        $newpostid = forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);
-    }
-    \mod_spatialforum\local\media::save($newpostid, $data->message_editor, $context);
-    $transaction->allow_commit();
+    $create = function () use ($activity, $track, $createstrack, $originpostid, $USER, $action, $data, $context, $DB) {
+        $targettrackid = $track->id;
+        $message = $data->message_editor['text'];
+        $format = $data->message_editor['format'];
+        if ($createstrack) {
+            $targettrackid = forum::reply_in_new_track(
+                $activity,
+                $track,
+                $originpostid,
+                $USER->id,
+                $action === 'branch' ? $data->branchname : $data->subject,
+                $data->subject,
+                $message,
+                $format,
+                !empty($data->showparent),
+                '[]'
+            );
+            $newpostid = $DB->get_field('spatialforum_posts', 'id', ['trackid' => $targettrackid], MUST_EXIST);
+        } else {
+            $newpostid = forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);
+        }
+        \mod_spatialforum\local\media::save($newpostid, $data->message_editor, $context);
+        return (int) $newpostid;
+    };
+    $newpostid = \mod_spatialforum\local\submissions::save($cm, $data->submissionkey, $create);
+    $targettrackid = $DB->get_field('spatialforum_posts', 'trackid', ['id' => $newpostid], MUST_EXIST);
     redirect(new moodle_url('/mod/spatialforum/view.php', [
         'id' => $cm->id,
         'trackid' => $targettrackid,
