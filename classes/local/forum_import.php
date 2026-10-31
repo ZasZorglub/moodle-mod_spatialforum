@@ -106,9 +106,8 @@ class forum_import {
         $issues = [];
         $hash = hash_init('sha256');
         hash_update($hash, json_encode([$forum, $cm, $course->groupmode, $course->groupmodeforce, $course->maxbytes]));
-        if (!in_array($forum->type, ['general', 'eachuser'], true)) {
-            self::issue($issues, 'type');
-        }
+        // All standard Moodle forum types share the same discussion/post tables.
+        // Their presentation rules are converted into the spatial thread model.
         if ($forum->lockdiscussionafter || $forum->cutoffdate) {
             self::issue($issues, 'timed');
         }

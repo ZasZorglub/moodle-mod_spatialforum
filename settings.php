@@ -94,4 +94,16 @@ if ($ADMIN->fulltree) {
         get_string('allowlikes_desc', 'mod_spatialforum'),
         1
     ));
+    $settings->add(new admin_setting_configselect(
+        'mod_spatialforum/subscriptionpolicy',
+        get_string('subscriptionpolicy', 'mod_spatialforum'),
+        get_string('subscriptionpolicy_desc', 'mod_spatialforum'),
+        'optin',
+        [
+            'optin' => get_string('subscriptionpolicy_optin', 'mod_spatialforum'),
+            'initial' => get_string('subscriptionpolicy_initial', 'mod_spatialforum'),
+            'forced' => get_string('subscriptionpolicy_forced', 'mod_spatialforum'),
+            'disabled' => get_string('subscriptionpolicy_disabled', 'mod_spatialforum'),
+        ]
+    ));
 }

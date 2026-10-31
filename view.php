@@ -38,6 +38,7 @@ $activity = $DB->get_record('spatialforum', ['id' => $cm->instance], '*', MUST_E
 require_course_login($course, true, $cm);
 $context = context_module::instance($cm->id);
 require_capability('mod/spatialforum:view', $context);
+\mod_spatialforum\local\notifications::ensure_activity_subscription($activity->id, $USER->id);
 
 if (!$trackid) {
     $trackid = $activity->roottrackid;
@@ -63,6 +64,8 @@ $openpostid = optional_param('postid', 0, PARAM_INT);
 $data = forum::export_view_data($activity, $cm, $track, $context, true, $openpostid);
 $data['subscriptionurl'] = !isguestuser() && !empty($USER->id)
     ? (new moodle_url('/mod/spatialforum/subscription.php', ['id' => $cm->id]))->out(false) : '';
+$data['exporturl'] = has_capability('mod/spatialforum:import', $context)
+    ? (new moodle_url('/mod/spatialforum/export.php', ['id' => $cm->id]))->out(false) : '';
 $data['assessmenturl'] = '';
 if (\mod_spatialforum\local\grading::enabled() && !empty($activity->grade) && !isguestuser()) {
     $grader = has_capability('mod/spatialforum:grade', $context);

@@ -29,6 +29,11 @@ namespace mod_spatialforum\local;
  * Opt-in subscriptions, transactional fan-out and permission-aware notification delivery.
  */
 class notifications {
+    /** Site policy for activity subscriptions. */
+    public const POLICY_OPTIN = 'optin';
+    public const POLICY_INITIAL = 'initial';
+    public const POLICY_FORCED = 'forced';
+    public const POLICY_DISABLED = 'disabled';
     /** No opt-in. */
     public const OFF = 0;
     /** One notification for each new post. */
@@ -45,6 +50,42 @@ class notifications {
     public const UNCERTAIN = 3;
     /** Maximum age of delivery metadata, in seconds. */
     public const RETENTION = 30 * DAYSECS;
+
+    /** Return the administrator-selected subscription policy. */
+    public static function policy(): string {
+        $policy = (string) get_config('mod_spatialforum', 'subscriptionpolicy');
+        return in_array($policy, [self::POLICY_OPTIN, self::POLICY_INITIAL, self::POLICY_FORCED, self::POLICY_DISABLED], true)
+            ? $policy : self::POLICY_OPTIN;
+    }
+
+    /** Default activity mode for a newly eligible participant. */
+    public static function default_mode(): int {
+        return match (self::policy()) {
+            self::POLICY_INITIAL, self::POLICY_FORCED => self::IMMEDIATE,
+            default => self::OFF,
+        };
+    }
+
+    /** Materialise an administrator-selected initial/forced subscription when a participant opens the activity. */
+    public static function ensure_activity_subscription(int $forumid, int $userid): void {
+        global $DB;
+        if (!in_array(self::policy(), [self::POLICY_INITIAL, self::POLICY_FORCED], true)) {
+            return;
+        }
+        $cm = get_coursemodule_from_instance('spatialforum', $forumid, 0, false, MUST_EXIST);
+        $user = $DB->get_record('user', ['id' => $userid]);
+        if (!$user || !self::eligible($cm, $user)) {
+            return;
+        }
+        if (!$DB->record_exists('spatialforum_subscriptions', ['spatialforumid' => $forumid, 'userid' => $userid, 'rootpostid' => 0])) {
+            $first = (int) $DB->get_field_sql('SELECT MAX(id) FROM {spatialforum_posts} WHERE spatialforumid = ?', [$forumid]);
+            $DB->insert_record('spatialforum_subscriptions', (object) [
+                'spatialforumid' => $forumid, 'userid' => $userid, 'rootpostid' => 0,
+                'mode' => self::IMMEDIATE, 'firstpostid' => $first,
+                'timecreated' => time(), 'timemodified' => time(),
+            ]);
+        }
+    }
 
     /**
      * An active participant must be able to view the activity now.
@@ -88,7 +129,13 @@ class notifications {
             throw new \moodle_exception('invalidsubscription', 'mod_spatialforum');
         }
         $cm = get_coursemodule_from_instance('spatialforum', $forumid, 0, false, MUST_EXIST);
+        if ($mode && self::policy() === self::POLICY_DISABLED) {
+            throw new \moodle_exception('invalidsubscription', 'mod_spatialforum');
+        }
         if ($mode && !self::eligible($cm, $USER)) {
+            throw new \moodle_exception('invalidsubscription', 'mod_spatialforum');
+        }
+        if (self::policy() === self::POLICY_FORCED && !$mode) {
             throw new \moodle_exception('invalidsubscription', 'mod_spatialforum');
         }
         $rootid = 0;

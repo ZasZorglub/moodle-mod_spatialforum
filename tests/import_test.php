@@ -144,9 +144,10 @@ final class import_test extends \advanced_testcase {
         $DB->set_field('forum_discussions', 'timeend', time() + 1000, ['id' => $discussion->id]);
         $DB->set_field('forum_posts', 'parent', $reply->id, ['id' => $reply->id]);
         $issues = forum_import::preview($cm->id)['issues'];
-        foreach (['type', 'restricted', 'timed', 'structure'] as $issue) {
+        foreach (['restricted', 'timed', 'structure'] as $issue) {
             $this->assertContains($issue, $issues);
         }
+        $this->assertNotContains('type', $issues);
         $this->assertSame(0, $DB->count_records('spatialforum'));
     }
 

@@ -39,6 +39,7 @@ class subscription_form extends \moodleform {
         $rootid = $this->_customdata['rootpostid'] ?? 0;
         $mform->addElement('hidden', 'postid', $rootid);
         $mform->setType('postid', PARAM_INT);
+        $policy = \mod_spatialforum\local\notifications::policy();
         $options = [0 => get_string($rootid ? 'threadmuted' : 'subscriptionoff', 'mod_spatialforum')];
         if ($this->_customdata['eligible']) {
             if ($rootid) {
@@ -49,6 +50,12 @@ class subscription_form extends \moodleform {
                 $text = get_string($label, 'mod_spatialforum');
                 $enabled = $settings[$mode === 1 ? 'immediateenabled' : 'dailyenabled'];
                 $options[$mode] = $enabled ? $text : get_string('communicationpaused', 'mod_spatialforum', $text);
+            }
+            if (!$rootid && $policy === \mod_spatialforum\local\notifications::POLICY_DISABLED) {
+                $options = [0 => get_string('subscriptionpolicy_disabled', 'mod_spatialforum')];
+            }
+            if ($policy === \mod_spatialforum\local\notifications::POLICY_FORCED) {
+                unset($options[0]);
             }
         }
         $mform->addElement('select', 'mode', get_string('subscriptionmode', 'mod_spatialforum'), $options);

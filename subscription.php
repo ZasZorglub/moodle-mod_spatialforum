@@ -61,7 +61,8 @@ $form = new \mod_spatialforum\form\subscription_form(null, ['cmid' => $id, 'elig
 $subscription = $DB->get_record('spatialforum_subscriptions', [
     'spatialforumid' => $cm->instance, 'userid' => $USER->id, 'rootpostid' => $rootid,
 ]);
-$form->set_data(['mode' => $eligible ? ($subscription->mode ?? ($rootid ? -1 : 0)) : 0]);
+$defaultmode = $rootid ? -1 : \mod_spatialforum\local\notifications::default_mode();
+$form->set_data(['mode' => $eligible ? ($subscription->mode ?? $defaultmode) : 0]);
 if ($form->is_cancelled()) {
     redirect($returnurl);
 }

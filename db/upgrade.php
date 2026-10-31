@@ -30,6 +30,9 @@
  */
 function xmldb_spatialforum_upgrade($oldversion): bool {
     global $DB;
+    if ($oldversion < 2026103105) {
+        upgrade_mod_savepoint(true, 2026103105, 'spatialforum');
+    }
 
     $dbman = $DB->get_manager();
     if ($oldversion < 2026102400) {

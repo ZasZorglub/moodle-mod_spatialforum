@@ -41,6 +41,24 @@ require_once(__DIR__ . '/fixtures/uncertain_notifications.php');
 #[CoversClass(\mod_spatialforum\task\fanout_post::class)]
 #[CoversClass(\mod_spatialforum\task\send_notifications::class)]
 final class notifications_test extends \advanced_testcase {
+    /** Administrator policy controls defaults and forced opt-out behavior. */
+    public function test_admin_subscription_policy(): void {
+        global $DB, $USER;
+        $this->resetAfterTest();
+        set_config('subscriptionpolicy', 'forced', 'mod_spatialforum');
+        $gen = $this->getDataGenerator();
+        $course = $gen->create_course();
+        $activity = $gen->create_module('spatialforum', ['course' => $course->id]);
+        $participant = $gen->create_user();
+        $gen->enrol_user($participant->id, $course->id, 'student');
+        $this->setUser($participant);
+        $this->assertSame(notifications::IMMEDIATE, notifications::default_mode());
+        notifications::ensure_activity_subscription($activity->id, $USER->id);
+        $this->assertTrue($DB->record_exists('spatialforum_subscriptions', ['spatialforumid' => $activity->id,
+            'userid' => $USER->id, 'rootpostid' => 0]));
+        $this->expectException(\moodle_exception::class);
+        notifications::set_mode($activity->id, notifications::OFF);
+    }
     /**
      * An author and two independent recipients in one course.
      *
