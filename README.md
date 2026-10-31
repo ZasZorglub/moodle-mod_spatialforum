@@ -12,6 +12,12 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 For setup and use, see [the user guide](https://github.com/ZasZorglub/moodle-mod_spatialforum-support/blob/main/USER-GUIDE.md). For support and issue reporting, see [the support policy](SUPPORT.md).
 
+## 0.11.0 contribution completion
+
+Automatic activity completion can require a minimum total number of contributions, replies and/or new top-level posts. Zero disables an individual rule; all selected requirements must be met. Deleted posts and other participants' contributions do not count. Replies include contributions in child tracks. Posting, moderation deletion and individual post erasure refresh the participant's Moodle completion state. Existing activities default to no contribution requirements. Rule changes follow Moodle's standard completion-unlock/reset workflow; Gradebook completion remains a separate core Moodle condition.
+
+Administrator opt-in at **Site administration → Plugins → Activity modules → Spatial forum → Enable grading** is required before grading interfaces appear. Individual activities must also configure a grade. Disabling the site switch preserves existing Gradebook data; Moodle Gradebook permissions continue to govern the central gradebook.
+
 ## 0.10.0 standard-forum import
 
 Teachers with course activity-management/import permissions can use **Import a standard forum** in the course navigation. Preview reports the source counts, supported media, exclusions and blockers before explicit confirmation. Supported source types are General and Each person posts one discussion. The importer creates a new hidden activity, preserves discussion titles, post subjects, authors, dates, parent relationships, group scope and supported files, and remaps links inside the source. The source remains unchanged.
