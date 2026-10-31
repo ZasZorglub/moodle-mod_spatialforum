@@ -82,6 +82,14 @@ class mod_spatialforum_mod_form extends moodleform_mod {
     public function validation($data, $files): array {
         global $DB;
         $errors = parent::validation($data, $files);
+        $suffix = $this->get_suffix();
+        foreach (\mod_spatialforum\completion\custom_completion::get_defined_custom_rules() as $rule) {
+            $value = $data[$rule . $suffix] ?? 0;
+            $value = $value === '' ? 0 : $value;
+            if (!preg_match('/^\d+$/D', (string) $value) || $value > 10000) {
+                $errors[$rule . $suffix] = get_string('invalidcompletioncount', 'mod_spatialforum');
+            }
+        }
         $existing = !empty($this->_instance) ? $DB->get_record('spatialforum', ['id' => $this->_instance]) : null;
         try {
             \mod_spatialforum\local\grading::validate_definition((object) $data, $existing ?: null);
@@ -89,5 +97,49 @@ class mod_spatialforum_mod_form extends moodleform_mod {
             $errors['grade'] = $e->getMessage();
         }
         return $errors;
+    }
+
+    /**
+     * Zero disables a rule; all positive requirements must be met.
+     * @return array
+     */
+    public function add_completion_rules() {
+        $rules = [];
+        foreach (\mod_spatialforum\completion\custom_completion::get_defined_custom_rules() as $rule) {
+            $name = $rule . $this->get_suffix();
+            $this->_form->addElement('text', $name, get_string($rule, 'mod_spatialforum'), ['size' => 5]);
+            $this->_form->setType($name, PARAM_INT);
+            $this->_form->setDefault($name, 0);
+            $rules[] = $name;
+        }
+        return $rules;
+    }
+
+    /**
+     * Whether any contribution requirement is enabled.
+     * @param array $data
+     * @return bool
+     */
+    public function completion_rule_enabled($data) {
+        foreach (\mod_spatialforum\completion\custom_completion::get_defined_custom_rules() as $rule) {
+            if (!empty($data[$rule . $this->get_suffix()])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Disable custom rules when the unlocked form selects manual/no completion.
+     * @param \stdClass $data
+     */
+    public function data_postprocessing($data) {
+        parent::data_postprocessing($data);
+        $suffix = $this->get_suffix();
+        if (!empty($data->completionunlocked) && ($data->{'completion' . $suffix} ?? 0) != COMPLETION_TRACKING_AUTOMATIC) {
+            foreach (\mod_spatialforum\completion\custom_completion::get_defined_custom_rules() as $rule) {
+                $data->{$rule . $suffix} = 0;
+            }
+        }
     }
 }

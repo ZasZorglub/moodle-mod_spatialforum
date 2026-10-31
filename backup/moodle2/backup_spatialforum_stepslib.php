@@ -45,6 +45,7 @@ class backup_spatialforum_activity_structure_step extends backup_activity_struct
         $spatialforum = new backup_nested_element('spatialforum', ['id'], [
             'name', 'intro', 'introformat', 'roottrackid', 'groupready', 'maxdepth',
             'enablecolors', 'enablelikes', 'locked', 'grade', 'timemodified',
+            'completionposts', 'completionreplies', 'completiondiscussions',
         ]);
         $tracks = new backup_nested_element('tracks');
         $track = new backup_nested_element('track', ['id'], [

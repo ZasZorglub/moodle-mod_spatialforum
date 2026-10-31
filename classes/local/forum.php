@@ -329,6 +329,7 @@ class forum {
             if ($notify) {
                 notifications::schedule_post($postid);
             }
+            \mod_spatialforum\completion\custom_completion::refresh($activity->id, $userid);
             $transaction->allow_commit();
             return $postid;
         } catch (\Throwable $e) {

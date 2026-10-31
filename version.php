@@ -26,7 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_spatialforum';
-$plugin->version = 2026102904;
+$plugin->version = 2026103100;
 $plugin->requires = 2025041400;
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.10.0-dev';
+$plugin->release = '0.11.0-dev';

@@ -84,6 +84,7 @@ if ($action === 'toggletrack') {
     $post->replyparts = null;
     $post->timemodified = time();
     $DB->update_record('spatialforum_posts', $post);
+    \mod_spatialforum\completion\custom_completion::refresh($activity->id, (int) $post->userid);
     $returnurl->param('trackid', $post->trackid);
 } else {
     throw new moodle_exception('invalidaction', 'mod_spatialforum');

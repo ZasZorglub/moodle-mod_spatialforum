@@ -274,5 +274,15 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         }
         upgrade_mod_savepoint(true, 2026102904, 'spatialforum');
     }
+    if ($oldversion < 2026103100) {
+        $table = new xmldb_table('spatialforum');
+        foreach (['completionposts', 'completionreplies', 'completiondiscussions'] as $name) {
+            $field = new xmldb_field($name, XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+        upgrade_mod_savepoint(true, 2026103100, 'spatialforum');
+    }
     return true;
 }

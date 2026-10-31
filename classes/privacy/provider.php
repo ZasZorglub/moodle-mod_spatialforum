@@ -414,6 +414,7 @@ class provider implements \core_privacy\local\metadata\provider, core_userlist_p
             $DB->execute("UPDATE {spatialforum_posts}
                             SET userid = 0, subject = '', discussionname = NULL, message = '', replyparts = NULL, deleted = 1
                           WHERE id {$insql}", $params);
+            \mod_spatialforum\completion\custom_completion::refresh($cm->instance, $userid);
         }
         $readids = $DB->get_fieldset_sql(
             'SELECT r.id

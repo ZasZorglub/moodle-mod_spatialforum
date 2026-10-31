@@ -76,6 +76,9 @@ class restore_spatialforum_activity_structure_step extends restore_activity_stru
         $record->groupready = $record->groupready ?? 0;
         $record->enablelikes = $record->enablelikes ?? 1;
         $record->grade = $record->grade ?? 0;
+        foreach (['completionposts', 'completionreplies', 'completiondiscussions'] as $rule) {
+            $record->$rule = $record->$rule ?? 0;
+        }
         // A restored copy is independent of an excluded processing job.
         $record->importstate = 0;
         if ($record->grade < 0) {

@@ -35,12 +35,37 @@ function spatialforum_supports($feature) {
         FEATURE_GROUPINGS => true,
         FEATURE_SHOW_DESCRIPTION => true,
         FEATURE_COMPLETION_TRACKS_VIEWS => true,
+        FEATURE_COMPLETION_HAS_RULES => true,
         FEATURE_BACKUP_MOODLE2 => true,
         FEATURE_GRADE_HAS_GRADE => true,
         FEATURE_GRADE_OUTCOMES => false,
         FEATURE_MOD_PURPOSE => MOD_PURPOSE_COMMUNICATION,
         default => null,
     };
+}
+
+/**
+ * Publish the automatic contribution rules to Moodle's cached module information.
+ * @param stdClass $coursemodule
+ * @return cached_cm_info|false
+ */
+function spatialforum_get_coursemodule_info($coursemodule) {
+    global $DB;
+    $activity = $DB->get_record('spatialforum', ['id' => $coursemodule->instance]);
+    if (!$activity) {
+        return false;
+    }
+    $result = new cached_cm_info();
+    $result->name = $activity->name;
+    if ($coursemodule->showdescription) {
+        $result->content = format_module_intro('spatialforum', $activity, $coursemodule->id, false);
+    }
+    if ($coursemodule->completion == COMPLETION_TRACKING_AUTOMATIC) {
+        foreach (\mod_spatialforum\completion\custom_completion::get_defined_custom_rules() as $rule) {
+            $result->customdata['customcompletionrules'][$rule] = (int) ($activity->$rule ?? 0);
+        }
+    }
+    return $result;
 }
 
 /**
