@@ -123,13 +123,13 @@ final class excerpts_test extends \advanced_testcase {
         }
     }
 
-    public function test_form_accepts_comments_without_final_message_and_rejects_empty_reply(): void {
+    public function test_form_requires_editor_content_after_selection_reply_is_retired(): void {
         [$activity, $track, $origin, $context, $cm] = $this->fixture();
         $form = new \mod_spatialforum\form\post_form(null, ['cmid' => $cm->id, 'action' => 'reply',
             'trackid' => $track->id, 'originpostid' => $origin->id, 'origin' => $origin, 'context' => $context]);
         $data = ['subject' => 'Reply', 'message_editor' => ['text' => '', 'format' => FORMAT_HTML],
             'excerptdraft' => json_encode([['quote' => 'Pentz', 'comment' => 'My point']])];
-        $this->assertSame([], $form->validation($data, []));
+        $this->assertArrayHasKey('message_editor', $form->validation($data, []));
         $data['excerptdraft'] = json_encode([['quote' => 'Pentz', 'comment' => '']]);
         $this->assertArrayHasKey('message_editor', $form->validation($data, []));
         foreach (["\u{00A0}", "\u{200B}"] as $invisible) {
@@ -137,9 +137,11 @@ final class excerpts_test extends \advanced_testcase {
             $this->assertArrayHasKey('message_editor', $form->validation($data, []));
         }
         $data['excerptdraft'] = json_encode([['quote' => 'Pentz', 'comment' => '<script> is literal QA text']]);
-        $this->assertSame([], $form->validation($data, []));
+        $this->assertArrayHasKey('message_editor', $form->validation($data, []));
         $data['excerptdraft'] = json_encode([['quote' => 'Forged', 'comment' => 'My point']]);
         $this->assertArrayHasKey('message_editor', $form->validation($data, []));
+        $data['message_editor']['text'] = 'A manually composed reply';
+        $this->assertSame([], $form->validation($data, []));
     }
 
     public function test_privacy_erases_reply_comments_and_source_erasure_hides_quotations(): void {
