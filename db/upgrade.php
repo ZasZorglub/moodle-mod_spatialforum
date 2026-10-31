@@ -30,10 +30,6 @@
  */
 function xmldb_spatialforum_upgrade($oldversion): bool {
     global $DB;
-    if ($oldversion < 2026103105) {
-        upgrade_mod_savepoint(true, 2026103105, 'spatialforum');
-    }
-
     $dbman = $DB->get_manager();
     if ($oldversion < 2026102400) {
         $table = new xmldb_table('spatialforum');
@@ -330,6 +326,9 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
     if ($oldversion < 2026103104) {
         // No schema changes: invalidate caches for deferred rendering and its new partial template.
         upgrade_mod_savepoint(true, 2026103104, 'spatialforum');
+    }
+    if ($oldversion < 2026103105) {
+        upgrade_mod_savepoint(true, 2026103105, 'spatialforum');
     }
     return true;
 }
