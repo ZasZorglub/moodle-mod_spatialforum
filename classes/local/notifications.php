@@ -30,9 +30,13 @@ namespace mod_spatialforum\local;
  */
 class notifications {
     /** Site policy for activity subscriptions. */
+    /** Participants opt in explicitly. */
     public const POLICY_OPTIN = 'optin';
+    /** Participants start subscribed and may opt out. */
     public const POLICY_INITIAL = 'initial';
+    /** Participants are always subscribed. */
     public const POLICY_FORCED = 'forced';
+    /** Notifications are disabled. */
     public const POLICY_DISABLED = 'disabled';
     /** No opt-in. */
     public const OFF = 0;
@@ -51,14 +55,20 @@ class notifications {
     /** Maximum age of delivery metadata, in seconds. */
     public const RETENTION = 30 * DAYSECS;
 
-    /** Return the administrator-selected subscription policy. */
+    /**
+     * Return the administrator-selected subscription policy.
+     * @return string
+     */
     public static function policy(): string {
         $policy = (string) get_config('mod_spatialforum', 'subscriptionpolicy');
         return in_array($policy, [self::POLICY_OPTIN, self::POLICY_INITIAL, self::POLICY_FORCED, self::POLICY_DISABLED], true)
             ? $policy : self::POLICY_OPTIN;
     }
 
-    /** Default activity mode for a newly eligible participant. */
+    /**
+     * Return the default activity mode for a newly eligible participant.
+     * @return int
+     */
     public static function default_mode(): int {
         return match (self::policy()) {
             self::POLICY_INITIAL, self::POLICY_FORCED => self::IMMEDIATE,
@@ -66,7 +76,11 @@ class notifications {
         };
     }
 
-    /** Materialise an administrator-selected initial/forced subscription when a participant opens the activity. */
+    /**
+     * Materialise an administrator-selected subscription when a participant opens the activity.
+     * @param int $forumid
+     * @param int $userid
+     */
     public static function ensure_activity_subscription(int $forumid, int $userid): void {
         global $DB;
         if (!in_array(self::policy(), [self::POLICY_INITIAL, self::POLICY_FORCED], true)) {
@@ -77,7 +91,12 @@ class notifications {
         if (!$user || !self::eligible($cm, $user)) {
             return;
         }
-        if (!$DB->record_exists('spatialforum_subscriptions', ['spatialforumid' => $forumid, 'userid' => $userid, 'rootpostid' => 0])) {
+        if (
+            !$DB->record_exists(
+                'spatialforum_subscriptions',
+                ['spatialforumid' => $forumid, 'userid' => $userid, 'rootpostid' => 0]
+            )
+        ) {
             $first = (int) $DB->get_field_sql('SELECT MAX(id) FROM {spatialforum_posts} WHERE spatialforumid = ?', [$forumid]);
             $DB->insert_record('spatialforum_subscriptions', (object) [
                 'spatialforumid' => $forumid, 'userid' => $userid, 'rootpostid' => 0,

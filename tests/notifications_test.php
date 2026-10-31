@@ -41,7 +41,9 @@ require_once(__DIR__ . '/fixtures/uncertain_notifications.php');
 #[CoversClass(\mod_spatialforum\task\fanout_post::class)]
 #[CoversClass(\mod_spatialforum\task\send_notifications::class)]
 final class notifications_test extends \advanced_testcase {
-    /** Administrator policy controls defaults and forced opt-out behavior. */
+    /**
+     * Test that administrator policy controls defaults and forced opt-out behavior.
+     */
     public function test_admin_subscription_policy(): void {
         global $DB, $USER;
         $this->resetAfterTest();
