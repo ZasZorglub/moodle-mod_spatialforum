@@ -53,6 +53,10 @@ $PAGE->set_url('/mod/spatialforum/subscription.php', ['id' => $id, 'postid' => $
 $PAGE->set_title(get_string('notificationpreferences', 'mod_spatialforum'));
 $PAGE->set_heading(get_string('notificationpreferences', 'mod_spatialforum'));
 $returnurl = $eligible ? new moodle_url('/mod/spatialforum/view.php', ['id' => $id]) : new moodle_url('/my/');
+if ($rootid && $eligible) {
+    $returnurl->param('postid', $rootid);
+    $returnurl->set_anchor('post-' . $rootid);
+}
 $form = new \mod_spatialforum\form\subscription_form(null, ['cmid' => $id, 'eligible' => $eligible, 'rootpostid' => $rootid]);
 $subscription = $DB->get_record('spatialforum_subscriptions', [
     'spatialforumid' => $cm->instance, 'userid' => $USER->id, 'rootpostid' => $rootid,

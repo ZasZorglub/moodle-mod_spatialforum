@@ -71,7 +71,8 @@ for (const built of [false, true]) {
     const main = fs.readFileSync(path.join(plugin, 'templates/main.mustache'), 'utf8');
     const live = parseHTML(Mustache.render(main, {cmid: 7, posts: [{id: 1, message: '<p>English QA selection</p>',
         canreply: true, replyurl: '/reply'}], str: () => text => text.split(',')[0]},
-    {'mod_spatialforum/reply_context': ''}));
+    {'mod_spatialforum/reply_context': '',
+        'mod_spatialforum/post_detail': fs.readFileSync(path.join(plugin, 'templates/post_detail.mustache'), 'utf8')}));
     assert.equal(live.document.querySelector('[data-excerpt-start]'), null, 'Selection reply action is retired');
 
 }

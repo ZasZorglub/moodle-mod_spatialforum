@@ -14,9 +14,10 @@ import {Script} from 'node:vm';
 for (const name of ['spatialforum', 'excerpts', 'drafts']) {
     const source = readFileSync(new URL(`../amd/src/${name}.js`, import.meta.url), 'utf8');
     if (!source.includes('export const init =')) throw new Error(`Unexpected module export: ${name}`);
-    const dependencies = name === 'drafts' ? '["editor_tiny/editor"],function(Tiny)' : '[],function()';
+    const dependencies = name === 'drafts' ? '["editor_tiny/editor"],function(Tiny)' : name === 'spatialforum' ?
+        '["core/fragment","core/templates"],function(Fragment,Templates)' : '[],function()';
     const code = `define("mod_spatialforum/${name}",${dependencies}{\n` +
-        source.replace("import * as Tiny from 'editor_tiny/editor';", '').replace('export const init =', 'const init =') +
+        source.replace(/^import \* as \w+ from '[^']+';\n/gm, '').replace('export const init =', 'const init =') +
         '\nreturn {init};\n});\n';
     new Script(code, {filename: name});
     const target = fileURLToPath(new URL(`../amd/build/${name}.min.js`, import.meta.url));

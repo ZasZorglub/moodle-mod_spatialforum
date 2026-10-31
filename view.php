@@ -59,7 +59,8 @@ if (!empty($SESSION->spatialforumdraftclear)) {
 }
 
 spatialforum_view($activity, $course, $cm, $context);
-$data = forum::export_view_data($activity, $cm, $track, $context, true);
+$openpostid = optional_param('postid', 0, PARAM_INT);
+$data = forum::export_view_data($activity, $cm, $track, $context, true, $openpostid);
 $data['subscriptionurl'] = !isguestuser() && !empty($USER->id)
     ? (new moodle_url('/mod/spatialforum/subscription.php', ['id' => $cm->id]))->out(false) : '';
 $data['assessmenturl'] = '';
@@ -73,7 +74,6 @@ if (\mod_spatialforum\local\grading::enabled() && !empty($activity->grade) && !i
 
 $viewmode = optional_param('sfview', '', PARAM_ALPHA);
 $data['initialview'] = in_array($viewmode, ['map', 'list'], true) ? $viewmode : '';
-$openpostid = optional_param('postid', 0, PARAM_INT);
 foreach ($data['posts'] as &$post) {
     $post['opened'] = $post['id'] == $openpostid;
     if ($data['initialview'] !== '') {

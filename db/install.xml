@@ -8,7 +8,7 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 -->
-<XMLDB PATH="mod/spatialforum/db" VERSION="2026103103" COMMENT="XMLDB file for mod_spatialforum"
+<XMLDB PATH="mod/spatialforum/db" VERSION="2026103104" COMMENT="XMLDB file for mod_spatialforum"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>

@@ -324,5 +324,9 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
         }
         upgrade_mod_savepoint(true, 2026103103, 'spatialforum');
     }
+    if ($oldversion < 2026103104) {
+        // No schema changes: invalidate caches for deferred rendering and its new partial template.
+        upgrade_mod_savepoint(true, 2026103104, 'spatialforum');
+    }
     return true;
 }

@@ -11,7 +11,11 @@
     @template mod_spatialforum/main
     One activity-wide conversation map. Native details remain usable without JavaScript.
 }}
-<div class="mod-spatialforum" data-region="spatialforum" data-cmid="{{cmid}}" data-sesskey="{{sesskey}}"
+<div class="mod-spatialforum" data-region="spatialforum" data-cmid="{{cmid}}" data-context-id="{{contextid}}" data-sesskey="{{sesskey}}"
+     data-loading-label="{{#str}}postloading, mod_spatialforum{{/str}}" data-loaded-label="{{#str}}postloaded, mod_spatialforum{{/str}}"
+     data-load-error-label="{{#str}}postloadfailed, mod_spatialforum{{/str}}" data-retry-label="{{#str}}retry{{/str}}"
+     data-fallback-label="{{#str}}reloadpost, mod_spatialforum{{/str}}"
+     data-results-label="{{#str}}postsshown, mod_spatialforum{{/str}}"
      data-colours-enabled="{{enablecolors}}"
      data-read-url="{{readurl}}" data-read-label="{{#str}}readpost, mod_spatialforum{{/str}}"
      data-unread-label="{{#str}}unread, mod_spatialforum{{/str}}" data-root-label="{{#str}}maintrack, mod_spatialforum{{/str}}"
@@ -57,10 +61,11 @@
             {{#posts}}
                 <details class="spatialforum-post {{#unread}}is-unread{{/unread}}" id="post-{{id}}"
                          data-post-id="{{id}}" data-parent-id="{{parentid}}" data-colour="{{colour}}"
+                         {{#deferred}}data-search-text="{{searchtext}}"{{/deferred}}
                          data-unread="{{#unread}}1{{/unread}}{{^unread}}0{{/unread}}"
                          data-readable="{{#cantrackread}}1{{/cantrackread}}{{^cantrackread}}0{{/cantrackread}}"
                          style="--post-colour: {{colour}};" {{#opened}}open{{/opened}}>
-                    <summary class="spatialforum-card-toggle">
+                    <summary class="spatialforum-card-toggle" aria-describedby="post-{{id}}-relationship">
                         <span class="spatialforum-subject">{{subject}}</span>
                         <span class="spatialforum-preview" aria-hidden="true">{{preview}}</span>
                         <span class="spatialforum-card-meta">
@@ -75,94 +80,13 @@
                             {{#edited}}<time datetime="{{editediso}}">{{editedshort}}</time>{{/edited}}
                         </span>
                     </summary>
-                    <div class="spatialforum-post-detail">
-                        <div class="spatialforum-detail-head">
-                            <div class="spatialforum-dates">
-                                <time datetime="{{creatediso}}">{{createdlabel}}</time>
-                                {{#edited}}<time datetime="{{editediso}}">{{editedlabel}}</time>{{/edited}}
-                            </div>
-                            <div class="spatialforum-reader-actions">
-                                <button type="button" class="spatialforum-close spatialforum-js-only" data-copy-link>{{#str}}copylink, mod_spatialforum{{/str}}</button>
-                                <button type="button" class="spatialforum-close" data-close>{{#str}}closepost, mod_spatialforum{{/str}}</button>
-                            </div>
-                        </div>
-                        {{#tracklocked}}<p class="alert alert-warning">{{#str}}forumlocked, mod_spatialforum{{/str}}</p>{{/tracklocked}}
-                        {{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
-                        <div class="spatialforum-message">{{{message}}}</div>
-                        {{#unread}}
-                            {{#cantrackread}}
-                                <form class="spatialforum-read-fallback" method="post" action="{{readurl}}">
-                                    <input type="hidden" name="id" value="{{cmid}}">
-                                    <input type="hidden" name="postid" value="{{id}}">
-                                    <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                    <button type="submit" class="btn btn-outline-secondary">{{#str}}markread, mod_spatialforum{{/str}}</button>
-                                </form>
-                            {{/cantrackread}}
-                        {{/unread}}
-                        <div class="spatialforum-reactions">
-                            {{#showlikes}}
-                                {{#canlike}}
-                                    <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
-                                        <input type="hidden" name="id" value="{{cmid}}">
-                                        <input type="hidden" name="postid" value="{{id}}">
-                                        <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                        <input type="hidden" name="reaction" value="{{nextreaction}}">
-                                        <button type="submit" class="spatialforum-like-button" aria-pressed="{{#liked}}true{{/liked}}{{^liked}}false{{/liked}}">{{likelabel}} ({{likecount}})</button>
-                                    </form>
-                                    <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
-                                        <input type="hidden" name="id" value="{{cmid}}">
-                                        <input type="hidden" name="postid" value="{{id}}">
-                                        <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                        <input type="hidden" name="reaction" value="{{nextdislike}}">
-                                        <button type="submit" class="spatialforum-like-button" aria-pressed="{{#disliked}}true{{/disliked}}{{^disliked}}false{{/disliked}}">{{dislikelabel}} ({{dislikecount}})</button>
-                                    </form>
-                                {{/canlike}}
-                                {{^canlike}}<span>{{#str}}likes, mod_spatialforum{{/str}}: {{likecount}} · {{#str}}dislikes, mod_spatialforum{{/str}}: {{dislikecount}}</span>{{/canlike}}
-                            {{/showlikes}}
-                        </div>
-                        {{#canreply}}<a class="btn btn-primary spatialforum-reply" href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
-                        {{#canedit}}<a class="btn btn-link" href="{{editurl}}">{{#str}}editpost, mod_spatialforum{{/str}}</a>{{/canedit}}
-                        {{#threadsubscriptionurl}}<a class="btn btn-link" href="{{threadsubscriptionurl}}">{{#str}}threadnotifications, mod_spatialforum{{/str}}</a>{{/threadsubscriptionurl}}
-                        {{#haschildren}}
-                            <div class="spatialforum-children">
-                                <h3>{{#str}}replieshere, mod_spatialforum{{/str}}</h3>
-                                {{#children}}
-                                    <a href="#post-{{id}}" data-open-post="{{id}}"><span>{{subject}}<small>{{author}}</small></span><span aria-hidden="true">→</span></a>
-                                {{/children}}
-                            </div>
-                        {{/haschildren}}
-                        {{#canmoderate}}
-                            <div class="spatialforum-moderation">
-                                {{#canlocktrack}}
-                                <form method="post" action="{{moderationurl}}">
-                                    <input type="hidden" name="id" value="{{cmid}}">
-                                    <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                    <input type="hidden" name="action" value="toggletrack">
-                                    <input type="hidden" name="trackid" value="{{trackid}}">
-                                    <button type="submit" class="btn btn-link">{{moderatelabel}}</button>
-                                </form>
-                                {{/canlocktrack}}
-                                {{#candelete}}
-                                    <form method="post" action="{{moderationurl}}">
-                                        <input type="hidden" name="id" value="{{cmid}}">
-                                        <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                        <input type="hidden" name="action" value="deletepost">
-                                        <input type="hidden" name="postid" value="{{id}}">
-                                        <button type="submit" class="btn btn-link text-danger">{{#str}}delete{{/str}}</button>
-                                    </form>
-                                {{/candelete}}
-                                {{#canrestore}}
-                                    <p>{{#str}}restorewindow, mod_spatialforum{{/str}}</p>
-                                    <form method="post" action="{{moderationurl}}">
-                                        <input type="hidden" name="id" value="{{cmid}}">
-                                        <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                        <input type="hidden" name="action" value="restorepost">
-                                        <input type="hidden" name="postid" value="{{id}}">
-                                        <button type="submit" class="btn btn-outline-secondary">{{#str}}restorepost, mod_spatialforum{{/str}}</button>
-                                    </form>
-                                {{/canrestore}}
-                            </div>
-                        {{/canmoderate}}
+                    <span class="sr-only" id="post-{{id}}-relationship">{{relationship}}</span>
+                    <div class="spatialforum-post-detail" data-region="post-detail" {{#deferred}}data-deferred="1"{{/deferred}}>
+                        {{#deferred}}
+                            <p data-region="detail-status" role="status"></p>
+                            <a href="{{fullposturl}}" data-load-detail>{{#str}}loadpost, mod_spatialforum{{/str}}</a>
+                        {{/deferred}}
+                        {{^deferred}}{{> mod_spatialforum/post_detail}}{{/deferred}}
                     </div>
                 </details>
             {{/posts}}

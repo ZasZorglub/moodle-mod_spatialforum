@@ -16,6 +16,7 @@ const Mustache = require('mustache');
 const plugin = path.join(__dirname, '../..');
 const template = fs.readFileSync(path.join(plugin, 'templates/main.mustache'), 'utf8');
 const partial = fs.readFileSync(path.join(plugin, 'templates/reply_context.mustache'), 'utf8');
+const detail = fs.readFileSync(path.join(plugin, 'templates/post_detail.mustache'), 'utf8');
 const source = fs.readFileSync(path.join(plugin, 'amd/src/spatialforum.js'), 'utf8');
 const built = fs.readFileSync(path.join(plugin, 'amd/build/spatialforum.min.js'), 'utf8');
 const labels = {readpost: 'Read', unread: 'Unread', maintrack: 'Main track', depth: 'Depth', closepost: 'Close'};
@@ -41,7 +42,7 @@ async function exercise(script, cyclic = false, mode = '') {
         readurl: '/read.php', readcount: 3, postcount: 6, likeurl: '/like.php',
         moderationurl: '/action.php', enablecolors: mode === 'neutral' ? '0' : '1',
         str: () => text => labels[text.split(',')[0].trim()] || text.split(',')[0].trim()},
-    {'mod_spatialforum/reply_context': partial});
+    {'mod_spatialforum/reply_context': partial, 'mod_spatialforum/post_detail': detail});
     const {document, window} = parseHTML(html);
     let width = 940;
     const observers = [];
@@ -90,7 +91,8 @@ async function exercise(script, cyclic = false, mode = '') {
     }};
     const context = vm.createContext(scope);
     if (script === source) {
-        vm.runInContext(script.replace('export const init', 'const init') + ';init();', context);
+        vm.runInContext(script.replace(/^import \* as \w+ from '[^']+';\n/gm, '')
+            .replace('export const init', 'const init') + ';init();', context);
     } else {
         context.define = (name, deps, factory) => {assert.equal(name, 'mod_spatialforum/spatialforum'); factory().init();};
         vm.runInContext(script, context);

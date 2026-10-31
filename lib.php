@@ -303,6 +303,34 @@ function spatialforum_scale_used_anywhere($scaleid): bool {
 }
 
 /**
+ * Load one full post through Moodle's authenticated fragment API.
+ * @param array $args Context is supplied by core_get_fragment, never taken from a client module ID
+ * @return string
+ */
+function mod_spatialforum_output_fragment_post_detail(array $args): string {
+    global $DB, $OUTPUT;
+    $context = $args['context'] ?? null;
+    if (!($context instanceof context_module)) {
+        throw new moodle_exception('invalidrequest', 'error');
+    }
+    // Moodle's core_get_fragment already validates login, availability and context before starting output.
+    // Revalidating here would attempt to change the page after its header has been rendered.
+    $cm = get_coursemodule_from_id('spatialforum', $context->instanceid, 0, false, MUST_EXIST);
+    require_capability('mod/spatialforum:view', $context);
+    $post = $DB->get_record('spatialforum_posts', [
+        'id' => clean_param($args['postid'] ?? 0, PARAM_INT), 'spatialforumid' => $cm->instance, 'deleted' => 0,
+    ], '*', MUST_EXIST);
+    \mod_spatialforum\local\group_access::for_activity($cm->instance)->require_post($post);
+    $activity = $DB->get_record('spatialforum', ['id' => $cm->instance], '*', MUST_EXIST);
+    $track = $DB->get_record('spatialforum_tracks', ['id' => $post->trackid, 'spatialforumid' => $activity->id], '*', MUST_EXIST);
+    $view = \mod_spatialforum\local\forum::export_view_data($activity, $cm, $track, $context, true, (int) $post->id, true);
+    if (!$view['posts']) {
+        throw new moodle_exception('groupaccessdenied', 'mod_spatialforum');
+    }
+    return $OUTPUT->render_from_template('mod_spatialforum/post_detail', $view['posts'][0] + $view);
+}
+
+/**
  * Provide an entry point before any spatial forum has been created in the course.
  * @param navigation_node $navigation
  * @param stdClass $course

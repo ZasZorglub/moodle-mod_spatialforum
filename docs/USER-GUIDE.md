@@ -26,7 +26,7 @@ Students open **Your grade and feedback** to see only their own permitted result
 
 ## Notifications and digests
 
-Open **Notification preferences** below the conversation. Choose **Off**, **Each new post** or **Daily digest**, then save. The preference is only for your own account and this activity. New posts from other people are included only while you have course, activity and group access. Your own and earlier posts are excluded. Getting a notification does not mark a post as read.
+Open **Notification preferences** below the conversation for activity-wide settings. Open **Conversation notifications** inside an individual post for that conversation and all its descendant branches. Choose the activity frequency, a separate immediate/daily frequency, or mute that conversation. The posting checkbox follows replies by default for eligible participants; an existing conversation mute remains unchecked. Activity-wide Off clears all individual follows. Settings apply only to your own account. Your own and earlier posts are excluded, and current course/activity/group access is rechecked. Getting a notification does not mark a post as read.
 
 Delivery uses Moodle's configured notification channels and regular site cron. The daily cutoff defaults to 17:00 in your Moodle timezone; administrators may change the time/timezone, delay individual messages, and disable particular notification types. Paused modes are labelled in the subscription selector; your preference is retained but disabled messages are not sent. Large digests can arrive in several batches. Links to images/audio/video open the authenticated Moodle post; files are not attached to notification emails. You can turn the activity subscription off even after course access is revoked, using its saved notification-preferences link after signing in. Already accepted messages cannot be recalled.
 
@@ -36,10 +36,16 @@ Restored/imported copies do not inherit your subscription. They require a new op
 
 ## Moderation and data
 
-Users with the moderation capability can lock tracks or remove posts after confirmation. Removal deletes managed post files; there is no undo. Course backup/restore includes posts and managed media. The Privacy API exports and erases personal data. Reactions and reply/branch actions follow Moodle capabilities and activity settings.
+Use **Edit my post** on your own live contribution to change its subject/body. The conversation must be open and your current permissions/group access must allow editing. Edits display an edited timestamp and keep replies connected. If another tab saved a change, the stale form remains visible for copying and review instead of overwriting that version.
+
+Users with the moderation capability can lock tracks or remove posts after confirmation. Removal immediately hides the body, quotes and media. **Undo deletion** restores the same post for seven days; after expiry, cron permanently removes its body/media. Privacy erasure is permanent and cannot be undone. Backups preserve the original removal deadline. Reactions and reply/branch actions follow Moodle capabilities and activity settings.
 
 ## Known limits
 
 Teachers can open **Import a standard forum** from the course navigation. Select a General or Each person posts one discussion forum and name the new copy. Review counts, exclusions and blockers, then explicitly confirm. Cron processes the copy while its content remains inaccessible. Keep the progress URL to refresh, retry an unchanged failed job, or discard an incomplete copy. The completed activity remains hidden: inspect its threads, group permissions and files before publishing in normal activity settings. The original is preserved. Private/timed content, unsupported files and incompatible permissions block conversion; grades, subscriptions, reads and historical notifications are excluded. See [import details](../tests/IMPORT-0100.md).
 
-The whole conversation is loaded; over 150 posts use the list fallback. Conversation pagination and dedicated Moodle App integration remain unimplemented. Assessment uses one whole-activity grade, not individual-post ratings or a rubric. Physical-device, screen-reader, cross-browser codec and concurrent-user performance coverage is not yet established. Validate with representative data before broader adoption.
+Every summary and parent connection remains in the overview. Above 150 posts, the view uses the list fallback and loads a post's full details when you open it. Loading placeholders do not mark posts read. A failed load offers retry or a link to reload with that post open, which also works without JavaScript. Full own-text search is retained as a plain-text index; database pagination is not implemented.
+
+Draft recovery retains subject/body and form choices in the same browser tab for up to 24 hours. Restore is explicit; publication and Cancel clear the matching tab draft. Keep the tab open during a connection problem. Storage restrictions, the last second of typing, expired temporary media and other rich-text editors are not guaranteed. No cross-device draft synchronisation is claimed.
+
+Dedicated Moodle App integration remains unimplemented. Assessment uses one whole-activity grade, not individual-post ratings or a rubric. Physical-device VoiceOver, cross-browser codecs and concurrent-user load still need validation.

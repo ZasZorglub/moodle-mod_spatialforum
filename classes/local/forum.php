@@ -472,6 +472,8 @@ class forum {
      * @param stdClass $currenttrack
      * @param context_module $context
      * @param bool $wholemap Include every track in the activity, rather than only the current track.
+     * @param int|null $openpostid Web requests defer large post details; null preserves the complete export API.
+     * @param bool $detailonly Return one post's details for the authenticated fragment callback
      * @return array
      */
     public static function export_view_data(
@@ -479,7 +481,9 @@ class forum {
         stdClass $cm,
         stdClass $currenttrack,
         context_module $context,
-        bool $wholemap = false
+        bool $wholemap = false,
+        ?int $openpostid = null,
+        bool $detailonly = false
     ): array {
         global $DB, $USER;
 
@@ -502,6 +506,10 @@ class forum {
         $maptracks[$currenttrack->id] = $currenttrack;
         $posts = array_filter($posts, $access->can_view(...));
         $renderposts = array_filter($renderposts, $access->can_view(...));
+        $defer = !$detailonly && $openpostid !== null && count($posts) > 150;
+        if ($detailonly) {
+            $posts = array_intersect_key($posts, [$openpostid => true]);
+        }
         $visibletracks = [(int) $activity->roottrackid => true];
         foreach ($maptracks as $id => $item) {
             if (isset($renderposts[$item->originpostid])) {
@@ -538,6 +546,10 @@ class forum {
         $userlikes = [];
         $scope = $wholemap ? 'p.spatialforumid = :scopeid' : 'p.trackid = :scopeid';
         $scopeid = $wholemap ? $activity->id : $currenttrack->id;
+        if ($detailonly) {
+            $scope = 'p.id = :scopeid';
+            $scopeid = $openpostid;
+        }
         if ($showlikes) {
             $likecounts = $DB->get_records_sql(
                 "SELECT l.postid,
@@ -566,6 +578,7 @@ class forum {
 
         $postdata = [];
         foreach ($posts as $post) {
+            $deferred = $defer && !$post->deleted && (int) $post->id !== $openpostid;
             $posttrack = $maptracks[$post->trackid] ?? null;
             $postdepth = $depths[$post->trackid] ?? $activity->maxdepth;
             $parentid = $post->replytoid ?: ($posttrack->originpostid ?? 0);
@@ -576,25 +589,34 @@ class forum {
                 && has_capability('mod/spatialforum:startbranch', $context)
                 && $access->can_write((int) ($post->groupid ?? -1));
             $replycontext = [];
-            if (!$post->deleted && $post->replytoid && $post->showparent) {
+            if (!$deferred && !$post->deleted && $post->replytoid && $post->showparent) {
                 $parent = $renderposts[$post->replytoid] ?? null;
                 $replycontext[] = $parent ? self::export_reply_context($parent, $context, $cm->id, $renderposts, $users, $access)
                     : ['available' => false];
             }
             $user = $users[$post->userid] ?? null;
             $fullname = $user ? fullname($user) : get_string('unknownuser', 'mod_spatialforum');
-            $message = $post->deleted
+            $message = $deferred ? '' : ($post->deleted
                 ? get_string('deletedpost', 'mod_spatialforum')
-                : excerpts::render($post, $context, $cm->id, $renderposts, $users, $access);
+                : excerpts::render($post, $context, $cm->id, $renderposts, $users, $access));
+            $source = $post->deleted ? '' : excerpts::source($post, $context);
             $reaction = (int) ($userlikes[$post->id]->reaction ?? 0);
             $postdata[] = [
                 ...self::post_times($post),
                 'id' => $post->id,
+                'deferred' => $deferred,
+                'searchtext' => $source,
+                'fullposturl' => (new moodle_url('/mod/spatialforum/view.php', [
+                    'id' => $cm->id, 'postid' => $post->id, 'sfview' => 'list',
+                ]))->out(false),
                 'trackid' => $post->trackid,
                 'parentid' => $parentid,
+                'relationship' => $parentid
+                    ? get_string('inreplyto', 'mod_spatialforum') . ' ' . html_to_text($renderposts[$parentid]->subject)
+                    : get_string('maintrack', 'mod_spatialforum'),
                 'colour' => self::normalise_colour($posttrack->colour ?? '#ffffff'),
                 'preview' => $post->deleted ? self::preview($message) :
-                    self::preview(s(excerpts::source($post, $context))),
+                    self::preview(s($source)),
                 'cantrackread' => $cantrackread && !$post->deleted,
                 'readlabel' => get_string($post->deleted ? 'removedpost' :
                     ($cantrackread ? 'readpost' : 'readnottracked'), 'mod_spatialforum'),
@@ -662,6 +684,16 @@ class forum {
         }
 
         $byparent = [];
+        if ($detailonly) {
+            foreach ($renderposts as $child) {
+                $parentid = $child->replytoid ?: ($maptracks[$child->trackid]->originpostid ?? 0);
+                if ((int) $parentid === $openpostid && $child->id != $openpostid) {
+                    $author = $users[$child->userid] ?? null;
+                    $byparent[$parentid][] = ['id' => $child->id, 'subject' => format_string($child->subject),
+                        'author' => $author ? fullname($author) : get_string('unknownuser', 'mod_spatialforum')];
+                }
+            }
+        }
         foreach ($postdata as $item) {
             if ($item['parentid']) {
                 $byparent[$item['parentid']][] = [
@@ -732,6 +764,7 @@ class forum {
         return [
             'forumname' => format_string($activity->name),
             'cmid' => $cm->id,
+            'contextid' => $context->id,
             'enablecolors' => empty($activity->enablecolors) ? 0 : 1,
             'sesskey' => sesskey(),
             'readurl' => (new moodle_url('/mod/spatialforum/read.php'))->out(false),

@@ -12,7 +12,12 @@ Use a dedicated test course with an editing teacher and two synthetic learners i
 | Case | Steps | Required result |
 | --- | --- | --- |
 | Thread context | Create a root, reply and nested reply; open each card and switch to List | Parents, replies and route remain connected; opening a card preserves the overview |
-| Selection reply | Select a passage and use Reply to selection; reload the saved reply | Active action is clear; quoted passage links to the authorised source |
+| Reply context | Open a reply, expand/collapse the original and choose the optional parent quote | Original starts expanded; quote choice is below the editor; activity description and retired selection reply are absent |
+| Writing recovery | Write English subject/body, reopen in the same tab, restore and submit twice using the same request | Draft fields recover and only one post/branch is published |
+| Edit and undo | Edit your own synthetic post; remove it as moderator; undo removal | Edited timestamp appears, replies remain connected, removed body/media are unavailable until restored |
+| Conversation follow | Follow one thread, mute another, change immediate/daily delivery and then choose activity-wide Off | Only current authorised future posts are delivered, no duplicates/history replay, and activity-wide Off removes all follows |
+| Keyboard and VoiceOver | Open a post, navigate to parent/child, reply, filter and close using keyboard or iPhone VoiceOver | Labels/parent relationships are announced, focus returns to the summary, no trap; record actual iPhone/iOS/browser results |
+| Large conversation | Read a synthetic conversation above 150 posts and open a post using a direct link, retry and fallback | Every summary/parent remains; only requested detail is fetched; loading/failure does not mark a post read |
 | Media | Upload PNG/JPEG, MP3, MP4 and VTT; reload as the second learner | Image renders, audio/video play on the actual device, captions/files resolve through authenticated URLs |
 | Groups | Read and reply as both learners in separate groups; try a copied direct post/file URL | Each learner sees only permitted content; denied requests expose no body/file; visible-group read access does not grant write access |
 | Locks | Open a reply form, lock the conversation as teacher, then submit | Server rejects the stale write |

@@ -4,13 +4,21 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 ## Compatibility and release status
 
-- Development build: **0.9.0-dev** (alpha); not approved or published on Moodle Marketplace.
+- Development build: **0.12.0-dev** (alpha); not approved or published on Moodle Marketplace.
 - Declared installation minimum: Moodle LMS 5.0 (`requires = 2025041400`). This is a minimum-version gate, not proof that every later version has been tested.
 - The previous release was tested on Moodle LMS 5.2.2+, PHP 8.3 and MariaDB 11.4. Current release results and database coverage are recorded in [docs/RELEASE-CANDIDATE.md](docs/RELEASE-CANDIDATE.md).
 - Moodle Workplace compatibility has not been verified and is not claimed for this release.
 - No additional plugins, external service accounts or paid service subscriptions are required. Administrator installation requires no Node.js or Composer commands.
 
-For setup and use, see [the user guide](https://github.com/ZasZorglub/moodle-mod_spatialforum-support/blob/main/USER-GUIDE.md). For support and issue reporting, see [the support policy](SUPPORT.md).
+For setup and use, see [the user guide](docs/USER-GUIDE.md). For support and issue reporting, see [the support policy](SUPPORT.md).
+
+## 0.12.0 pilot writing and reading improvements
+
+- Recover subject/body and form choices in the same browser tab after interrupted writing, with scoped publication keys preventing duplicate posts/branches on retry. See [writing safety evidence and limits](tests/WRITING-0111.md).
+- Edit your own live post while the conversation remains open; an edited timestamp and conflict detection preserve thread identity. Moderators can undo removal for seven days; cron then purges body/media. Privacy erasure is permanent. See [lifecycle evidence](tests/POST-LIFECYCLE-0112.md).
+- Follow individual conversations, including descendant branches, using the posting checkbox or **Conversation notifications**. Per-conversation immediate/daily/mute choices override the activity preference. Existing explicit mutes are respected on the next reply. Activity-wide Off clears all conversation follows. Messages explain their subscription source; Moodle notification processors and site communication settings remain authoritative.
+- Large web overviews keep every summary/parent connection and fetch full details through Moodle's authenticated fragment API on opening. Failed loads offer retry and a server-rendered link. A loading placeholder is not marked read. Search retains the full own text as a plain-text index in the overview. This is deferred presentation, not database pagination.
+- Parent descriptions for screen readers, live filter counts and focus restoration support keyboard use. Physical iPhone/VoiceOver, other rich-text editors, native App handlers and concurrent-user load remain unverified.
 
 ## 0.11.0 contribution completion
 
