@@ -1,37 +1,56 @@
-# Marketplace listing draft — owner review required
+# Moodle Marketplace listing draft — owner review required
+
+All public copy, screenshots and captions for this submission must be in English and use synthetic data only.
 
 ## Name
 
-Samtalespor (Spatial forum)
+Samtalespor — Spatial forum
 
 ## Short description
 
-Keep branching discussions visible in a threaded conversation map. Reply to complete posts or selected passages, and include Moodle-managed images, audio and video.
+Keep branching discussions understandable in an interactive conversation map or compact hierarchical list, with Moodle-native groups, notifications, grading, completion and media.
 
 ## Full description
 
-Samtalespor is a Moodle activity module for conversations that branch into connected tracks. Opening a post keeps it in place within the surrounding thread. Participants can switch between Map and a hierarchical List, search loaded posts and navigate unread contributions.
+Samtalespor is a Moodle activity module for discussions that branch into connected conversation tracks. Opening a post keeps it inside the surrounding thread, so participants retain context while reading and replying. Users can switch between Map and List, enable Compact view, search the conversation and move through unread contributions without flattening the hierarchy.
 
-Reply to a whole post or select passages for linked quotations with comments. Each published reply creates a connected child track. Posts support uploaded images, MP3 audio, MP4 video and optional VTT captions through Moodle's editor and File API, subject to site limits and browser support. Teachers can control reactions and track depth, lock tracks and remove posts after confirmation.
+Participants create top-level posts or reply in connected child tracks. Moodle-managed images, MP3 audio, MP4 video and VTT caption files can be included through the editor, subject to site and course limits. Teachers can configure track depth, reactions, group mode, completion based on contributions, and an optional whole-activity grade with private feedback.
 
-The module includes per-user read state, Moodle capability checks, course backup/restore and Privacy API export/erasure. Uploaded post media follow the same access, backup, deletion and privacy lifecycle. No additional plugin or external service subscription is required.
+Participants can follow the whole activity or individual conversations and choose individual notifications or daily digests. Administrators control subscription policy, notification types, timing and plain-text message templates. Delivery uses Moodle cron and the Message API; the site's processor configuration remains authoritative.
 
-This release is a candidate for controlled evaluation. It has no subscriptions/digests, group mode, grading, dedicated Moodle App services or standard-forum import. It loads the complete conversation and uses a List fallback above 150 posts. Large-course concurrency, physical devices and screen readers have not yet been validated. Workplace compatibility is not claimed.
+The module supports no groups, separate groups, visible groups and groupings, with server-side access checks across posts, files and services. It also includes course backup/restore, Privacy API export and deletion, standard-forum preview/copy import, a JSON interchange export, and dedicated authenticated web services for online Moodle App clients.
+
+No external service, API key or additional plugin is required. The complete conversation stays available in List view when Map is unsuitable; conversations above 150 posts automatically use List. Native Moodle App presentation, offline App use, physical-device screen-reader coverage, high-concurrency load and Moodle Workplace compatibility are not claimed for this release.
 
 ## Submission fields
 
 - Component: `mod_spatialforum`
-- Release: `0.6.1-rc.1` / `2026102800`
-- Maturity: release candidate
-- License: GNU GPL v3 or later; full text included in the ZIP
-- Documentation: https://github.com/ZasZorglub/moodle-mod_spatialforum-support/blob/main/USER-GUIDE.md
+- Planned release: `0.14.0-rc.1` / `2026110101`
+- Planned maturity: release candidate
+- Pricing: Free
+- License: GNU GPL v3 or later
+- Dependencies: None outside Moodle LMS
+- Supported Moodle versions: Moodle 5.0–5.3, subject to the final CI matrix
+- Source: https://github.com/ZasZorglub/moodle-mod_spatialforum
 - Public issue tracker: https://github.com/ZasZorglub/moodle-mod_spatialforum-support/issues
-- Source: https://github.com/ZasZorglub/moodle-mod_spatialforum (private; arrange reviewer access if requested)
-- Supported-version selection: select only versions with completed evidence for the submitted code; see RELEASE-CANDIDATE.md and the linked CI run.
-- Pricing/commercial terms: owner decision; no price or support SLA is promised by this draft.
+- Documentation: include `README.md` and `docs/USER-GUIDE.md` in the submitted public source repository
+- Support: community issue tracker; no guaranteed response time or service-level agreement
 
-## Screenshots and approval
+Select only Moodle versions covered by the final green CI matrix and release evidence. The source repository must be publicly accessible before submission; an unauthenticated check currently returns 404.
 
-Prepare/review synthetic English screenshots showing the complete map, an opened post with the surrounding thread, Reply to selection and uploaded media. Existing test screenshots require review before public use. Do not publish student names, course data, session keys or private URLs.
+## English screenshot set
 
-Before submitting, the owner must approve the listing text, support terms, selected versions, screenshots and commercial terms. This document is a draft and does not authorise or perform a Marketplace submission.
+Capture at desktop width with Boost, English UI and synthetic users/course content. Remove private URLs, session keys and all personal data.
+
+1. `01-conversation-map.png` — complete branching map with several visible tracks.
+2. `02-open-post-in-context.png` — one opened post while the surrounding thread remains visible.
+3. `03-compact-list-view.png` — Compact view enabled in the hierarchical List.
+4. `04-reply-with-media.png` — English reply editor with synthetic image, audio and video examples.
+5. `05-notification-preferences.png` — participant activity/conversation notification choices.
+6. `06-teacher-settings.png` — English activity settings for groups, completion and optional grading.
+
+Each caption must describe only visible, verified behaviour. Do not show the test tunnel hostname in public material.
+
+## Submission boundary
+
+This file prepares content but does not authorise Marketplace submission. Before submission, the owner must approve the final ZIP, compatibility selections, screenshots, listing copy, support terms and the free pricing choice. Marketplace upload is an external submission and requires separate final approval.

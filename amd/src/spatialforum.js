@@ -25,6 +25,7 @@ export const init = () => {
     const search = root.querySelector('[data-region="search"]');
     const onlyUnread = root.querySelector('[data-region="only-unread"]');
     const viewButtons = Array.from(root.querySelectorAll('[data-view]'));
+    const densityButton = root.querySelector('[data-density-toggle]');
     const stateKey = 'mod_spatialforum:' + root.dataset.cmid;
     let saved = {};
     try {
@@ -36,6 +37,7 @@ export const init = () => {
     if (!['map', 'list'].includes(view)) {
         view = null;
     }
+    let density = saved.density === 'compressed' ? 'compressed' : 'comfortable';
     let overview = {top: Number(saved.top) || 0, left: Number(saved.left) || 0};
     const scrollHost = () => {
         let node = root.parentElement;
@@ -50,7 +52,7 @@ export const init = () => {
     const remember = () => {
         try {
             // Store only presentation state per tab, never post bodies or drafts.
-            window.sessionStorage.setItem(stateKey, JSON.stringify({...overview, view}));
+            window.sessionStorage.setItem(stateKey, JSON.stringify({...overview, view, density}));
         } catch (error) {
             // Storage is an optional enhancement.
         }
@@ -365,6 +367,11 @@ export const init = () => {
         };
         animation = requestAnimationFrame(tick);
     };
+    const applyDensity = () => {
+        const compressed = density === 'compressed';
+        root.classList.toggle('is-compressed', compressed);
+        densityButton.setAttribute('aria-pressed', String(compressed));
+    };
     const writeURL = (id, replace = false) => {
         const url = new URL(window.location.href);
         if (id) {
@@ -484,6 +491,7 @@ export const init = () => {
     };
     root.classList.add('js-enabled');
     root.querySelector('[data-region="tools"]').hidden = false;
+    applyDensity();
     const applyFilters = () => {
         const query = search.value.trim().toLocaleLowerCase();
         const filtering = !!query || onlyUnread.checked;
@@ -521,6 +529,12 @@ export const init = () => {
         writeURL(active, true);
         updateCount();
     }));
+    densityButton.addEventListener('click', () => {
+        density = density === 'compressed' ? 'comfortable' : 'compressed';
+        applyDensity();
+        remember();
+        layout(false);
+    });
     root.querySelector('[data-next-unread]').addEventListener('click', () => {
         const index = cards.findIndex(card => card.dataset.postId === active);
         const ordered = cards.slice(index + 1).concat(cards.slice(0, index + 1));

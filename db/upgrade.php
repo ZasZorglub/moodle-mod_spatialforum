@@ -333,5 +333,9 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
     if ($oldversion < 2026110100) {
         upgrade_mod_savepoint(true, 2026110100, 'spatialforum');
     }
+    if ($oldversion < 2026110101) {
+        // No schema changes: invalidate caches for the optional compact presentation.
+        upgrade_mod_savepoint(true, 2026110101, 'spatialforum');
+    }
     return true;
 }

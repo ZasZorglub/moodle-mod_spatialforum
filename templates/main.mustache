@@ -35,6 +35,10 @@
             <button type="button" class="btn btn-outline-secondary" data-view="map" aria-pressed="false">{{#str}}mapview, mod_spatialforum{{/str}}</button>
             <button type="button" class="btn btn-outline-secondary" data-view="list" aria-pressed="false">{{#str}}listview, mod_spatialforum{{/str}}</button>
         </div>
+        <button type="button" class="btn btn-outline-secondary spatialforum-density-toggle" data-density-toggle
+                aria-pressed="false" title="{{#str}}compressedview_help, mod_spatialforum{{/str}}">
+            {{#str}}compressedview, mod_spatialforum{{/str}}
+        </button>
         <label class="spatialforum-search"><span class="sr-only">{{#str}}searchposts, mod_spatialforum{{/str}}</span>
             <input type="search" class="form-control" data-region="search" placeholder="{{#str}}searchposts, mod_spatialforum{{/str}}" aria-controls="spatialforum-posts-{{cmid}}">
         </label>

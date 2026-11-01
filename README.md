@@ -4,7 +4,7 @@ Samtalespor is a Moodle activity module that turns branching discussion into nam
 
 ## Compatibility and release status
 
-- Development build: **0.12.0-dev** (alpha); not approved or published on Moodle Marketplace.
+- Release candidate: **0.14.0-rc.1**; not yet approved or published on Moodle Marketplace.
 - Declared installation minimum: Moodle LMS 5.0 (`requires = 2025041400`). This is a minimum-version gate, not proof that every later version has been tested.
 - The previous release was tested on Moodle LMS 5.2.2+, PHP 8.3 and MariaDB 11.4. Current release results and database coverage are recorded in [docs/RELEASE-CANDIDATE.md](docs/RELEASE-CANDIDATE.md).
 - Moodle Workplace compatibility has not been verified and is not claimed for this release.
@@ -18,7 +18,7 @@ For setup and use, see [the user guide](docs/USER-GUIDE.md). For support and iss
 - Edit your own live post while the conversation remains open; an edited timestamp and conflict detection preserve thread identity. Moderators can undo removal for seven days; cron then purges body/media. Privacy erasure is permanent. See [lifecycle evidence](tests/POST-LIFECYCLE-0112.md).
 - Follow individual conversations, including descendant branches, using the posting checkbox or **Conversation notifications**. Per-conversation immediate/daily/mute choices override the activity preference. Existing explicit mutes are respected on the next reply. Activity-wide Off clears all conversation follows. Messages explain their subscription source; Moodle notification processors and site communication settings remain authoritative.
 - Large web overviews keep every summary/parent connection and fetch full details through Moodle's authenticated fragment API on opening. Failed loads offer retry and a server-rendered link. A loading placeholder is not marked read. Search retains the full own text as a plain-text index in the overview. This is deferred presentation, not database pagination.
-- Parent descriptions for screen readers, live filter counts and focus restoration support keyboard use. Physical iPhone/VoiceOver, other rich-text editors, native App handlers and concurrent-user load remain unverified.
+- Parent descriptions for screen readers, live filter counts and focus restoration support keyboard use. An optional Compact view reduces card spacing without flattening the thread. Physical iPhone/VoiceOver, other rich-text editors, native App handlers and concurrent-user load remain unverified.
 
 ## 0.11.0 contribution completion
 
@@ -62,7 +62,7 @@ Posts support Moodle-managed PNG/JPEG images, MP3 audio, MP4 video and VTT capti
 
 Privacy erasure anonymises child-track names derived from the author's first post. Upgrade also repairs names left by earlier erasures. Restore remaps links inside post messages, including post/hash links. Quote rendering batches source posts and authors, instead of querying per quote. Very large conversations still load their full HTML; this is not pagination.
 
-Unread only removes a previously read card when moving to the next post, colours respect the activity setting, audio players fit narrow content areas, and the active Reply to selection action stays at the top of the open post while scrolling. Moderator actions require POST and a session key; deletion has a server confirmation page before files/content are removed. The thread layout and native reading fallback remain intact.
+Unread only removes a previously read card when moving to the next post, colours respect the activity setting, and audio players fit narrow content areas. Moderator actions require POST and a session key; deletion has a server confirmation page before files/content are removed. The thread layout and native reading fallback remain intact.
 
 See [tests/RELEASE-060.md](tests/RELEASE-060.md) for audit IDs, test evidence and limits.
 
@@ -70,15 +70,15 @@ See [tests/RELEASE-060.md](tests/RELEASE-060.md) for audit IDs, test evidence an
 
 Posts unfold in their original place in the thread. The complete map and its connecting wires stay visible; the selected column widens for readable text and neighbouring cards reflow without overlaps. Long map cards scroll internally to keep the surrounding thread in view. In List, the opened post retains its hierarchical indentation and uses the full content height. Map and List are explicit choices; small available widths default to List. Search, Unread only and Next unread help navigate the loaded conversation. Copy link, reload, browser history and cancellation preserve the selected post; per-tab session storage keeps only presentation preferences and overview offsets, not post content.
 
-When text is selected inside a post, **Reply to selection** becomes green, high-contrast and visibly emphasized; the button exposes its enabled state to assistive technology.
+Compact view is a presentation-only choice stored for the current browser tab. It reduces spacing, preview height and metadata height while preserving the same post elements, hierarchy, connections and opened-post behaviour.
 
-The activity uses Moodle's introduction once and a compact toolbar. Reading-route emphasis preserves text contrast. New posts have their own heading and Create post action. Ordinary replies start with the message editor and a compact, expandable original; passage quoting and whole-parent quoting are optional disclosures. Removing a quote restores logical keyboard focus. The Marketplace package ships English labels. The Danish translation is retained in the source repository for later AMOS submission. See `tests/UX-050.md` for acceptance and verification boundaries.
+The activity uses Moodle's introduction once and a compact toolbar. Reading-route emphasis preserves text contrast. New posts have their own heading and Create post action. Ordinary replies start with the message editor and an always-visible original-post control; whole-parent quoting is optional below the editor. The Marketplace package ships English labels. The Danish translation is retained in the source repository for later AMOS submission. See `tests/UX-050.md` for acceptance and verification boundaries.
 
 Build the dependency-free AMD wrappers with `node scripts/build-amd.mjs`. The group-support development build adds post audiences and a legacy-audience review gate. See [group verification](tests/GROUPS-070.md) before upgrading.
 
-## 0.4.0 selective replies
+## 0.4.0 legacy selective-reply data
 
-Select text in an opened post and choose **Reply to selection**. The reply form opens with that passage and a comment field. Select further passages in the original above the form and choose **Add selected text** to build an interleaved quote/comment reply. Remove any unwanted blocks before submitting. Up to ten blocks, each with a 4,000-character quotation/comment limit, form one reply and one automatically linked track. The regular message editor provides an optional closing comment. Plain Reply and optional whole-parent quoting remain available.
+Earlier development versions allowed passage-level replies. Existing structured quotation data remains renderable and covered by backup/privacy handling, but the current participant interface no longer exposes **Reply to selection**. Participants use ordinary threaded Reply and may optionally include the complete previous post as a quote.
 
 Selections are checked against the source on the server. Stored blocks contain the reply author's comments, source offsets and a fingerprint; no copy of another author's text is stored. The visible quotation links to the source and its current author. A changed source displays a notice instead of a potentially incorrect passage; deleting or privacy-erasing a source hides its quotations. Previews contain only the reply author's own text. Backup/restore and Privacy API export/deletion include the new nullable `replyparts` field. Selection/composer interactions require JavaScript; ordinary replies remain available without it.
 
@@ -129,13 +129,13 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
 The [feature expansion plan](docs/FEATURE-EXPANSION.md) records implemented development slices and the remaining App work.
 
 - No separate attachment list, per-post ratings or activity completion based on posting
-- No Moodle App/mobile service implementation
+- Authenticated web services cover online App reading, replies and subscription changes; a dedicated native App handler and offline mode remain unimplemented
 - No ongoing synchronisation with the standard Moodle forum activity; import supports the restricted subset described above
 - 3D is a progressive visual layer; core navigation remains conventional links for accessibility
 
 ## Security and operations
 
-- Version `0.9.0-dev` upgrades earlier versions to `2026102903`. Existing activities keep their content and require explicit audience review before learners can use group mode. Activities without groups continue normally. Only a user with manage-activities and access-all-groups can confirm the audience for all legacy posts. Cancel if different conversations require different audiences; this first review workflow assigns one audience to the entire legacy activity. New replies inherit their stored parent audience. See [tests/GROUPS-070.md](tests/GROUPS-070.md).
+- Version `0.14.0-rc.1` upgrades earlier versions to `2026110101`. Existing activities keep their content and require explicit audience review before learners can use group mode. Activities without groups continue normally. Only a user with manage-activities and access-all-groups can confirm the audience for all legacy posts. Cancel if different conversations require different audiences; this first review workflow assigns one audience to the entire legacy activity. New replies inherit their stored parent audience. See [tests/GROUPS-070.md](tests/GROUPS-070.md).
 - Teachers who can edit an activity can disable **Allow like/dislike on posts** in its settings. Administrators can disable **Allow like/dislike site-wide** in the module's site settings. Both switches hide both controls/counts and reject direct submissions, while preserving existing reactions.
 - Reactions use POST, session keys, a separate capability and a unique `(userid, postid)` index. Each user chooses like, dislike or neither. Repeating the same request does not toggle the result.
 - Authors opt in to a parent quote with **Include the previous post as a quote** (off by default). The reply relationship is preserved independently of this choice. Quotes read the original live rather than copying message text. Deleted originals appear as unavailable, including across track boundaries.

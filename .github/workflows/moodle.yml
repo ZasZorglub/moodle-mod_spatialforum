@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        moodle: [MOODLE_500_STABLE, MOODLE_502_STABLE]
+        moodle: [MOODLE_500_STABLE, MOODLE_502_STABLE, MOODLE_503_STABLE]
         database: [mariadb, pgsql]
     services:
       postgres:

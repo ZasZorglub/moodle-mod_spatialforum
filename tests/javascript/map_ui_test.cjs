@@ -116,6 +116,15 @@ async function exercise(script, cyclic = false, mode = '') {
         }
     }
     assert.equal(root.querySelectorAll('details').length, 6);
+    const density = root.querySelector('[data-density-toggle]');
+    const threadOrder = [...root.querySelectorAll('[data-post-id]')].map(item => item.dataset.postId);
+    assert.equal(density.getAttribute('aria-pressed'), 'false');
+    density.click();
+    assert.ok(root.classList.contains('is-compressed'));
+    assert.equal(density.getAttribute('aria-pressed'), 'true');
+    assert.deepEqual([...root.querySelectorAll('[data-post-id]')].map(item => item.dataset.postId), threadOrder,
+        'Compact view preserves the full threaded order');
+    assert.equal(JSON.parse(storage.get('mod_spatialforum:42')).density, 'compressed');
     assert.equal(root.querySelectorAll('.spatialforum-preview').length, 6);
     assert.equal(card(10).querySelectorAll('summary time').length, 1);
     assert.equal(card(12).querySelectorAll('summary time').length, 2);
@@ -246,6 +255,7 @@ async function exercise(script, cyclic = false, mode = '') {
     const css = fs.readFileSync(path.join(plugin, 'styles.css'), 'utf8');
     assert.ok(css.includes('-webkit-line-clamp: 2'));
     assert.ok(css.includes('.mod-spatialforum.is-list'));
+    assert.ok(css.includes('.mod-spatialforum.is-compressed'));
     assert.ok(!css.includes('perspective('));
     const read = fs.readFileSync(path.join(plugin, 'read.php'), 'utf8');
     assert.ok(read.includes("'POST'"));

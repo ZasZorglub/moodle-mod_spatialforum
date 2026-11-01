@@ -8,9 +8,9 @@ Add Samtalespor from a course's activity chooser. Set its name and introduction,
 
 ## Reading and replying
 
-Map shows the branching conversation. Open a card to read it in place; the surrounding thread remains visible. Close the card or press Escape to return to the overview. List preserves the same hierarchy and is the default at narrow widths. Search, Unread only and Next unread navigate the loaded conversation. Read state is per user and is saved when a post is opened successfully.
+Map shows the branching conversation. Open a card to read it in place; the surrounding thread remains visible. Close the card or press Escape to return to the overview. List preserves the same hierarchy and is the default at narrow widths. Enable **Compact view** to reduce card spacing and metadata height without changing post order, indentation or connections. The density choice is kept for the current browser tab. Search, Unread only and Next unread navigate the loaded conversation. Read state is per user and is saved when a post is opened successfully.
 
-Create post starts a top-level contribution. Reply starts a linked child track after publishing; cancelling creates nothing. Select text in an opened post to enable Reply to selection. Add a comment and optionally select more passages. Up to ten passage/comment blocks can form a reply. Source links refer to the current original; deleted or changed sources may make quotations unavailable.
+Create post starts a top-level contribution. Reply starts a linked child track after publishing; cancelling creates nothing. The original post remains available above the editor, and the author can optionally include the previous post as a quote.
 
 ## Images, audio and video
 
@@ -48,4 +48,4 @@ Every summary and parent connection remains in the overview. Above 150 posts, th
 
 Draft recovery retains subject/body and form choices in the same browser tab for up to 24 hours. Restore is explicit; publication and Cancel clear the matching tab draft. Keep the tab open during a connection problem. Storage restrictions, the last second of typing, expired temporary media and other rich-text editors are not guaranteed. No cross-device draft synchronisation is claimed.
 
-Dedicated Moodle App integration remains unimplemented. Assessment uses one whole-activity grade, not individual-post ratings or a rubric. Physical-device VoiceOver, cross-browser codecs and concurrent-user load still need validation.
+Authenticated services support online reading, posting/replying and subscription changes for Moodle App clients. A dedicated native App presentation and offline use remain unimplemented and must not be advertised. Assessment uses one whole-activity grade, not individual-post ratings or a rubric. Physical-device VoiceOver, cross-browser codecs and concurrent-user load still need validation.

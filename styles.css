@@ -138,6 +138,7 @@
 .spatialforum-hero > a { order: 5; }
 .spatialforum-view-switch { display: flex; gap: 4px; }
 .spatialforum-view-switch [aria-pressed="true"] { background: var(--sf-active); border-color: var(--sf-active); color: #fff; }
+.spatialforum-density-toggle[aria-pressed="true"] { background: var(--sf-active); border-color: var(--sf-active); color: #fff; }
 .spatialforum-search { flex: 1 1 140px; }
 .spatialforum-unread-filter { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
 .spatialforum-result-status { margin: 0; padding: 0 20px 10px; font-size: .875rem; }
@@ -154,6 +155,27 @@
 .spatialforum-excerpt-composer summary, .spatialforum-quote-options summary, .spatialforum-original summary { cursor: pointer; min-height: 44px; padding: 10px 0; font-weight: 600; }
 .spatialforum-original .spatialforum-message { max-height: 350px; overflow: auto; padding: 12px; line-height: 1.65; }
 .spatialforum-quote-options { margin-bottom: 20px; }
+.mod-spatialforum.is-compressed .spatialforum-hero { padding: 8px 14px; }
+.mod-spatialforum.is-compressed .spatialforum-route { min-height: 34px; padding: 5px 16px; }
+.mod-spatialforum.is-compressed .spatialforum-posts { gap: 8px; padding-block: 10px; }
+.mod-spatialforum.is-compressed .spatialforum-card-toggle { padding: 7px 8px; }
+.mod-spatialforum.is-compressed .spatialforum-subject { font-size: .9rem; line-height: 1.25; }
+.mod-spatialforum.is-compressed .spatialforum-preview {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    max-height: 1.35em;
+    margin-top: 3px;
+    line-height: 1.3;
+}
+.mod-spatialforum.is-compressed .spatialforum-card-meta { gap: 3px; margin-top: 4px; font-size: .75rem; }
+.mod-spatialforum.is-compressed .spatialforum-card-times { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 3px; }
+.mod-spatialforum.is-compressed .spatialforum-post[open] .spatialforum-card-toggle { padding: 10px 12px 6px; }
+.mod-spatialforum.is-compressed .spatialforum-post[open] .spatialforum-subject { font-size: 1rem; }
+.mod-spatialforum.is-compressed .spatialforum-post-detail { padding: 0 12px 12px; }
+.mod-spatialforum.is-compressed .spatialforum-detail-head { margin-bottom: 8px; }
+.mod-spatialforum.is-compressed .spatialforum-reactions { margin: 10px 0 12px; }
+.mod-spatialforum.is-compressed .spatialforum-children { margin-top: 10px; padding-top: 9px; }
+.mod-spatialforum.is-compressed.is-list .spatialforum-post { margin-block: 6px; }
 @media (max-width: 450px) {
     .spatialforum-search { flex-basis: 100%; }
     .mod-spatialforum.is-list .spatialforum-post { margin-left: min(calc(var(--post-depth, 0) * 8px), 16px); }
