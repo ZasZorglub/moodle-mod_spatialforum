@@ -1,36 +1,58 @@
-# 0.6.1-rc.1 release candidate
+# 0.14.0-rc.1 release candidate
 
-Prepared on 28 October 2026. This is a release candidate, not a Marketplace approval or a production deployment.
+Prepared on 1 November 2026. This is a candidate for Moodle Marketplace review, not an approval or public release.
 
-## Changes
+## Candidate identity
 
-- Added the full GNU GPL v3 license and explicit copyright/license headers across source files.
-- Added the missing activity-administration language string discovered by a real page request with full developer debugging, with a regression test exercising Moodle settings navigation.
-- Corrected Moodle coding-standard findings, expanded PHPDoc descriptions and removed a redundant identical English string key. Function-only files no longer contain unnecessary top-level guards; request entry points retain their access controls.
-- Added a deterministic ZIP builder, archive checks and an English-only release package. Danish is retained in Git for later AMOS submission; no existing installation's language files are deleted by this preparation.
-- Published a separate public issue tracker and English user guide: https://github.com/ZasZorglub/moodle-mod_spatialforum-support
-- Narrowed compatibility claims: minimum install version remains Moodle 5.0; Workplace is unverified. Added a Moodle 5.0/5.2 x MariaDB/PostgreSQL CI matrix, coding-standard and metadata checks.
+- Component: `mod_spatialforum`
+- Release: `0.14.0-rc.1`
+- Build: `2026110101`
+- Supported declaration: Moodle 5.0–5.3
+- Package: deterministic English-only ZIP produced by `scripts/package-release.py`
+- Pricing decision: Free initial listing
 
-## Verification
+## Candidate changes
 
-The test environments are disposable local Docker containers. The existing Moodle test-server source was mounted read-only for copying; its database and data directories were not used by these tests. Additional non-core plugins were removed from the isolated copies.
+- Added an optional **Compact view** that reduces closed-card spacing, preview height and metadata height while preserving the complete thread hierarchy, post elements and connections.
+- Stored display density only in per-tab session storage; no post content or personal data is added to browser preference storage.
+- Updated English Marketplace copy, screenshot plan, user guide and current feature/limitation statements.
+- Extended the CI matrix to Moodle 5.3 and PostgreSQL 17 while retaining Moodle 5.0/5.2 and MariaDB coverage.
+- Declared RC maturity and Moodle 5.0–5.3 support in `version.php`.
 
-- Moodle LMS 5.2.2+, PHP 8.3.36, PostgreSQL 16: clean Moodle/plugin installation from the release archive; 42 tests / 251 assertions passed.
-- Moodle coding standard (`moodlehq/moodle-cs` 3.7.0): zero errors and zero warnings.
-- Both JavaScript suites passed against source/build and the real templates.
-- Own-browser check on the isolated English guest demo: the activity page renders with full developer debugging, opening a card preserves surrounding threads, Close restores the overview and Enter opens the focused card. Screenshots use only synthetic content/participants. This does not cover authenticated Reply to selection or media playback for the new candidate.
-- Moodle LMS 5.2.2+, PHP 8.3.36, MariaDB 11.4.13: clean installation; 42 tests / 251 assertions passed.
-- Moodle's own ZIP validator passed. Its expected warnings identify RC maturity and an existing writable target directory; no validation errors remain. The builder writes explicit directory entries, as required by this validator.
-- PostgreSQL schema check passed. PHP syntax checks and Git whitespace checks passed.
-- Executable-token review found only the declared version/maturity change, equivalent `elseif` formatting, interface ordering and language-key sorting/removal of identical duplicates; the other PHP changes are comments/formatting or removal of unnecessary function-only guards.
-- Remote CI is started by the release commit push. Consult GitHub Actions for the completed matrix result; this note does not claim a result before completion.
+## Notification verification without SMTP
 
-Local evidence logs are stored outside the source repository in `../rapporter/samtalespor-0.6.1-rc.1-2026-10-28/`. Earlier media/browser results belong to 0.6.0 and are recorded in `tests/RELEASE-060.md`; they are not a fresh cross-browser or physical-device run for this candidate.
+The PHPUnit suites use Moodle's message redirection sink, not a real mailbox. They verify Message API acceptance and the generated recipient, subject, body and authenticated links without sending external mail. Existing focused cases cover:
 
-## Before submission or stable release
+- individual notifications and daily digests
+- activity and conversation-level preferences
+- administrator templates, timing, type switches and preview/test restrictions
+- source explanations, no self-notification and no historical replay
+- current enrolment, suspension, visibility and group-access rechecks
+- unsubscribe, forced/disabled policy behaviour and pending-work cancellation
+- idempotent fan-out, bounded retries, uncertain delivery and reconciliation
+- digest timezone/DST handling and batching
 
-- Check completed remote CI results for the final commit.
-- Upload the final ZIP through Moodle's built-in plugin-installation UI as an additional manual check; CLI extraction/installation does not prove that UI flow.
-- Review the public listing description, license, support terms, compatibility selection and screenshots. Use synthetic English examples without student data. Submit only after the owner approves the final listing.
-- Physical devices, screen readers, multi-browser codecs and concurrent-user/load testing remain unverified. Do not claim these have passed or market the candidate as broadly proven stable.
-- AMOS submission is separate and follows plugin approval. Existing screenshots and browser evidence must be reviewed before public publication.
+This proves plugin-side generation and handoff to Moodle's Message API. It does not prove SMTP delivery, spam handling, push delivery or receipt in an external inbox. Those remain the Moodle site's operational responsibility.
+
+## Automated release gates
+
+GitHub Actions installs the plugin and runs PHP lint, Moodle coding standards, metadata validation, upgrade savepoints, JavaScript DOM regressions, deterministic ZIP validation and the complete plugin PHPUnit suite on:
+
+- Moodle 5.0 / MariaDB and PostgreSQL
+- Moodle 5.2 / MariaDB and PostgreSQL
+- Moodle 5.3 / MariaDB and PostgreSQL 17
+
+Only a completed green run for the final commit counts as release evidence. A workflow definition or an earlier commit is not sufficient.
+
+## Marketplace submission blockers and open evidence
+
+- The source repository currently returns `404` to an unauthenticated request. It must be made public before submission; this requires an explicit owner action.
+- Capture and approve the six English screenshots listed in `MARKETPLACE-LISTING.md` using synthetic data only.
+- Install the final ZIP through Moodle's web plugin installer and verify the upgrade on the shared test server with developer debugging enabled.
+- Complete an own-browser smoke test of Map, List, Compact view, reply, media, notification preferences, grading settings and import/export.
+- Native Moodle App rendering, offline App use, physical-device screen readers, high-concurrency load and Moodle Workplace remain unverified and are not claimed.
+- Marketplace upload and submission require separate final owner approval.
+
+## Rollback
+
+Before test-server installation, back up the database, Moodle data and existing plugin directory. The `2026110101` upgrade changes no schema; it invalidates caches for the new presentation. Roll back only by restoring the consistent pre-upgrade backups. Copying old PHP files alone is not a supported database rollback procedure.
