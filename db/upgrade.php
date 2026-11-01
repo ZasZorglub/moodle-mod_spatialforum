@@ -330,5 +330,8 @@ function xmldb_spatialforum_upgrade($oldversion): bool {
     if ($oldversion < 2026103105) {
         upgrade_mod_savepoint(true, 2026103105, 'spatialforum');
     }
+    if ($oldversion < 2026110100) {
+        upgrade_mod_savepoint(true, 2026110100, 'spatialforum');
+    }
     return true;
 }
