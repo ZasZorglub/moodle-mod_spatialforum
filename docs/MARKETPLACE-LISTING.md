@@ -40,14 +40,14 @@ Select only Moodle versions covered by the final green CI matrix and release evi
 
 ## English screenshot set
 
-Capture at desktop width with Boost, English UI and synthetic users/course content. Remove private URLs, session keys and all personal data.
+Prepared with the responsive Boost layout, English UI and synthetic users/course content. The images contain no tunnel hostname, session key or personal data.
 
 1. `01-conversation-map.png` — complete branching map with several visible tracks.
 2. `02-open-post-in-context.png` — one opened post while the surrounding thread remains visible.
 3. `03-compact-list-view.png` — Compact view enabled in the hierarchical List.
-4. `04-reply-with-media.png` — English reply editor with synthetic image, audio and video examples.
-5. `05-notification-preferences.png` — participant activity/conversation notification choices.
-6. `06-teacher-settings.png` — English activity settings for groups, completion and optional grading.
+4. `04-reply-with-media.png` — English reply editor with image, multimedia, audio and video controls.
+5. `05-notification-preferences.png` — participant notification mode with delivery and access guidance.
+6. `06-teacher-settings.png` — English administrator settings for media limits, optional grading, reactions and subscription policy.
 
 Each caption must describe only visible, verified behaviour. Do not show the test tunnel hostname in public material.
 

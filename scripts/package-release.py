@@ -22,8 +22,14 @@ timestamp = (int(build[:4]), int(build[4:6]), int(build[6:8]), 0, 0, 0)
 files = subprocess.check_output(
     ['git', 'ls-files', '--cached', '-z'], cwd=root
 ).decode().split('\0')
-files = sorted({name for name in files if name and not name.startswith(('.github/', 'lang/da/'))
-                and name != '.gitattributes'})
+files = sorted({name for name in files if name and not name.startswith((
+                    '.github/',
+                    'docs/marketplace/',
+                    'lang/da/',
+                )) and name not in {
+                    '.gitattributes',
+                    'docs/MARKETPLACE-LISTING.md',
+                }})
 required = {'version.php', 'LICENSE', 'lang/en/spatialforum.php', 'db/install.xml',
             'amd/build/spatialforum.min.js', 'amd/build/excerpts.min.js'}
 if not required.issubset(files):
