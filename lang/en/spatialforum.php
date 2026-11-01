@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Samtalespor spatial discussion activity.
+ * Spatial forum discussion activity.
  *
  * @package    mod_spatialforum
  * @copyright  2026 Anders Christian Sloth
@@ -251,7 +251,7 @@ $string['messageprovider:communicationtests'] = 'Administrator communication tes
 $string['messageprovider:digests'] = 'Spatial forum daily digests';
 $string['messageprovider:posts'] = 'New spatial forum posts';
 $string['modulename'] = 'Spatial forum';
-$string['modulename_help'] = 'A forum where branching discussions become named, colour-coded spatial tracks.';
+$string['modulename_help'] = 'A user-focused forum for easier navigation and clearer overview of branching discussions.';
 $string['modulenameplural'] = 'Spatial forums';
 $string['newpost'] = 'New post';
 $string['nextunread'] = 'Next unread';

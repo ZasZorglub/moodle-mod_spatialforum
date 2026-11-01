@@ -1,6 +1,6 @@
-# Samtalespor (`mod_spatialforum`)
+# Spatial forum (`mod_spatialforum`)
 
-Samtalespor is a Moodle activity module that turns branching discussion into named, colour-coded spatial tracks. The main track stays white, each branch gets its own colour, and the interface keeps both the route back and the complete track map visible.
+Spatial forum is a Moodle activity module that makes branching discussion easier to navigate and understand. Named, colour-coded spatial tracks keep the route back and the complete conversation overview visible, giving participants a better forum experience designed around real reading and replying behaviour.
 
 ## Compatibility and release status
 
@@ -103,7 +103,7 @@ Version 0.3.1 adds explicit creation dates/times on closed and opened cards, and
    php admin/cli/upgrade.php
    ```
 
-3. Add **Samtalespor** as an activity in a course.
+3. Add **Spatial forum** as an activity in a course.
 
 ## Included
 

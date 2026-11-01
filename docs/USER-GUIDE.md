@@ -1,10 +1,10 @@
-# Samtalespor user guide
+# Spatial forum user guide
 
 ## Installation and update
 
 Back up the Moodle database, Moodle data and the existing plugin directory before an update. Upload the release ZIP through Site administration > Plugins > Install plugins, or extract its spatialforum directory to mod/spatialforum. Complete the normal Moodle upgrade. Do not uninstall to update. Installing the ZIP requires no build tools.
 
-Add Samtalespor from a course's activity chooser. Set its name and introduction, choose track depth and reaction/colour settings, and save. Site administrators can set upload types, file counts and size limits under the plugin settings. Moodle and course upload limits also apply.
+Add Spatial forum from a course's activity chooser. Set its name and introduction, choose track depth and reaction/colour settings, and save. Site administrators can set upload types, file counts and size limits under the plugin settings. Moodle and course upload limits also apply.
 
 ## Reading and replying
 

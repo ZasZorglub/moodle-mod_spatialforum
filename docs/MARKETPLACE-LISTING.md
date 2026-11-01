@@ -4,15 +4,17 @@ All public copy, screenshots and captions for this submission must be in English
 
 ## Name
 
-Samtalespor — Spatial forum
+Spatial forum
 
 ## Short description
 
-Keep branching discussions understandable in an interactive conversation map or compact hierarchical list, with Moodle-native groups, notifications, grading, completion and media.
+A better forum for meaningful discussion: easier navigation, clearer conversation overview and a user experience designed around how people actually read, follow and contribute to branching conversations.
 
 ## Full description
 
-Samtalespor is a Moodle activity module for discussions that branch into connected conversation tracks. Opening a post keeps it inside the surrounding thread, so participants retain context while reading and replying. Users can switch between Map and List, enable Compact view, search the conversation and move through unread contributions without flattening the hierarchy.
+Spatial forum is a Moodle activity module built to make online discussion easier to follow. It is a better forum experience for conversations that branch into connected tracks: opening a post keeps it inside the surrounding thread, so participants retain context while reading and replying. Users can switch between Map and List, enable Compact view, search the conversation and move through unread contributions without flattening the hierarchy.
+
+Designed with the user experience in mind, Spatial forum makes the structure of a conversation visible instead of hiding it behind a long, flat list. Participants can see where a reply belongs, understand the route through a discussion and return to the wider overview without losing their place.
 
 Participants create top-level posts or reply in connected child tracks. Moodle-managed images, MP3 audio, MP4 video and VTT caption files can be included through the editor, subject to site and course limits. Teachers can configure track depth, reactions, group mode, completion based on contributions, and an optional whole-activity grade with private feedback.
 

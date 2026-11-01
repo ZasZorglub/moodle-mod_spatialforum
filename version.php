@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Samtalespor spatial discussion activity.
+ * Spatial forum discussion activity.
  *
  * @package    mod_spatialforum
  * @copyright  2026 Anders Christian Sloth
