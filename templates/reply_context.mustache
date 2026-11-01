@@ -1,0 +1,27 @@
+{{!
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+}}
+{{!
+    @template mod_spatialforum/reply_context
+    Live parent-post context. Never stores another copy of the original message.
+}}
+<blockquote class="spatialforum-reply-context">
+    <div class="spatialforum-reply-label">{{#str}}inreplyto, mod_spatialforum{{/str}}</div>
+    {{#available}}
+        <a href="{{url}}">{{subject}}</a>
+        <div class="spatialforum-reply-author">{{author}} · <time datetime="{{creatediso}}">{{createdlabel}}</time>
+            {{#edited}} · <time datetime="{{editediso}}">{{editedlabel}}</time>{{/edited}}
+        </div>
+        {{#compact}}<details class="spatialforum-original" open>
+            <summary>{{#str}}showoriginal, mod_spatialforum{{/str}}</summary>{{/compact}}
+        <div class="spatialforum-message" {{#compact}}tabindex="0"{{/compact}}>{{{message}}}</div>
+        {{#compact}}</details>{{/compact}}
+    {{/available}}
+    {{^available}}<p>{{#str}}originalunavailable, mod_spatialforum{{/str}}</p>{{/available}}
+</blockquote>

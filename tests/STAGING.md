@@ -1,0 +1,64 @@
+# Staging validation for 0.5.0
+
+The 0.5.0 UX scope, acceptance criteria and observed verification are in `UX-050.md`. The historical checks below still apply to source-aware replies, read persistence, roles, backup and privacy.
+
+Do not merge to main until the target Moodle/Workplace checks below pass.
+
+## 0.4.0 selective replies
+
+- Select text inside an opened post, choose Reply to selection, add a comment, then select another passage in the original above the form. Add it and write a second comment. Publish one reply; verify quote/comment order, source links and automatic child-track creation.
+- Remove a block before submitting; cancel a draft; submit only comments with no final-editor text; verify empty replies fail. Check selection by mouse, keyboard and touch in target browsers. Embedded quotations and selections crossing outside the source must not be attributed to its author.
+- Check markup, Danish characters and whitespace. Forge an absent passage or exceed ten blocks / 4,000 characters; the server must reject it. Source revision changes must display a notice; deletion/privacy erasure must hide quotations without erasing the reply author's comments. Previews must exclude quoted source text.
+- Restore a backup into another course and verify source links, quote text and comments after ID remapping. Upgrade from 0.3.3 without changing existing posts/read/reaction records. Privacy exports include own comments and references; privacy deletion clears them.
+
+## 0.3.1 timestamps
+
+- Closed and opened cards show labelled creation time. Only posts with a later modification timestamp show Edited; moderation tombstones must not be labelled as author edits. Existing posts have no new editing UI in this release.
+- Check date/time formatting in Danish/English and the viewer's Moodle timezone, including daylight-saving boundaries. Creation time stays unchanged after editing. Read marks and reactions do not update edit time.
+- Quoted originals show creation/edit metadata too. Backup/restore preserves the interval between creation and modification. No schema change or reset of existing data is required.
+
+## 0.3.0 acceptance
+
+- Upgrade 0.2.1 without losing any read timestamp, reaction, quote preference or post/track link. No schema replacement is needed.
+- The activity-wide map must include every root post and child track. Open each card in turn, including post 5 and a long HTML post. Only one stays open. Other branches move without overlapping. Close, Escape and ancestor/child links preserve a usable keyboard focus and visible route.
+- Closed cards show the first two visual lines of their own text, not copied parent quotes. Unread posts have an explicit label and distinct marker. Merely loading the map, hovering or previewing must not mark anything read.
+- Open one unread post as student A: only that post becomes Read, after the server saves it. Reload and test as student B: A's read marker must not affect B. Repeat submissions preserve the first read timestamp. Simulate network/session failure: do not display a false saved Read label; reopening retries.
+- Direct read POSTs must enforce session key, activity access, non-guest user and matching activity/post; GET must not write. Guests show Not tracked. Without JavaScript, details and the explicit Mark as read form remain usable.
+- Reply must offer subject, optional parent quote and message, with no branch-name field or duplicate branch button. Saving automatically creates the linked track and opens the new post. Cancelling creates nothing. Check each post's actual track lock, permissions and depth, not merely the currently requested track.
+- Test desktop, tablet, mobile, reduced motion, images loading after the card opens, formatted content and repeated opening/closing. Narrow/deep maps and activities over 150 posts must reflow without horizontal clipping. Test realistic large activities before adopting this release.
+
+## Additional 0.2.1 checks
+
+- Like, dislike, switch in both directions and remove a reaction. Confirm separate counts, one reaction per user/post and unchanged votes from other users. Submit the same state twice; it must remain unchanged. Both teacher and administrator disable switches apply to both reactions.
+- Reply with the parent-quote checkbox off (default), then on. The parent must only appear in the saved reply when selected, including in a manually created child track. In both cases preserve the reply relationship. Trigger validation failure and confirm the checkbox choice survives.
+- Upgrade 0.2.0 with existing likes and replies: likes stay positive and published parent quotes remain visible. New replies default to no quote. Check the new `reaction` and `showparent` fields and no pending upgrade on a second visit.
+- Backup/restore preserves dislike values, quote preferences and reply parents across tracks. Privacy export includes the reaction and quote preference; privacy deletion also removes dislike-only users.
+- Every Reply to an existing post opens a new-track form with editable name/subject. Save two replies to A: each gets its own child track whose origin is A. Reply to B: create a child of B's track. Test with and without quote. Cancelling creates nothing. At maximum depth, without branch permission or while locked, both the UI and direct requests must prevent replies that would create a track.
+
+## Reported issues and implemented changes
+
+1. Reply opens with an empty subject. `post.php` now supplies an editable `Re:` default from the selected parent, avoiding another prefix when it already starts with `Re:` and respecting the 255-character field limit.
+2. No reactions. Added POST-only like/dislike forms, separate counts and a capability. One user can give one reaction per post. Teacher activity settings and the administrator site switch both enforce disabling on the server. Existing reactions are retained while hidden.
+3. Replies lack parent context. The form shows a labelled reference and offers an unchecked opt-in quote checkbox. Only opted-in saved replies show the parent blockquote. It is rendered live from the parent so moderator removal and privacy erasure also remove the displayed quote. Quotes do not recursively quote ancestor posts.
+4. Reporter cannot activate Reply on post 5 in a long thread. The supplied screenshot does not establish the exact browser hit-test failure. The old code applied perspective/rotate/translateZ to the whole growing plane and posts inside an overflow-hidden container. The candidate fix removes transforms from interactive content, keeps the 3D decoration non-interactive, and enlarges action targets to at least 44px. Exact reproduction and confirmation remain required on the target site.
+
+## Required target-site checks
+
+- Back up the staging database and plugin directory. Upgrade an existing MVP with posts, tracks and unread state. Confirm the new version, preserved data, `enablelikes` field and likes table; run upgrade again and check for no pending changes.
+- Also install fresh on Moodle 5.x. Add an activity, root post, reply and child track. Confirm white root and coloured child tracks and route/map navigation.
+- Reply to a post with a non-ASCII subject; check a single `Re:` prefix. Edit it, trigger a form validation error and confirm the edited subject remains. A new root post and a new branch should still start with a blank subject.
+- Check the labelled parent reference before posting. Opt in to quoting: the saved reply quotes only the direct parent. Leave it unchecked: no quote appears. Remove the parent as moderator or erase its author's data: the parent's content must disappear from opted-in quotes.
+- Use at least 8 posts, including several long HTML messages. At desktop, tablet and mobile widths scroll to posts 5 through 8 and activate Reply with mouse, touch and keyboard. Move the mouse around the stage, repeat with reduced motion enabled, and ensure the whole last post remains reachable. Inspect the rendered links/overlays if the issue persists.
+- Student A likes a post, reloads and unlikes; student B's like remains. Repeat identical submissions and check no duplicates. Try a guest, a role without `mod/spatialforum:like`, invalid session keys, GET requests, a deleted post and a post from another activity: all unauthorised writes must fail.
+- Disable likes in the activity as editing teacher and at site level as admin. In each case controls/counts disappear and a direct POST is rejected. Re-enable and confirm the stored likes return.
+- Lock track and whole activity. Students cannot reply or branch. Editing teachers/moderators retain their appropriate controls; a non-editing teacher does not gain moderator access by default. Likes are independent of the conversation lock.
+- Back up/restore with user data: check remapped reply parents, branch origins, root track and likes, including a privacy-erased parent tombstone. Back up/restore without user data: no posts, reads or likes; track structure and like settings remain.
+- Privacy: a user who has only liked a post must be discoverable in the correct activity context; export includes likes and timestamps; individual/bulk deletion removes their likes only in approved contexts; whole-context deletion and activity deletion leave no orphan likes. Check unrelated activities are unchanged.
+
+## Evidence
+
+The first real Moodle CI installation (run 40105388505) stopped on three existing XMLDB debug warnings: both `name` fields and the post `subject` declared an empty-string default on a NOT NULL CHAR field. The install schema now omits those defaults, matching the normalised schema Moodle created for the MVP.
+
+The branch includes real Moodle PHPUnit tests for activity creation, reply context, subjects, like idempotency and settings, role/lock controls, likes-only privacy users, existing-data upgrade and backup/restore remapping. The workflow runs these with Moodle Plugin CI. Local Node checks also exercise the compiled AMD module and source with/without reduced motion and render eight post cards to check the fifth reply URL and per-post form parameters. These structural checks do not prove browser hit testing.
+
+The in-app browser automation host returned `The browser access host is unavailable` on 24 October 2026. No deployment to the target site or target-site test pass is claimed by this change.

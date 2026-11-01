@@ -1,5 +1,27 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Samtalespor spatial discussion activity.
+ *
+ * @package    mod_spatialforum
+ * @copyright  2026 Anders Christian Sloth
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 
 require_once(__DIR__ . '/../../config.php');
 
@@ -10,6 +32,8 @@ $id = required_param('id', PARAM_INT);
 $action = optional_param('action', 'reply', PARAM_ALPHA);
 $trackid = required_param('trackid', PARAM_INT);
 $originpostid = optional_param('originpostid', 0, PARAM_INT);
+$viewmode = optional_param('sfview', '', PARAM_ALPHA);
+$viewmode = in_array($viewmode, ['map', 'list'], true) ? $viewmode : '';
 
 if (!in_array($action, ['reply', 'branch'], true)) {
     throw new moodle_exception('invalidaction', 'mod_spatialforum');
@@ -25,6 +49,7 @@ $track = $DB->get_record('spatialforum_tracks', [
 
 require_course_login($course, true, $cm);
 $context = context_module::instance($cm->id);
+require_capability('mod/spatialforum:view', $context);
 require_capability($action === 'branch' ? 'mod/spatialforum:startbranch' : 'mod/spatialforum:reply', $context);
 
 if ($activity->locked || $track->locked) {
@@ -34,58 +59,140 @@ if ($originpostid) {
     $origin = $DB->get_record('spatialforum_posts', [
         'id' => $originpostid,
         'trackid' => $track->id,
+        'deleted' => 0,
     ], '*', MUST_EXIST);
+}
+$access = new \mod_spatialforum\local\group_access($activity, $cm);
+$access->require_track($track);
+if (!empty($origin)) {
+    $access->require_post($origin, true);
+} else if (!$access->can_start($access->selected_group())) {
+    throw new moodle_exception('groupaccessdenied', 'mod_spatialforum');
+}
+$createstrack = $action === 'branch' || $originpostid !== 0;
+if ($createstrack) {
+    require_capability('mod/spatialforum:startbranch', $context);
+    if (!$originpostid) {
+        throw new moodle_exception('branchrequirespost', 'mod_spatialforum');
+    }
+    if (count(forum::get_path($track->id, $activity->id)) >= $activity->maxdepth) {
+        throw new moodle_exception('maxdepthreached', 'mod_spatialforum');
+    }
 }
 
 $returnurl = new moodle_url('/mod/spatialforum/view.php', ['id' => $cm->id, 'trackid' => $track->id]);
+if ($originpostid) {
+    $returnurl->param('postid', $originpostid);
+    $returnurl->set_anchor('post-' . $originpostid);
+}
+if ($viewmode) {
+    $returnurl->param('sfview', $viewmode);
+}
+$pagelabel = $action === 'branch' ? 'createbranch' : ($originpostid ? 'postreply' : 'newpost');
 $PAGE->set_url('/mod/spatialforum/post.php', [
     'id' => $cm->id,
     'action' => $action,
     'trackid' => $track->id,
     'originpostid' => $originpostid,
 ]);
-$PAGE->set_title(get_string($action === 'branch' ? 'createbranch' : 'postreply', 'mod_spatialforum'));
+$PAGE->set_title(get_string($pagelabel, 'mod_spatialforum'));
 $PAGE->set_heading(format_string($course->fullname));
+$PAGE->activityheader->set_description('');
+$draftscope = implode(':', [$USER->id, $cm->id, $action, $track->id, $originpostid]);
+$PAGE->requires->js_call_amd('mod_spatialforum/drafts', 'init', [[
+    'scope' => $draftscope,
+    'restore' => $_SERVER['REQUEST_METHOD'] === 'GET',
+    'ready' => get_string('draftready', 'mod_spatialforum'),
+    'saved' => get_string('draftsaved', 'mod_spatialforum'),
+    'available' => get_string('draftavailable', 'mod_spatialforum'),
+    'restoreLabel' => get_string('draftrestore', 'mod_spatialforum'),
+    'discardLabel' => get_string('draftdiscard', 'mod_spatialforum'),
+    'unavailable' => get_string('draftunavailable', 'mod_spatialforum'),
+]]);
 
+$followdefault = 1;
+$canfollow = \mod_spatialforum\local\notifications::eligible($cm, $USER);
+if (!empty($origin)) {
+    $rootid = \mod_spatialforum\local\thread_subscriptions::root($origin);
+    $threadpref = $DB->get_record('spatialforum_subscriptions', [
+        'spatialforumid' => $activity->id, 'userid' => $USER->id, 'rootpostid' => $rootid,
+    ]);
+    $followdefault = $threadpref && (int) $threadpref->mode === 0 ? 0 : 1;
+}
 $form = new post_form(null, [
+    'allowfollow' => $canfollow,
+    'followdefault' => $followdefault,
+    'submissionkey' => optional_param('submissionkey', bin2hex(random_bytes(32)), PARAM_ALPHANUM),
     'cmid' => $cm->id,
+    'groupid' => $access->selected_group(),
     'action' => $action,
     'trackid' => $track->id,
     'originpostid' => $originpostid,
+    'newtrack' => $createstrack,
+    'origin' => $origin ?? null,
+    'context' => $context,
+    'sfview' => $viewmode,
 ]);
+
+if ($action === 'reply' && !empty($origin)) {
+    $defaults = ['subject' => forum::reply_subject($origin->subject)];
+    $form->set_data($defaults);
+}
 
 if ($form->is_cancelled()) {
     redirect($returnurl);
-} elseif ($data = $form->get_data()) {
+} else if ($data = $form->get_data()) {
     require_sesskey();
-    $transaction = $DB->start_delegated_transaction();
-    $targettrackid = $track->id;
-    if ($action === 'branch') {
-        if (!$originpostid) {
-            throw new moodle_exception('branchrequirespost', 'mod_spatialforum');
+    $create = function () use ($activity, $track, $createstrack, $originpostid, $USER, $action, $data, $context, $DB, $canfollow) {
+        $targettrackid = $track->id;
+        $message = $data->message_editor['text'];
+        $format = $data->message_editor['format'];
+        if ($createstrack) {
+            $targettrackid = forum::reply_in_new_track(
+                $activity,
+                $track,
+                $originpostid,
+                $USER->id,
+                $action === 'branch' ? $data->branchname : $data->subject,
+                $data->subject,
+                $message,
+                $format,
+                !empty($data->showparent),
+                '[]'
+            );
+            $newpostid = $DB->get_field('spatialforum_posts', 'id', ['trackid' => $targettrackid], MUST_EXIST);
+        } else {
+            $newpostid = forum::create_post($activity, $targettrackid, $USER->id, $data->subject, $message, $format);
         }
-        $targettrackid = forum::create_track($activity, $track, $originpostid, $data->branchname);
-    }
-    $message = $data->message_editor['text'];
-    $format = $data->message_editor['format'];
-    forum::create_post(
-        $activity,
-        $targettrackid,
-        $USER->id,
-        $data->subject,
-        $message,
-        $format,
-        $action === 'reply' ? $originpostid : 0
-    );
-    $transaction->allow_commit();
+        \mod_spatialforum\local\media::save($newpostid, $data->message_editor, $context);
+        if ($canfollow) {
+            $post = $DB->get_record('spatialforum_posts', ['id' => $newpostid], '*', MUST_EXIST);
+            $sub = \mod_spatialforum\local\thread_subscriptions::effective($post, $USER->id);
+            $mode = empty($data->followthread) ? 0 : ($sub ? (int) $sub->mode : 1);
+            \mod_spatialforum\local\notifications::set_mode($activity->id, $mode, $newpostid);
+        }
+        return (int) $newpostid;
+    };
+    $newpostid = \mod_spatialforum\local\submissions::save($cm, $data->submissionkey, $create);
+    $targettrackid = $DB->get_field('spatialforum_posts', 'trackid', ['id' => $newpostid], MUST_EXIST);
+    $SESSION->spatialforumdraftclear = ['scope' => $draftscope, 'clear' => $data->submissionkey];
     redirect(new moodle_url('/mod/spatialforum/view.php', [
         'id' => $cm->id,
         'trackid' => $targettrackid,
+        'postid' => $newpostid,
+        'sfview' => $viewmode,
     ]), get_string('postsaved', 'mod_spatialforum'));
 }
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string($action === 'branch' ? 'createbranch' : 'postreply', 'mod_spatialforum'));
+echo $OUTPUT->heading(get_string($pagelabel, 'mod_spatialforum'));
+if (!empty($origin)) {
+    $origincontext = forum::export_reply_context($origin, $context, $cm->id);
+    $origincontext['compact'] = true;
+    echo $OUTPUT->render_from_template(
+        'mod_spatialforum/reply_context',
+        $origincontext
+    );
+}
 $form->display();
 echo $OUTPUT->footer();
-

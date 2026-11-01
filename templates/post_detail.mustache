@@ -1,0 +1,95 @@
+{{!
+/**
+ * Full post content and actions, also used by the authenticated Moodle fragment callback.
+ * @template mod_spatialforum/post_detail
+ * @copyright 2026 Anders Christian Sloth
+ * @license https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+}}
+<div class="spatialforum-detail-head">
+    <div class="spatialforum-dates">
+        <time datetime="{{creatediso}}">{{createdlabel}}</time>
+        {{#edited}}<time datetime="{{editediso}}">{{editedlabel}}</time>{{/edited}}
+    </div>
+    <div class="spatialforum-reader-actions">
+        <button type="button" class="spatialforum-close spatialforum-js-only" data-copy-link>{{#str}}copylink, mod_spatialforum{{/str}}</button>
+        <button type="button" class="spatialforum-close" data-close>{{#str}}closepost, mod_spatialforum{{/str}}</button>
+    </div>
+</div>
+{{#tracklocked}}<p class="alert alert-warning">{{#str}}forumlocked, mod_spatialforum{{/str}}</p>{{/tracklocked}}
+{{#replycontext}}{{> mod_spatialforum/reply_context}}{{/replycontext}}
+<div class="spatialforum-message">{{{message}}}</div>
+{{#unread}}
+    {{#cantrackread}}
+        <form class="spatialforum-read-fallback" method="post" action="{{readurl}}">
+            <input type="hidden" name="id" value="{{cmid}}">
+            <input type="hidden" name="postid" value="{{id}}">
+            <input type="hidden" name="sesskey" value="{{sesskey}}">
+            <button type="submit" class="btn btn-outline-secondary">{{#str}}markread, mod_spatialforum{{/str}}</button>
+        </form>
+    {{/cantrackread}}
+{{/unread}}
+<div class="spatialforum-reactions">
+    {{#showlikes}}
+        {{#canlike}}
+            <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
+                <input type="hidden" name="id" value="{{cmid}}">
+                <input type="hidden" name="postid" value="{{id}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="reaction" value="{{nextreaction}}">
+                <button type="submit" class="spatialforum-like-button" aria-pressed="{{#liked}}true{{/liked}}{{^liked}}false{{/liked}}">{{likelabel}} ({{likecount}})</button>
+            </form>
+            <form method="post" action="{{likeurl}}" class="spatialforum-like-form">
+                <input type="hidden" name="id" value="{{cmid}}">
+                <input type="hidden" name="postid" value="{{id}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="reaction" value="{{nextdislike}}">
+                <button type="submit" class="spatialforum-like-button" aria-pressed="{{#disliked}}true{{/disliked}}{{^disliked}}false{{/disliked}}">{{dislikelabel}} ({{dislikecount}})</button>
+            </form>
+        {{/canlike}}
+        {{^canlike}}<span>{{#str}}likes, mod_spatialforum{{/str}}: {{likecount}} · {{#str}}dislikes, mod_spatialforum{{/str}}: {{dislikecount}}</span>{{/canlike}}
+    {{/showlikes}}
+</div>
+{{#canreply}}<a class="btn btn-primary spatialforum-reply" href="{{replyurl}}">{{#str}}reply, mod_spatialforum{{/str}}</a>{{/canreply}}
+{{#canedit}}<a class="btn btn-link" href="{{editurl}}">{{#str}}editpost, mod_spatialforum{{/str}}</a>{{/canedit}}
+{{#threadsubscriptionurl}}<a class="btn btn-link" href="{{threadsubscriptionurl}}">{{#str}}threadnotifications, mod_spatialforum{{/str}}</a>{{/threadsubscriptionurl}}
+{{#haschildren}}
+    <div class="spatialforum-children">
+        <h3>{{#str}}replieshere, mod_spatialforum{{/str}}</h3>
+        {{#children}}
+            <a href="#post-{{id}}" data-open-post="{{id}}"><span>{{subject}}<small>{{author}}</small></span><span aria-hidden="true">→</span></a>
+        {{/children}}
+    </div>
+{{/haschildren}}
+{{#canmoderate}}
+    <div class="spatialforum-moderation">
+        {{#canlocktrack}}
+        <form method="post" action="{{moderationurl}}">
+            <input type="hidden" name="id" value="{{cmid}}">
+            <input type="hidden" name="sesskey" value="{{sesskey}}">
+            <input type="hidden" name="action" value="toggletrack">
+            <input type="hidden" name="trackid" value="{{trackid}}">
+            <button type="submit" class="btn btn-link">{{moderatelabel}}</button>
+        </form>
+        {{/canlocktrack}}
+        {{#candelete}}
+            <form method="post" action="{{moderationurl}}">
+                <input type="hidden" name="id" value="{{cmid}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="deletepost">
+                <input type="hidden" name="postid" value="{{id}}">
+                <button type="submit" class="btn btn-link text-danger">{{#str}}delete{{/str}}</button>
+            </form>
+        {{/candelete}}
+        {{#canrestore}}
+            <p>{{#str}}restorewindow, mod_spatialforum{{/str}}</p>
+            <form method="post" action="{{moderationurl}}">
+                <input type="hidden" name="id" value="{{cmid}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="restorepost">
+                <input type="hidden" name="postid" value="{{id}}">
+                <button type="submit" class="btn btn-outline-secondary">{{#str}}restorepost, mod_spatialforum{{/str}}</button>
+            </form>
+        {{/canrestore}}
+    </div>
+{{/canmoderate}}
